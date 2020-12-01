@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30717.126
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DogScepterLib", "DogScepterLib\DogScepterLib.csproj", "{96413ABC-3EDA-4D63-87C4-8C4D7981D4D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DogScepterTest", "DogScepterTest\DogScepterTest.csproj", "{03327F28-4BA1-4636-BDAF-22FC01707D07}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{96413ABC-3EDA-4D63-87C4-8C4D7981D4D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{96413ABC-3EDA-4D63-87C4-8C4D7981D4D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{96413ABC-3EDA-4D63-87C4-8C4D7981D4D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{96413ABC-3EDA-4D63-87C4-8C4D7981D4D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03327F28-4BA1-4636-BDAF-22FC01707D07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03327F28-4BA1-4636-BDAF-22FC01707D07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03327F28-4BA1-4636-BDAF-22FC01707D07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03327F28-4BA1-4636-BDAF-22FC01707D07}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3EAFA76F-2ADD-487D-BBEE-74445DD362E7}
+	EndGlobalSection
+EndGlobal

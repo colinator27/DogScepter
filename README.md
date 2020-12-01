@@ -9,8 +9,11 @@
 
 \* Join the Underminers community Discord server! https://discord.gg/RxXpdwJ
 
+\* (Oh, right, this is just a work-in-progress modding tool geared toward (but not limited to) UNDERTALE/DELTARUNE by Toby Fox.)
+
 ## Features
-* It can do absolutely nothing right now. There is no code. Nothing has been written. It doesn't exist yet.
+* Right now, reading/writing the barebones data file is in progress. It's really early in development...
+* Planned features include an actual editor, a superior editing mode for modding purposes, and eventually decompilation/compilation (potentially).
 
 ## Special Thanks
 * Msnshame and Agentalex9 for assistance in creating the icon for the tool. Additional thanks to the Underminers Discord server members for being there to come up with the name, as well.
@@ -19,4 +22,4 @@
     - https://github.com/donkeybonks/acolyte/wiki/Bytecode
     - https://github.com/PoroCYon/Altar.NET
     - https://github.com/WarlockD/GMdsam
-    - Most prominently, the reason this now exists, https://github.com/krzys-h/UndertaleModTool
+    - Most prominently, the reason this now exists (and also major inspiration for core code), https://github.com/krzys-h/UndertaleModTool
