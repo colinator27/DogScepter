@@ -56,6 +56,8 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Serialize(writer);
 
+            writer.WritePointerString(Filename);
+            // TODO: everything else, this is just a STRG test at the moment
         }
 
         public override void Unserialize(GMDataReader reader)

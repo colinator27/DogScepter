@@ -16,6 +16,7 @@ namespace DogScepterLib.Core
             public byte FormatID = 0;
 
             public bool AlignChunksTo16 = true;
+            public bool AlignStringsTo4 = true;
 
             /// <summary>
             /// Sets the major/minor/release/build version, only if higher

@@ -123,6 +123,14 @@ namespace DogScepterLib.Core.Util
             buffer[offset++] = (byte)((value >> 24) & 0xFF);
         }
 
+        public void WriteAt(int pos, int value)
+        {
+            buffer[pos] = (byte)(value & 0xFF);
+            buffer[pos + 1] = (byte)((value >> 8) & 0xFF);
+            buffer[pos + 2] = (byte)((value >> 16) & 0xFF);
+            buffer[pos + 3] = (byte)((value >> 24) & 0xFF);
+        }
+
         public void Write(uint value)
         {
             ResizeToFit(offset + 4);

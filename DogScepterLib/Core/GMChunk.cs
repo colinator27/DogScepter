@@ -32,7 +32,8 @@ namespace DogScepterLib.Core
 
         public static readonly Dictionary<string, Type> ChunkMap = new Dictionary<string, Type>()
         {
-            { "GEN8", typeof(GMChunkGEN8) }
+            { "GEN8", typeof(GMChunkGEN8) },
+            { "STRG", typeof(GMChunkSTRG) }
         };
 
         public override void Serialize(GMDataWriter writer)
