@@ -4,7 +4,7 @@ using System.Text;
 
 namespace DogScepterLib.Core.Chunks
 {
-    class GMChunkOPTN : GMChunk
+    public class GMChunkOPTN : GMChunk
     {
         [Flags]
         public enum OptionsFlags : ulong
@@ -40,15 +40,15 @@ namespace DogScepterLib.Core.Chunks
             DisableSandbox = 0x10000000
         }
 
-        ulong Unknown;
-        OptionsFlags Options;
-        uint Scale;
-        uint WindowColor;
-        uint ColorDepth;
-        uint Resolution;
-        uint Frequency;
-        uint VertexSync;
-        uint Priority;
+        public ulong Unknown;
+        public OptionsFlags Options;
+        public uint Scale;
+        public uint WindowColor;
+        public uint ColorDepth;
+        public uint Resolution;
+        public uint Frequency;
+        public uint VertexSync;
+        public uint Priority;
 
         public override void Serialize(GMDataWriter writer)
         {
