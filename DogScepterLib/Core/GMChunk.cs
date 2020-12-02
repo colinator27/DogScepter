@@ -88,7 +88,7 @@ namespace DogScepterLib.Core
 
                 // Update whether this version aligns chunks to 16 bytes
                 if (reader.Offset < EndOffset)
-                    reader.Data.VersionInfo.AlignChunksTo16 &= ((reader.Offset - 4) % 16 == 0);
+                    reader.Data.VersionInfo.AlignChunksTo16 &= (reader.Offset % 16 == 0);
             }
 
             // Actually read all the sub-chunks

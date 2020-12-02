@@ -22,4 +22,9 @@
     - https://github.com/donkeybonks/acolyte/wiki/Bytecode
     - https://github.com/PoroCYon/Altar.NET
     - https://github.com/WarlockD/GMdsam
+	- Additional research by Nik (@nkrapivin)
     - Most prominently, the reason this now exists (and also major inspiration for core code), https://github.com/krzys-h/UndertaleModTool
+
+## Contributors
+- colinator27 (me)
+- TheEternalShine

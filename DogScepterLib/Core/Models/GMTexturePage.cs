@@ -18,14 +18,15 @@ namespace DogScepterLib.Core.Models
         public void Unserialize(GMDataReader reader)
         {
             Scaled = reader.ReadUInt32();
-            if (reader.VersionInfo.Major >= 2) GeneratedMips = reader.ReadUInt32();
+            if (reader.VersionInfo.Major >= 2) 
+                GeneratedMips = reader.ReadUInt32();
             reader.ReadPointerObject<GMTextureData>();
         }
     }
 
     public class GMTextureData : GMSerializable
     {
-
+        // The PNG data
         public byte[] Data;
 
         public void Serialize(GMDataWriter writer)
@@ -37,21 +38,21 @@ namespace DogScepterLib.Core.Models
             int startOffset = reader.Offset;
 
             if (!reader.ReadBytes(8).SequenceEqual(new byte[8] { 137, 80, 78, 71, 13, 10, 26, 10 }))
-                new GMWarning("PNG Header expected.");
+                reader.Warnings.Add(new GMWarning("PNG header expected.", GMWarning.WarningLevel.Bad));
 
             while (true)
             {
                 uint length = (uint)reader.ReadByte() << 24 | (uint)reader.ReadByte() << 16 | (uint)reader.ReadByte() << 8 | (uint)reader.ReadByte();
-                string type = Encoding.UTF8.GetString(reader.ReadBytes(4));
-                byte[] data = reader.ReadBytes((int)length);
-                uint crc = (uint)reader.ReadByte() << 24 | (uint)reader.ReadByte() << 16 | (uint)reader.ReadByte() << 8 | (uint)reader.ReadByte();
+                string type = reader.ReadChars(4);
+                reader.ReadBytes((int)length);
+                reader.Offset += 4;
                 if (type == "IEND")
                     break;
             }
 
             int texLength = reader.Offset - startOffset;
             reader.Offset = startOffset;
-            Data = reader.ReadBytes((int)texLength);
+            Data = reader.ReadBytes(texLength);
         }
     }
 }
