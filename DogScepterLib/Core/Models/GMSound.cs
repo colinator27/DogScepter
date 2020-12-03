@@ -49,11 +49,6 @@ namespace DogScepterLib.Core.Models
             Pitch = reader.ReadSingle();
             GroupID = reader.ReadInt32();
             AudioID = reader.ReadInt32();
-
-            Console.WriteLine(Name.Content);
-            Console.WriteLine(GroupID);
-            Console.WriteLine(AudioID);
-
         }
     }
 }
