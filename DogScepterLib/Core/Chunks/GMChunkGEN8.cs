@@ -198,7 +198,7 @@ namespace DogScepterLib.Core.Chunks
                         int second = random.Next();
                         writer.Write(first);
                         writer.Write(second);
-                        GMS2_RandomUID.Add((first << 32) | second);
+                        GMS2_RandomUID.Add(((long)first << 32) | (long)second);
                     }
                 }
 
@@ -287,7 +287,7 @@ namespace DogScepterLib.Core.Chunks
                             reader.Warnings.Add(new GMWarning("Unexpected random UID", GMWarning.WarningLevel.Info));
                         if (second != random.Next())
                             reader.Warnings.Add(new GMWarning("Unexpected random UID", GMWarning.WarningLevel.Info));
-                        GMS2_RandomUID.Add((first << 32) | second);
+                        GMS2_RandomUID.Add((long)(first << 32) | (long)second);
                     }
                 }
 
