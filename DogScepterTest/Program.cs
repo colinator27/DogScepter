@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 
 using DogScepterLib.Core;
@@ -9,6 +10,8 @@ namespace DogScepterTest
     {
         static void Main(string[] args)
         {
+            Stopwatch s = new Stopwatch();
+            s.Start();
             using (FileStream fs = new FileStream(@"in.win", FileMode.Open))
             {
                 GMDataReader reader = new GMDataReader(fs);
@@ -22,6 +25,8 @@ namespace DogScepterTest
                     }
                 }
             }
+            s.Stop();
+            Console.WriteLine(s.Elapsed.TotalMilliseconds);
         }
     }
 }
