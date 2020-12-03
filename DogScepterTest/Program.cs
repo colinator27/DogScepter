@@ -27,6 +27,8 @@ namespace DogScepterTest
             }
             s.Stop();
             Console.WriteLine(s.Elapsed.TotalMilliseconds);
+
+            Console.ReadLine();
         }
     }
 }

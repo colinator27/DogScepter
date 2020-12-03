@@ -36,7 +36,8 @@ namespace DogScepterLib.Core
             { "OPTN", typeof(GMChunkOPTN) },
             { "LANG", typeof(GMChunkLANG) },
             { "STRG", typeof(GMChunkSTRG) },
-            { "TXTR", typeof(GMChunkTXTR) }
+            { "TXTR", typeof(GMChunkTXTR) },
+            { "TPAG", typeof(GMChunkTPAG) }
         };
 
         public override void Serialize(GMDataWriter writer)
