@@ -35,6 +35,7 @@ namespace DogScepterLib.Core
             { "GEN8", typeof(GMChunkGEN8) },
             { "OPTN", typeof(GMChunkOPTN) },
             { "LANG", typeof(GMChunkLANG) },
+            { "EXTN", typeof(GMChunkEXTN) },
             { "STRG", typeof(GMChunkSTRG) },
             { "TXTR", typeof(GMChunkTXTR) },
             { "TPAG", typeof(GMChunkTPAG) }
