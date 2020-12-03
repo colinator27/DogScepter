@@ -37,7 +37,7 @@ namespace DogScepterLib.Core
             }
         }
 
-        public void Serialize(GMDataWriter writer)
+        public virtual void Serialize(GMDataWriter writer)
         {
             Serialize(writer, null, null, null);
         }
@@ -67,7 +67,7 @@ namespace DogScepterLib.Core
             }
         }
 
-        public void Unserialize(GMDataReader reader)
+        public virtual void Unserialize(GMDataReader reader)
         {
             Unserialize(reader, null, null, null);
         }
@@ -120,6 +120,11 @@ namespace DogScepterLib.Core
             Serialize(writer, before, after, elemWriter, null);
         }
 
+        public override void Serialize(GMDataWriter writer)
+        {
+            Serialize(writer, null, null, null);
+        }
+
         public override void Unserialize(GMDataReader reader, ListUnserialize before = null,
                                                               ListUnserialize after = null,
                                                               ListUnserializeElement elemReader = null)
@@ -145,6 +150,11 @@ namespace DogScepterLib.Core
 
                 after?.Invoke(reader);
             }
+        }
+
+        public override void Unserialize(GMDataReader reader)
+        {
+            Unserialize(reader, null, null, null);
         }
     }
 }
