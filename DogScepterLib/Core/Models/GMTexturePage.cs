@@ -13,6 +13,10 @@ namespace DogScepterLib.Core.Models
 
         public void Serialize(GMDataWriter writer)
         {
+            writer.Write(Scaled);
+            if (writer.VersionInfo.Major >= 2) writer.Write(GeneratedMips);
+            writer.WritePointer(TextureData);
+            TextureData.Serialize(writer);
         }
 
         public void Unserialize(GMDataReader reader)
@@ -20,7 +24,7 @@ namespace DogScepterLib.Core.Models
             Scaled = reader.ReadUInt32();
             if (reader.VersionInfo.Major >= 2) 
                 GeneratedMips = reader.ReadUInt32();
-            reader.ReadPointerObject<GMTextureData>();
+            TextureData = reader.ReadPointerObject<GMTextureData>();
         }
     }
 
@@ -31,6 +35,8 @@ namespace DogScepterLib.Core.Models
 
         public void Serialize(GMDataWriter writer)
         {
+            writer.WriteObjectPointer(this);
+            writer.Write(Data);
         }
 
         public void Unserialize(GMDataReader reader)
@@ -44,8 +50,7 @@ namespace DogScepterLib.Core.Models
             {
                 uint length = (uint)reader.ReadByte() << 24 | (uint)reader.ReadByte() << 16 | (uint)reader.ReadByte() << 8 | (uint)reader.ReadByte();
                 string type = reader.ReadChars(4);
-                reader.ReadBytes((int)length);
-                reader.Offset += 4;
+                reader.Offset += (int)length + 4;
                 if (type == "IEND")
                     break;
             }
