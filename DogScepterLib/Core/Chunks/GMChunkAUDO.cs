@@ -5,22 +5,26 @@ using System.Text;
 
 namespace DogScepterLib.Core.Chunks
 {
-    public class GMChunkTPAG : GMChunk
+    public class GMChunkAUDO : GMChunk
     {
-        public GMPointerList<GMTextureItem> List;
+        public GMPointerList<GMAudio> List;
 
         public override void Serialize(GMDataWriter writer)
         {
             base.Serialize(writer);
 
-            List.Serialize(writer);
+            List.Serialize(writer, (writer) =>
+            {
+                // Align each entry to 4 bytes
+                writer.Pad(4);
+            });
         }
 
         public override void Unserialize(GMDataReader reader)
         {
             base.Unserialize(reader);
 
-            List = new GMPointerList<GMTextureItem>();
+            List = new GMPointerList<GMAudio>();
             List.Unserialize(reader);
         }
     }

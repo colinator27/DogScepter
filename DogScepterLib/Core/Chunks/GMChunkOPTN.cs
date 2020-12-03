@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DogScepterLib.Core.Models;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -50,6 +51,14 @@ namespace DogScepterLib.Core.Chunks
         public uint VertexSync;
         public uint Priority;
 
+        // Seemingly unused splash textures? Not sure if supplying these does anything
+        public GMTextureItem SplashBackImage;
+        public GMTextureItem SplashFrontImage;
+        public GMTextureItem SplashLoadImage;
+        public uint LoadAlpha;
+
+        public GMList<Constant> Constants;
+
         public override void Serialize(GMDataWriter writer)
         {
             base.Serialize(writer);
@@ -63,10 +72,11 @@ namespace DogScepterLib.Core.Chunks
             writer.Write(Frequency);
             writer.Write(VertexSync);
             writer.Write(Priority);
-
-            // TODO:
-            // load images
-
+            writer.WritePointer(SplashBackImage);
+            writer.WritePointer(SplashFrontImage);
+            writer.WritePointer(SplashLoadImage);
+            writer.Write(LoadAlpha);
+            Constants.Serialize(writer);
         }
 
         public override void Unserialize(GMDataReader reader)
@@ -82,10 +92,30 @@ namespace DogScepterLib.Core.Chunks
             Frequency = reader.ReadUInt32();
             VertexSync = reader.ReadUInt32();
             Priority = reader.ReadUInt32();
+            SplashBackImage = reader.ReadPointerObject<GMTextureItem>();
+            SplashFrontImage = reader.ReadPointerObject<GMTextureItem>();
+            SplashLoadImage = reader.ReadPointerObject<GMTextureItem>();
+            LoadAlpha = reader.ReadUInt32();
+            Constants = new GMList<Constant>();
+            Constants.Unserialize(reader);
+        }
 
-            // TODO:
-            // load images
+        public class Constant : GMSerializable
+        {
+            public GMString Name;
+            public GMString Value;
 
+            public void Serialize(GMDataWriter writer)
+            {
+                writer.WritePointerString(Name);
+                writer.WritePointerString(Value);
+            }
+
+            public void Unserialize(GMDataReader reader)
+            {
+                Name = reader.ReadStringPointerObject();
+                Value = reader.ReadStringPointerObject();
+            }
         }
     }
 }

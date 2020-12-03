@@ -37,8 +37,10 @@ namespace DogScepterLib.Core
             { "LANG", typeof(GMChunkLANG) },
             { "EXTN", typeof(GMChunkEXTN) },
             { "STRG", typeof(GMChunkSTRG) },
+            { "TPAG", typeof(GMChunkTPAG) },
             { "TXTR", typeof(GMChunkTXTR) },
-            { "TPAG", typeof(GMChunkTPAG) }
+            { "AGRP", typeof(GMChunkAGRP) },
+            { "AUDO", typeof(GMChunkAUDO) },
         };
 
         public override void Serialize(GMDataWriter writer)

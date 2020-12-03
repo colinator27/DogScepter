@@ -20,7 +20,7 @@ namespace DogScepterLib.Core.Models
 
         public ushort TargetX; // The offset of the image, to account for trimmed 
         public ushort TargetY;
-        public ushort TargetWidth; // The dimensions to scale the image to. (Is this BoundingWidth - TargetX)?
+        public ushort TargetWidth; // The dimensions to scale the image to.
         public ushort TargetHeight;
 
         public ushort BoundWidth; // The image's dimensions.
