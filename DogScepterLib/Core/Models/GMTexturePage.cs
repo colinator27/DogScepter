@@ -14,9 +14,9 @@ namespace DogScepterLib.Core.Models
         public void Serialize(GMDataWriter writer)
         {
             writer.Write(Scaled);
-            if (writer.VersionInfo.Major >= 2) writer.Write(GeneratedMips);
+            if (writer.VersionInfo.Major >= 2) 
+                writer.Write(GeneratedMips);
             writer.WritePointer(TextureData);
-            TextureData.Serialize(writer);
         }
 
         public void Unserialize(GMDataReader reader)
@@ -35,6 +35,7 @@ namespace DogScepterLib.Core.Models
 
         public void Serialize(GMDataWriter writer)
         {
+            writer.Pad(128);
             writer.WriteObjectPointer(this);
             writer.Write(Data);
         }

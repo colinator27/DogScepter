@@ -19,6 +19,8 @@ namespace DogScepterLib.Core.Chunks
                 if (writer.VersionInfo.AlignStringsTo4)
                     writer.Pad(4);
             });
+
+            writer.Pad(128);
         }
 
         public override void Unserialize(GMDataReader reader)

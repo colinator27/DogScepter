@@ -14,6 +14,10 @@ namespace DogScepterLib.Core.Chunks
             base.Serialize(writer);
 
             List.Serialize(writer);
+            foreach (GMTexturePage tpe in List)
+                tpe.TextureData.Serialize(writer);
+
+            writer.Pad(4);
         }
 
         public override void Unserialize(GMDataReader reader)
