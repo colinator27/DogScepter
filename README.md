@@ -15,6 +15,17 @@
 * Right now, reading/writing the barebones data file is in progress. It's really early in development...
 * Planned features include an actual editor, a superior editing mode for modding purposes, and eventually decompilation/compilation (potentially).
 
+## Roadmap (subject to change)
+- [ ] Stage 1: Core library (work in progress)
+    - Fully parse GameMaker IFF data files, store in memory, and be able to serialize them to new files byte-for-byte.
+- [ ] Stage 2: Abstraction layer in library
+    - [ ] Convert the output of the Core into a project-esque format, where IDs resolve to asset names, strings become unique, textures get split, and so on.
+    - [ ] Be able to convert this *back* into the structures of the Core.
+	- Texture page generation
+	- Re-compress strings
+	- Resolve asset names to IDs
+- [ ] Stage 3: System for exporting/importing specific assets automatically for source control
+
 ## Special Thanks
 * Msnshame and Agentalex9 for assistance in creating the icon for the tool. Additional thanks to the Underminers Discord server members for being there to come up with the name, as well.
 * Previous GameMaker/Undertale data format research and tools
