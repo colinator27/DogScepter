@@ -55,7 +55,7 @@ namespace DogScepterLib.Core
         /// </summary>
         public T ReadPointerObject<T>(int ptr) where T : GMSerializable, new()
         {
-            if (ptr == 0)
+            if (ptr <= 0)
                 return default(T);
 
             T res;
