@@ -28,7 +28,6 @@ namespace DogScepterLib.Core.Models
 
         public void Serialize(GMDataWriter writer)
         {
-            TileCount--;
             writer.WritePointerString(Name);
             writer.WriteWideBoolean(Transparent);
             writer.WriteWideBoolean(Smooth);
