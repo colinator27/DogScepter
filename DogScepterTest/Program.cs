@@ -22,11 +22,13 @@ namespace DogScepterTest
                     using (GMDataWriter writer = new GMDataWriter(reader.Data, fs2, reader.Length))
                     {
                         writer.Flush();
+                        foreach (GMWarning w in writer.Warnings)
+                            Console.WriteLine("WARN: " + w.Message);
                     }
                 }
             }
             s.Stop();
-            Console.WriteLine(s.Elapsed.TotalMilliseconds);
+            Console.WriteLine(string.Format("Took {0} ms, {1} seconds.", s.Elapsed.TotalMilliseconds, Math.Round(s.Elapsed.TotalMilliseconds/1000, 2)));
 
             Console.ReadLine();
         }

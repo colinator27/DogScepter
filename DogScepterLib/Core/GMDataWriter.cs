@@ -12,6 +12,7 @@ namespace DogScepterLib.Core
     {
         public GMData Data;
         public GMData.GMVersionInfo VersionInfo => Data.VersionInfo;
+        public List<GMWarning> Warnings;
 
         /// Maps used for tracking locations of pointer-referenced objects and the locations to patch
         public Dictionary<GMSerializable, int> PointerOffsets = new Dictionary<GMSerializable, int>();
@@ -21,6 +22,7 @@ namespace DogScepterLib.Core
         public GMDataWriter(GMData data, Stream stream, int baseSize = 1024 * 1024 * 32) : base(stream, baseSize)
         {
             Data = data;
+            Warnings = new List<GMWarning>();
 
             // Write the root chunk, FORM
             Write("FORM".ToCharArray());
