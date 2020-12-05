@@ -24,10 +24,11 @@ namespace DogScepterLib.Core.Models
         public uint TileCount;
         public uint TileUnknown2; // Seems to always be 0
         public long TileFrameLength; // time for each frame in microseconds
-        public List<List<uint>> TileIDs; // Contains entries per tile per frame
+        public List<List<uint>> Tiles; // Contains entries per tile per frame
 
         public void Serialize(GMDataWriter writer)
         {
+            TileCount--;
             writer.WritePointerString(Name);
             writer.WriteWideBoolean(Transparent);
             writer.WriteWideBoolean(Smooth);
@@ -47,9 +48,16 @@ namespace DogScepterLib.Core.Models
                 writer.Write(TileUnknown2);
                 writer.Write(TileFrameLength);
 
-                foreach (List<uint> list in TileIDs)
+                if (Tiles.Count != TileCount)
+                    writer.Warnings.Add(new GMWarning("Amount of tiles != TileCount", GMWarning.WarningLevel.Severe));
+                else if (Tiles[0].Count != TileFrames)
+                    writer.Warnings.Add(new GMWarning("Amount of frames in tiles != TileFrames", GMWarning.WarningLevel.Severe));
+
+                for (int i = 0; i < Tiles.Count; i++)
                 {
-                    foreach (uint item in list)
+                    if (i != 0 && Tiles[i].Count != Tiles[i-1].Count)
+                        writer.Warnings.Add(new GMWarning("Amount of frames is different across tiles", GMWarning.WarningLevel.Severe));
+                    foreach (uint item in Tiles[i])
                     {
                         writer.Write(item);
                     }
@@ -78,11 +86,11 @@ namespace DogScepterLib.Core.Models
                 TileUnknown2 = reader.ReadUInt32();
                 TileFrameLength = reader.ReadInt64();
 
-                TileIDs = new List<List<uint>>((int)TileCount);
+                Tiles = new List<List<uint>>((int)TileCount);
                 for (int i = 0; i < TileCount; i++)
                 {
                     List<uint> tileFrames = new List<uint>((int)TileFrames);
-                    TileIDs.Add(tileFrames);
+                    Tiles.Add(tileFrames);
                     for (int j = 0; j < TileFrames; j++)
                     {
                         tileFrames.Add(reader.ReadUInt32());

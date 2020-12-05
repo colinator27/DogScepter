@@ -22,6 +22,8 @@ namespace DogScepterTest
                     using (GMDataWriter writer = new GMDataWriter(reader.Data, fs2, reader.Length))
                     {
                         writer.Flush();
+                        foreach (GMWarning w in writer.Warnings)
+                            Console.WriteLine("WARN: " + w.Message);
                     }
                 }
             }
