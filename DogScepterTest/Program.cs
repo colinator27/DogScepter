@@ -26,7 +26,7 @@ namespace DogScepterTest
                 }
             }
             s.Stop();
-            Console.WriteLine(s.Elapsed.TotalMilliseconds);
+            Console.WriteLine(string.Format("Took {0} ms, {1} seconds.", s.Elapsed.TotalMilliseconds, Math.Round(s.Elapsed.TotalMilliseconds/1000, 2)));
 
             Console.ReadLine();
         }
