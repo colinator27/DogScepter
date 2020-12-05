@@ -20,8 +20,6 @@ namespace DogScepterLib.Core.Models
         public uint TileOutputBorderX; // A setting in the IDE, seems to only change the texture on compile,
         public uint TileOutputBorderY; // and not impact the runner(?)
         public uint TileColumns;
-        public uint TileFrames; // amount of entries per tile
-        public uint TileCount;
         public uint TileUnknown2; // Seems to always be 0
         public long TileFrameLength; // time for each frame in microseconds
         public List<List<uint>> Tiles; // Contains entries per tile per frame
@@ -42,15 +40,10 @@ namespace DogScepterLib.Core.Models
                 writer.Write(TileOutputBorderX);
                 writer.Write(TileOutputBorderY);
                 writer.Write(TileColumns);
-                writer.Write(TileFrames);
-                writer.Write(TileCount);
+                writer.Write((uint)Tiles[0].Count);
+                writer.Write((uint)Tiles.Count);
                 writer.Write(TileUnknown2);
                 writer.Write(TileFrameLength);
-
-                if (Tiles.Count != TileCount)
-                    writer.Warnings.Add(new GMWarning("Amount of tiles != TileCount", GMWarning.WarningLevel.Severe));
-                else if (Tiles[0].Count != TileFrames)
-                    writer.Warnings.Add(new GMWarning("Amount of frames in tiles != TileFrames", GMWarning.WarningLevel.Severe));
 
                 for (int i = 0; i < Tiles.Count; i++)
                 {
@@ -80,17 +73,17 @@ namespace DogScepterLib.Core.Models
                 TileOutputBorderX = reader.ReadUInt32();
                 TileOutputBorderY = reader.ReadUInt32();
                 TileColumns = reader.ReadUInt32();
-                TileFrames = reader.ReadUInt32();
-                TileCount = reader.ReadUInt32();
+                uint tileFrameCount = reader.ReadUInt32();
+                uint tileCount = reader.ReadUInt32();
                 TileUnknown2 = reader.ReadUInt32();
                 TileFrameLength = reader.ReadInt64();
 
-                Tiles = new List<List<uint>>((int)TileCount);
-                for (int i = 0; i < TileCount; i++)
+                Tiles = new List<List<uint>>((int)tileCount);
+                for (int i = 0; i < tileCount; i++)
                 {
-                    List<uint> tileFrames = new List<uint>((int)TileFrames);
+                    List<uint> tileFrames = new List<uint>((int)tileFrameCount);
                     Tiles.Add(tileFrames);
-                    for (int j = 0; j < TileFrames; j++)
+                    for (int j = 0; j < tileFrameCount; j++)
                     {
                         tileFrames.Add(reader.ReadUInt32());
                     }
