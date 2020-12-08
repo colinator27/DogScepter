@@ -16,14 +16,14 @@ namespace DogScepterTest
             {
                 GMDataReader reader = new GMDataReader(fs);
                 foreach (GMWarning w in reader.Warnings)
-                    Console.WriteLine("WARN: " + w.Message);
+                    Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
                 using (FileStream fs2 = new FileStream("out.win", FileMode.Create))
                 {
                     using (GMDataWriter writer = new GMDataWriter(reader.Data, fs2, reader.Length))
                     {
                         writer.Flush();
                         foreach (GMWarning w in writer.Warnings)
-                            Console.WriteLine("WARN: " + w.Message);
+                            Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
                     }
                 }
             }

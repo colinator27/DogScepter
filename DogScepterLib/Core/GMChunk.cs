@@ -43,6 +43,7 @@ namespace DogScepterLib.Core
             { "AUDO", typeof(GMChunkAUDO) },
             { "SOND", typeof(GMChunkSOND) },
             { "BGND", typeof(GMChunkBGND) },
+            { "PATH", typeof(GMChunkPATH) },
         };
 
         public override void Serialize(GMDataWriter writer)
