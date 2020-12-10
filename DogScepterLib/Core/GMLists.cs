@@ -11,7 +11,7 @@ namespace DogScepterLib.Core
 
     // Callbacks for reading/writing each element, in special scenarios
     public delegate void ListSerializeElement(GMDataWriter writer, GMSerializable elem);
-    public delegate GMSerializable ListUnserializeElement(GMDataReader reader);
+    public delegate GMSerializable ListUnserializeElement(GMDataReader reader, bool last);
 
     /// <summary>
     /// Basic array-like list type in data file
@@ -60,7 +60,7 @@ namespace DogScepterLib.Core
                     elem.Unserialize(reader);
                 }
                 else
-                    elem = (T)elemReader(reader);
+                    elem = (T)elemReader(reader, (i + 1 != count));
                 Add(elem);
 
                 after?.Invoke(reader);
@@ -139,11 +139,11 @@ namespace DogScepterLib.Core
                 T elem;
                 if (elemReader == null)
                 {
-                    elem = reader.ReadPointerObject<T>(reader.ReadInt32(), before, after);
+                    elem = reader.ReadPointerObject<T>(reader.ReadInt32(), before, after, (i + 1 != count));
                 } else
                 {
                     before?.Invoke(reader);
-                    elem = (T)elemReader(reader);
+                    elem = (T)elemReader(reader, (i + 1 != count));
                     after?.Invoke(reader);
                 }
                 Add(elem);

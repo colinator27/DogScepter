@@ -44,6 +44,10 @@ namespace DogScepterLib.Core
             { "SOND", typeof(GMChunkSOND) },
             { "BGND", typeof(GMChunkBGND) },
             { "PATH", typeof(GMChunkPATH) },
+            { "EMBI", typeof(GMChunkEMBI) },
+            { "DAFL", typeof(GMChunkDAFL) },
+            { "TGIN", typeof(GMChunkTGIN) },
+            { "FONT", typeof(GMChunkFONT) },
         };
 
         public override void Serialize(GMDataWriter writer)
