@@ -8,7 +8,8 @@ namespace DogScepterLib.Core.Models
     {
         public GMString Name;
         public GMString DisplayName;
-        public int Size;
+        public int Size; // In 2.3(?), this seems to be a float instead (below value)
+        public float SizeFloat;
         public bool Bold;
         public bool Italic;
         public ushort RangeStart;
@@ -24,6 +25,8 @@ namespace DogScepterLib.Core.Models
         {
             writer.WritePointerString(Name);
             writer.WritePointerString(DisplayName);
+            if (Size < 0)
+                Size = BitConverter.ToInt32(BitConverter.GetBytes(-SizeFloat));
             writer.Write(Size);
             writer.WriteWideBoolean(Bold);
             writer.WriteWideBoolean(Italic);
@@ -44,6 +47,11 @@ namespace DogScepterLib.Core.Models
             Name = reader.ReadStringPointerObject();
             DisplayName = reader.ReadStringPointerObject();
             Size = reader.ReadInt32();
+            if (Size < 0)
+            {
+                reader.Offset -= 4;
+                SizeFloat = -reader.ReadSingle();
+            }
             Bold = reader.ReadWideBoolean();
             Italic = reader.ReadWideBoolean();
             RangeStart = reader.ReadUInt16();
