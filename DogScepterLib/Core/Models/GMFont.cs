@@ -25,8 +25,8 @@ namespace DogScepterLib.Core.Models
             writer.WritePointerString(Name);
             writer.WritePointerString(DisplayName);
             writer.Write(Size);
-            writer.Write(Bold);
-            writer.Write(Italic);
+            writer.WriteWideBoolean(Bold);
+            writer.WriteWideBoolean(Italic);
             writer.Write(RangeStart);
             writer.Write(Charset);
             writer.Write(AntiAlias);
