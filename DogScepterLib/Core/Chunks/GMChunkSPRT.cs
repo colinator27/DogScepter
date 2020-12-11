@@ -15,15 +15,7 @@ namespace DogScepterLib.Core.Chunks
 
             List.Serialize(writer, (writer, i, count) =>
             {
-                while ((writer.Offset & 3) != 0)
-                    writer.Offset++;
-            }, (writer, i, count) => 
-            { 
-                if (i + 1 != count)
-                {
-                    while ((writer.Offset & 3) != 0)
-                        writer.Offset++;
-                }
+                writer.Pad(4);
             });
         }
 

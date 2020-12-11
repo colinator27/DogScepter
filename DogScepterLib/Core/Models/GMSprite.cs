@@ -22,14 +22,35 @@ namespace DogScepterLib.Core.Models
         public int OriginY;
         public bool SpecialOrGMS2 = false;
 
+        public SpriteType S_SpriteType;
+        public byte[] S_Buffer;
+
+        public float GMS2_PlaybackSpeed;
+        public AnimSpeedType GMS2_PlaybackSpeedType;
+
+        public SequenceReference GMS2_3_Sequence;
+
         public GMRemotePointerList<GMTextureItem> TextureItems;
         public List<byte[]> CollisionMasks;
 
-        public enum SepMaskType
+        public enum SepMaskType : int
         {
             AxisAlignedRect = 0,
             Precise = 1,
             RotatedRect = 2
+        }
+
+        public enum SpriteType : int
+        {
+            Normal = 0,
+            SWF = 1,
+            Spine = 2
+        }
+
+        public enum AnimSpeedType : int
+        {
+            FramesPerSecond = 0,
+            FramesPerGameFrame = 1
         }
 
         public void Serialize(GMDataWriter writer)
@@ -51,10 +72,44 @@ namespace DogScepterLib.Core.Models
 
             if (SpecialOrGMS2)
             {
-                // TODO
-            }
-            else
+                // Special/GMS2 sprite type
+                writer.Write(-1);
+                writer.Write(GMS2_3_Sequence == null ? 1 : 2);
+                writer.Write((int)S_SpriteType);
+                if (writer.VersionInfo.IsNumberAtLeast(2))
+                {
+                    writer.Write(GMS2_PlaybackSpeed);
+                    writer.Write((int)GMS2_PlaybackSpeedType);
+                    if (GMS2_3_Sequence != null)
+                        writer.WritePointer(GMS2_3_Sequence);
+                }
+
+                switch (S_SpriteType)
+                {
+                    case SpriteType.Normal:
+                        TextureItems.Serialize(writer);
+                        WriteMaskData(writer);
+                        break;
+                    case SpriteType.SWF:
+                        writer.Write(8);
+                        TextureItems.Serialize(writer);
+                        writer.Pad(4);
+                        writer.Write(S_Buffer);
+                        break;
+                    case SpriteType.Spine:
+                        writer.Pad(4);
+                        writer.Write(S_Buffer);
+                        break;
+                }
+
+                if (GMS2_3_Sequence != null)
+                {
+                    writer.WriteObjectPointer(GMS2_3_Sequence);
+                    GMS2_3_Sequence.Serialize(writer);
+                }
+            } else
             {
+                // Normal sprite type
                 TextureItems.Serialize(writer);
                 WriteMaskData(writer);
             }
@@ -83,6 +138,70 @@ namespace DogScepterLib.Core.Models
                 // Special/GMS2 sprite type
                 SpecialOrGMS2 = true;
 
+                int version = reader.ReadInt32();
+                S_SpriteType = (SpriteType)reader.ReadInt32();
+                if (reader.VersionInfo.IsNumberAtLeast(2))
+                {
+                    GMS2_PlaybackSpeed = reader.ReadSingle();
+                    GMS2_PlaybackSpeedType = (AnimSpeedType)reader.ReadInt32();
+                    if (version >= 2)
+                        GMS2_3_Sequence = reader.ReadPointerObject<SequenceReference>();
+                }
+
+                switch (S_SpriteType)
+                {
+                    case SpriteType.Normal:
+                        TextureItems.Unserialize(reader);
+                        ParseMaskData(reader);
+                        break;
+                    case SpriteType.SWF:
+                        {
+                            if (reader.ReadInt32() != 8)
+                                reader.Warnings.Add(new GMWarning("SWF format not correct"));
+                            TextureItems.Unserialize(reader);
+
+                            // Parse the actual data
+                            reader.Pad(4);
+                            int begin = reader.Offset;
+                            int jpegTablesLength = (reader.ReadInt32() & ~int.MinValue);
+                            if (reader.ReadInt32() != 8)
+                                reader.Warnings.Add(new GMWarning("SWF format not correct"));
+                            reader.Offset += jpegTablesLength;
+                            reader.Pad(4);
+                            reader.Offset += (reader.ReadInt32() * 8) + 4;
+                            int frameCount = reader.ReadInt32();
+                            reader.Offset += 16;
+                            int maskCount = reader.ReadInt32();
+                            reader.Offset += 8;
+                            for (int i = 0; i < frameCount; i++)
+                                reader.Offset += (reader.ReadInt32() * 100) + 16;
+                            for (int i = 0; i < maskCount; i++)
+                            {
+                                reader.Offset += reader.ReadInt32();
+                                reader.Pad(4);
+                            }
+                            int swfDataLength = reader.Offset - begin;
+                            reader.Offset = begin;
+                            S_Buffer = reader.ReadBytes(swfDataLength);
+                        }
+                        break;
+                    case SpriteType.Spine:
+                        {
+                            reader.Pad(4);
+
+                            int begin = reader.Offset;
+                            reader.ReadUInt32(); // version number
+                            int jsonLength = reader.ReadInt32();
+                            int atlasLength = reader.ReadInt32();
+                            int textureLength = reader.ReadInt32();
+                            reader.ReadUInt32(); // atlas tex width
+                            reader.ReadUInt32(); // atlas tex height
+                            reader.Offset = begin;
+
+                            S_Buffer = reader.ReadBytes((int)(24 + jsonLength + atlasLength + textureLength));
+                        }
+                        break;
+                }
             } else
             {
                 // Normal, GM:S 1.4 sprite
@@ -134,6 +253,25 @@ namespace DogScepterLib.Core.Models
             int totalBytes = ((totalBits + 31) / 32 * 32) / 8;
             if (total != totalBytes)
                 writer.Warnings.Add(new GMWarning("Unexpected sprite mask length!"));
+        }
+
+        public class SequenceReference : GMSerializable
+        {
+            public GMSequence Sequence;
+
+            public void Serialize(GMDataWriter writer)
+            {
+                writer.Write(1);
+                Sequence.Serialize(writer);
+            }
+
+            public void Unserialize(GMDataReader reader)
+            {
+                if (reader.ReadInt32() != 1)
+                    reader.Warnings.Add(new GMWarning("Unexpected version for sequence reference in sprite"));
+                Sequence = new GMSequence();
+                Sequence.Unserialize(reader);
+            }
         }
     }
 }
