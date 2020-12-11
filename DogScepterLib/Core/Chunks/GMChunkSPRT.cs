@@ -5,9 +5,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Chunks
 {
-    public class GMChunkAUDO : GMChunk
+    public class GMChunkSPRT : GMChunk
     {
-        public GMPointerList<GMAudio> List;
+        public GMPointerList<GMSprite> List;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -15,8 +15,15 @@ namespace DogScepterLib.Core.Chunks
 
             List.Serialize(writer, (writer, i, count) =>
             {
-                // Align each entry to 4 bytes
-                writer.Pad(4);
+                while ((writer.Offset & 3) != 0)
+                    writer.Offset++;
+            }, (writer, i, count) => 
+            { 
+                if (i + 1 != count)
+                {
+                    while ((writer.Offset & 3) != 0)
+                        writer.Offset++;
+                }
             });
         }
 
@@ -24,7 +31,7 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
-            List = new GMPointerList<GMAudio>();
+            List = new GMPointerList<GMSprite>();
             List.Unserialize(reader);
         }
     }

@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkFONT : GMChunk
     {
-        public GMPointerList<GMFont> List = new GMPointerList<GMFont>();
+        public GMPointerList<GMFont> List;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -26,6 +26,7 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
+            List = new GMPointerList<GMFont>();
             List.Unserialize(reader);
 
             // Whatever this is

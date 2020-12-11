@@ -13,7 +13,7 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Serialize(writer);
 
-            List.Serialize(writer, (writer) =>
+            List.Serialize(writer, (writer, i, count) =>
             {
                 // Align to 4 byte offsets if necessary
                 if (writer.VersionInfo.AlignStringsTo4)
@@ -28,7 +28,7 @@ namespace DogScepterLib.Core.Chunks
             base.Unserialize(reader);
 
             List = new GMPointerList<GMString>();
-            List.Unserialize(reader, (reader) => 
+            List.Unserialize(reader, (reader, i, count) => 
             {
                 // Check if strings are aligned to 4 byte offsets
                 reader.VersionInfo.AlignStringsTo4 &= (reader.Offset % 4 == 0);

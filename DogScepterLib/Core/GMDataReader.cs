@@ -81,7 +81,7 @@ namespace DogScepterLib.Core
         /// Follows the specified pointer for an object type, unserializes it and returns it
         /// Also has helper callbacks for list reading
         /// </summary>
-        public T ReadPointerObject<T>(int ptr, ListUnserialize before, ListUnserialize after, bool returnAfter = true) where T : GMSerializable, new()
+        public T ReadPointerObject<T>(int ptr, bool returnAfter = true) where T : GMSerializable, new()
         {
             if (ptr == 0)
                 return default(T);
@@ -98,9 +98,7 @@ namespace DogScepterLib.Core
             int returnTo = Offset;
             Offset = ptr;
 
-            before?.Invoke(this);
             res.Unserialize(this);
-            after?.Invoke(this);
 
             if (returnAfter)
                 Offset = returnTo;
