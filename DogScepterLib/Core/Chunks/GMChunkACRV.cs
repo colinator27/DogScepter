@@ -12,6 +12,7 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Serialize(writer);
 
+            writer.Write(1);
             List.Serialize(writer);
         }
 
