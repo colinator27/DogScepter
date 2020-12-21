@@ -50,6 +50,7 @@ namespace DogScepterLib.Core
             { "FONT", typeof(GMChunkFONT) },
             { "SPRT", typeof(GMChunkSPRT) },
             { "ACRV", typeof(GMChunkACRV) },
+            { "FUNC", typeof(GMChunkFUNC) },
         };
 
         public override void Serialize(GMDataWriter writer)
