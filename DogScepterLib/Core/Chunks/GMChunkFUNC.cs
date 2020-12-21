@@ -39,7 +39,11 @@ namespace DogScepterLib.Core.Chunks
             {
                 int startOff = reader.Offset;
                 while (reader.Offset + 12 <= startOff + Length)
-                    FunctionEntries.Add(reader.ReadPointerObject<GMFunctionEntry>());
+                {
+                    GMFunctionEntry entry = new GMFunctionEntry();
+                    entry.Unserialize(reader);
+                    FunctionEntries.Add(entry);
+                }
             }
             else
             {
