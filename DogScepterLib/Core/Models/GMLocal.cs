@@ -4,7 +4,7 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
-    public class GMCodeLocals : GMSerializable
+    public class GMLocalsEntry : GMSerializable
     {
         public GMString Name;
         public List<GMLocal> Entries;

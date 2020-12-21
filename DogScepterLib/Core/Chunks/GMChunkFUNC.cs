@@ -8,7 +8,7 @@ namespace DogScepterLib.Core.Chunks
     class GMChunkFUNC : GMChunk
     {
         public GMList<GMFunctionEntry> FunctionEntries;
-        public GMList<GMCodeLocals> Locals;
+        public GMList<GMLocalsEntry> Locals;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -33,7 +33,7 @@ namespace DogScepterLib.Core.Chunks
             base.Unserialize(reader);
 
             FunctionEntries = new GMList<GMFunctionEntry>();
-            Locals = new GMList<GMCodeLocals>();
+            Locals = new GMList<GMLocalsEntry>();
 
             if (reader.VersionInfo.FormatID <= 14)
             {
