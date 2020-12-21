@@ -8,6 +8,7 @@ namespace DogScepterLib.Core.Models
     {
         public GMString Name;
         public List<GMLocal> Entries;
+
         public void Serialize(GMDataWriter writer)
         {
             writer.Write(Entries.Count);
@@ -38,6 +39,7 @@ namespace DogScepterLib.Core.Models
     {
         public uint Index;
         public GMString Name;
+
         public void Serialize(GMDataWriter writer)
         {
             writer.Write(Index);

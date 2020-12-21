@@ -8,14 +8,14 @@ namespace DogScepterLib.Core.Models
     {
         public GMString Name;
         public int StringIndex; // Index of the string in the STRG chunk, appears to be unused(?)
-        public uint Occurances;
+        public uint Occurrences;
         public uint FirstAddress; // TODO: Should be a bytecode instruction
 
         public void Serialize(GMDataWriter writer)
         {
             writer.WritePointerString(Name);
-            writer.Write(Occurances);
-            if (Occurances > 0)
+            writer.Write(Occurrences);
+            if (Occurrences > 0)
             {
                 if (writer.VersionInfo.IsNumberAtLeast(2, 3))
                 {
@@ -33,8 +33,8 @@ namespace DogScepterLib.Core.Models
         public void Unserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
-            Occurances = reader.ReadUInt32();
-            if (Occurances > 0)
+            Occurrences = reader.ReadUInt32();
+            if (Occurrences > 0)
             {
                 if (reader.VersionInfo.IsNumberAtLeast(2, 3))
                 {
