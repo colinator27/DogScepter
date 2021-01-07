@@ -52,6 +52,7 @@ namespace DogScepterLib.Core
             { "ACRV", typeof(GMChunkACRV) },
             { "FUNC", typeof(GMChunkFUNC) },
             { "VARI", typeof(GMChunkVARI) },
+            { "GLOB", typeof(GMChunkGLOB) },
         };
 
         public override void Serialize(GMDataWriter writer)
