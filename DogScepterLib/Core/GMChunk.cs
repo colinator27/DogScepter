@@ -52,6 +52,11 @@ namespace DogScepterLib.Core
             { "ACRV", typeof(GMChunkACRV) },
             { "FUNC", typeof(GMChunkFUNC) },
             { "VARI", typeof(GMChunkVARI) },
+            { "SCPT", typeof(GMChunkSCPT) },
+            { "TAGS", typeof(GMChunkTAGS) },
+            { "ROOM", typeof(GMChunkROOM) },
+            { "OBJT", typeof(GMChunkOBJT) },
+            { "TMLN", typeof(GMChunkTMLN) },
             { "GLOB", typeof(GMChunkGLOB) },
         };
 
