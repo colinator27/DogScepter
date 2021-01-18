@@ -57,6 +57,7 @@ namespace DogScepterLib.Core
             { "ROOM", typeof(GMChunkROOM) },
             { "OBJT", typeof(GMChunkOBJT) },
             { "TMLN", typeof(GMChunkTMLN) },
+            { "GLOB", typeof(GMChunkGLOB) },
         };
 
         public override void Serialize(GMDataWriter writer)
