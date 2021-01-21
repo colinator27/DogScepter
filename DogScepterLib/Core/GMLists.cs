@@ -11,7 +11,7 @@ namespace DogScepterLib.Core
 
     // Callbacks for reading/writing each element, in special scenarios
     public delegate void ListSerializeElement(GMDataWriter writer, GMSerializable elem);
-    public delegate GMSerializable ListUnserializeElement(GMDataReader reader, bool last);
+    public delegate GMSerializable ListUnserializeElement(GMDataReader reader, bool notLast);
 
     /// <summary>
     /// Basic array-like list type in data file

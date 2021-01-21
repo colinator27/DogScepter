@@ -14,12 +14,14 @@ namespace DogScepterLib.Core
         public List<GMWarning> Warnings;
 
         public Dictionary<int, GMSerializable> PointerOffsets;
+        public Dictionary<int, GMCode.Bytecode.Instruction> Instructions;
 
         public GMDataReader(Stream stream) : base(stream)
         {
             Data = new GMData();
             Warnings = new List<GMWarning>();
             PointerOffsets = new Dictionary<int, GMSerializable>();
+            Instructions = new Dictionary<int, GMCode.Bytecode.Instruction>();
 
             // Parse the root chunk of the file, FORM
             if (ReadChars(4) != "FORM")
