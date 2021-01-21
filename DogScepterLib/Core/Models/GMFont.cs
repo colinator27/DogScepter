@@ -72,7 +72,7 @@ namespace DogScepterLib.Core.Models
 
         public override string ToString()
         {
-            return $"Font: {Name.Content}";
+            return $"Font: \"{Name.Content}\"";
         }
     }
 
