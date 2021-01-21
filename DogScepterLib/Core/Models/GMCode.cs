@@ -5,6 +5,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a single code entry, which could be of an object's event, a timeline's step, a script, or a function (in 2.3)
+    /// </summary>
     public class GMCode : GMSerializable
     {
         public GMString Name;
@@ -68,6 +71,14 @@ namespace DogScepterLib.Core.Models
             }
         }
 
+        public override string ToString()
+        {
+            return $"Code: \"{Name.Content}\"";
+        }
+
+        /// <summary>
+        /// A sequence of GameMaker instructions.
+        /// </summary>
         public class Bytecode : GMSerializable
         {
             public List<Instruction> Instructions = new List<Instruction>();
@@ -95,6 +106,9 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
+            /// <summary>
+            /// A single GameMaker instruction.
+            /// </summary>
             public class Instruction : GMSerializable
             {
                 public class Reference<T> : GMSerializable
@@ -646,6 +660,11 @@ namespace DogScepterLib.Core.Models
                         default:
                             throw new Exception("Unknown opcode " + Kind.ToString());
                     }
+                }
+
+                public override string ToString()
+                {
+                    return $"Instruction: \"{Kind}\"";
                 }
             }
         }
