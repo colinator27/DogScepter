@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a GameMaker sprite.
+    /// </summary>
     public class GMSprite : GMSerializable
     {
         public GMString Name;
@@ -255,6 +258,11 @@ namespace DogScepterLib.Core.Models
                 writer.Warnings.Add(new GMWarning("Unexpected sprite mask length!"));
         }
 
+        public override string ToString()
+        {
+            return $"Sprite: \"{Name.Content}\"";
+        }
+
         public class SequenceReference : GMSerializable
         {
             public GMSequence Sequence;
@@ -271,6 +279,11 @@ namespace DogScepterLib.Core.Models
                     reader.Warnings.Add(new GMWarning("Unexpected version for sequence reference in sprite"));
                 Sequence = new GMSequence();
                 Sequence.Unserialize(reader);
+            }
+
+            public override string ToString()
+            {
+                return Sequence.ToString();
             }
         }
     }

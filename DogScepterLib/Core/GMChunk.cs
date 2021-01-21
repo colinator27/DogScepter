@@ -25,6 +25,9 @@ namespace DogScepterLib.Core
         }
     }
 
+    /// <summary>
+    /// The chunk that contains all other chunks.
+    /// </summary>
     public class GMChunkFORM : GMChunk
     {
         public List<string> ChunkNames;

@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a GameMaker extension.
+    /// </summary>
     public class GMExtension : GMSerializable
     {
         public GMString EmptyString;
@@ -46,6 +49,11 @@ namespace DogScepterLib.Core.Models
             Files.Unserialize(reader);
         }
 
+        public override string ToString()
+        {
+            return $"Extension: \"{Name.Content}\"";
+        }
+
         public class ExtensionFile : GMSerializable
         {
             public GMString Filename;
@@ -71,6 +79,11 @@ namespace DogScepterLib.Core.Models
                 Kind = (ExtensionKind)reader.ReadUInt32();
                 Functions = new GMPointerList<ExtensionFunction>();
                 Functions.Unserialize(reader);
+            }
+
+            public override string ToString()
+            {
+                return $"Extension File: \"{Filename.Content}\"";
             }
         }
 
@@ -108,6 +121,11 @@ namespace DogScepterLib.Core.Models
                 int count = reader.ReadInt32();
                 for (int i = 0; i < count; i++)
                     ArgumentTypes.Add((ExtensionValueType)reader.ReadUInt32());
+            }
+
+            public override string ToString()
+            {
+                return $"Extension Function: \"{Name.Content}\"";
             }
         }
     }

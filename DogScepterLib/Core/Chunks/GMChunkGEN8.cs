@@ -5,6 +5,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Chunks
 {
+    /// <summary>
+    /// Contains metadata about the GameMaker game.
+    /// </summary>
     public class GMChunkGEN8 : GMChunk
     {
         [Flags]

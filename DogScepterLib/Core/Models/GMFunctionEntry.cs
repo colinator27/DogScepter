@@ -1,10 +1,14 @@
 ﻿using DogScepterLib.Core.Chunks;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains information about a GameMaker function.
+    /// </summary>
     public class GMFunctionEntry : GMSerializable
     {
         public GMString Name;
@@ -81,5 +85,11 @@ namespace DogScepterLib.Core.Models
                     reader.Warnings.Add(new GMWarning("Function with no occurrences, but still has a first occurrence address"));
             }
         }
+
+        public override string ToString()
+        {
+            return $"Function: \"{Name.Content}\"";
+        }
+
     }
 }

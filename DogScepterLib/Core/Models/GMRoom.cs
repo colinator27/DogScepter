@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a GameMaker room.
+    /// </summary>
     public class GMRoom : GMSerializable
     {
         [Flags]
@@ -162,6 +165,14 @@ namespace DogScepterLib.Core.Models
             GameObjects.Unserialize(reader);
         }
 
+        public override string ToString()
+        {
+            return $"Room: \"{Name.Content}\"";
+        }
+
+        /// <summary>
+        /// Contains information about a background in a room.
+        /// </summary>
         public class Background : GMSerializable
         {
             public bool Enabled;
@@ -195,6 +206,9 @@ namespace DogScepterLib.Core.Models
             }
         }
 
+        /// <summary>
+        /// Contains information about a view in a room.
+        /// </summary>
         public class View : GMSerializable
         {
             public bool Enabled;
@@ -229,6 +243,9 @@ namespace DogScepterLib.Core.Models
             }
         }
 
+        /// <summary>
+        /// Contains information about an object in a room.
+        /// </summary>
         public class GameObject : GMSerializable
         {
             public int X, Y;
@@ -283,6 +300,9 @@ namespace DogScepterLib.Core.Models
             }
         }
 
+        /// <summary>
+        /// Contains information about a tile in a room.
+        /// </summary>
         public class Tile : GMSerializable
         {
             public int X, Y;
@@ -319,6 +339,9 @@ namespace DogScepterLib.Core.Models
             }
         }
 
+        /// <summary>
+        /// Contains information about a layer in a room.
+        /// </summary>
         public class Layer : GMSerializable
         {
             public enum LayerKind : int
@@ -403,6 +426,11 @@ namespace DogScepterLib.Core.Models
                         reader.Warnings.Add(new GMWarning($"Unknown layer kind {Kind}"));
                         break;
                 }
+            }
+
+            public override string ToString()
+            {
+                return Name.Content;
             }
 
             public class LayerBackground : GMSerializable
@@ -547,6 +575,11 @@ namespace DogScepterLib.Core.Models
                     AnimationSpeedType = (GMSprite.AnimSpeedType)reader.ReadInt32();
                     FrameIndex = reader.ReadSingle();
                     Rotation = reader.ReadSingle();
+                }
+
+                public override string ToString()
+                {
+                    return Name.Content;
                 }
             }
 

@@ -5,6 +5,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains information about a GameMaker variable.
+    /// </summary>
     public class GMVariable : GMSerializable
     {
         public GMString Name;
@@ -81,6 +84,11 @@ namespace DogScepterLib.Core.Models
                 if (reader.ReadInt32() != -1)
                     reader.Warnings.Add(new GMWarning("Variable with no occurrences, but still has a first occurrence address"));
             }
+        }
+
+        public override string ToString()
+        {
+            return $"Variable: \"{Name.Content}\"";
         }
     }
 }

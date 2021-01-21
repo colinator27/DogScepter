@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains binary audio data.
+    /// </summary>
     public class GMAudio : GMSerializable
     {
         public byte[] Data;

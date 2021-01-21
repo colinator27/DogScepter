@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a GameMaker script.
+    /// </summary>
     public class GMScript : GMSerializable
     {
         public GMString Name;
@@ -29,6 +32,11 @@ namespace DogScepterLib.Core.Models
                 Constructor = true;
                 CodeID = (int)((uint)CodeID & 2147483647u);
             }
+        }
+
+        public override string ToString()
+        {
+            return $"Script: \"{Name.Content}\"";
         }
     }
 }

@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a GameMaker shader.
+    /// </summary>
     public class GMShader : GMSerializable
     {
         public GMString Name;
@@ -199,6 +202,14 @@ namespace DogScepterLib.Core.Models
             reader.Offset = returnTo;
         }
 
+        public override string ToString()
+        {
+            return $"Shader: \"{Name.Content}\"";
+        }
+
+        /// <summary>
+        /// Contains compiled shader data.
+        /// </summary>
         public class ShaderBuffer : GMSerializable
         {
             public byte[] Buffer;

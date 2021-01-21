@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a GameMaker font.
+    /// </summary>
     public class GMFont : GMSerializable
     {
         public GMString Name;
@@ -65,6 +68,11 @@ namespace DogScepterLib.Core.Models
                 AscenderOffset = reader.ReadInt32();
             Glyphs = new GMPointerList<GMGlyph>();
             Glyphs.Unserialize(reader);
+        }
+
+        public override string ToString()
+        {
+            return $"Font: {Name.Content}";
         }
     }
 

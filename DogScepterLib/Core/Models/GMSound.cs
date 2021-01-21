@@ -5,6 +5,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a GameMaker sound file.
+    /// </summary>
     public class GMSound : GMSerializable
     {
         [Flags]
@@ -49,6 +52,11 @@ namespace DogScepterLib.Core.Models
             Pitch = reader.ReadSingle();
             GroupID = reader.ReadInt32();
             AudioID = reader.ReadInt32();
+        }
+
+        public override string ToString()
+        {
+            return $"Sound: \"{Name.Content}\"";
         }
     }
 }

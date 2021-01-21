@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core
 {
+    /// <summary>
+    /// A GameMaker resource that can be read and written.
+    /// </summary>
     public interface GMSerializable
     {
         void Serialize(GMDataWriter writer);
