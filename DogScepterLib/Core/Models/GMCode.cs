@@ -334,19 +334,29 @@ namespace DogScepterLib.Core.Models
                 {
                     if (Variable != null)
                     {
-                        List<int> l;
-                        if (writer.VariableReferences.TryGetValue(Variable.Target, out l))
-                            l.Add(writer.Offset);
+                        if (Variable.Target != null)
+                        {
+                            List<int> l;
+                            if (writer.VariableReferences.TryGetValue(Variable.Target, out l))
+                                l.Add(writer.Offset);
+                            else
+                                writer.VariableReferences.Add(Variable.Target, new List<int> { writer.Offset });
+                        }
                         else
-                            writer.VariableReferences.Add(Variable.Target, new List<int> { writer.Offset });
+                            writer.Warnings.Add(new GMWarning($"Missing variable target at {writer.Offset}"));
                     }
                     else if (Function != null)
                     {
-                        List<int> l;
-                        if (writer.FunctionReferences.TryGetValue(Function.Target, out l))
-                            l.Add(writer.Offset);
+                        if (Function.Target != null)
+                        {
+                            List<int> l;
+                            if (writer.FunctionReferences.TryGetValue(Function.Target, out l))
+                                l.Add(writer.Offset);
+                            else
+                                writer.FunctionReferences.Add(Function.Target, new List<int> { writer.Offset });
+                        }
                         else
-                            writer.FunctionReferences.Add(Function.Target, new List<int> { writer.Offset });
+                            writer.Warnings.Add(new GMWarning($"Missing function target at {writer.Offset}"));
                     }
 
                     switch (GetInstructionType(Kind))
