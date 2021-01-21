@@ -20,6 +20,8 @@ namespace DogScepterLib.Core
 
             public bool RoomObjectPreCreate = false;
 
+            public bool DifferentVarCounts = false;
+
             /// <summary>
             /// Sets the major/minor/release/build version, only if higher
             /// </summary>

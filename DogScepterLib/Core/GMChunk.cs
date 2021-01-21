@@ -62,6 +62,7 @@ namespace DogScepterLib.Core
             { "TMLN", typeof(GMChunkTMLN) },
             { "GLOB", typeof(GMChunkGLOB) },
             { "SHDR", typeof(GMChunkSHDR) },
+            { "CODE", typeof(GMChunkCODE) },
         };
 
         public override void Serialize(GMDataWriter writer)
@@ -123,6 +124,9 @@ namespace DogScepterLib.Core
             for (int i = 0; i < ChunkNames.Count; i++)
             {
                 reader.Offset = ChunkOffsets[i];
+#if DEBUG
+                Console.WriteLine("Reading " + ChunkNames[i] + " at " + reader.Offset.ToString());
+#endif
 
                 Type type;
                 if (!ChunkMap.TryGetValue(ChunkNames[i], out type))
@@ -136,8 +140,8 @@ namespace DogScepterLib.Core
                 // Actually parse the chunk, starting at its length
                 reader.Offset += 4;
                 GMChunk chunk = (GMChunk)Activator.CreateInstance(type);
-                chunk.Unserialize(reader);
                 Chunks.Add(ChunkNames[i], chunk);
+                chunk.Unserialize(reader);
             }
         }
     }

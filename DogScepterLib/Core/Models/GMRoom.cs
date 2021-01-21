@@ -52,8 +52,10 @@ namespace DogScepterLib.Core.Models
             writer.WriteWideBoolean(DrawBackgroundColor);
             writer.Write(CreationCodeID);
             int flags = (int)Flags;
-            if (writer.VersionInfo.IsNumberAtLeast(2))
-                flags |= 196608; // Weird thing in GMS2
+            if (writer.VersionInfo.IsNumberAtLeast(2, 3))
+                flags |= 0x60000;
+            else if (writer.VersionInfo.IsNumberAtLeast(2))
+                flags |= 0x20000;
             writer.Write(flags);
             writer.WritePointer(Backgrounds);
             writer.WritePointer(Views);
@@ -113,8 +115,10 @@ namespace DogScepterLib.Core.Models
             DrawBackgroundColor = reader.ReadWideBoolean();
             CreationCodeID = reader.ReadInt32();
             int flags = reader.ReadInt32();
-            if (reader.VersionInfo.IsNumberAtLeast(2))
-                flags &= ~196608; // Weird thing in GMS2
+            if (reader.VersionInfo.IsNumberAtLeast(2, 3))
+                flags &= ~0x60000;
+            else if (reader.VersionInfo.IsNumberAtLeast(2))
+                flags &= ~0x20000;
             Flags = (RoomFlags)flags;
             Backgrounds = reader.ReadPointerObject<GMPointerList<Background>>();
             Views = reader.ReadPointerObject<GMPointerList<View>>();

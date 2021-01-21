@@ -9,8 +9,9 @@ namespace DogScepterLib.Core.Chunks
     {
         public List<GMVariable> List;
 
-        public uint InstanceVarCount;
-        public uint MaxLocalVarCount;
+        public int VarCount1;
+        public int VarCount2;
+        public int MaxLocalVarCount;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -18,14 +19,38 @@ namespace DogScepterLib.Core.Chunks
 
             if (writer.VersionInfo.FormatID > 14)
             {
-                writer.Write(InstanceVarCount);
-                writer.Write(InstanceVarCount);
+                // Count instance/global variables
+                if (writer.VersionInfo.DifferentVarCounts)
+                {
+                    VarCount1 = 0;
+                    VarCount2 = 0;
+                    foreach (GMVariable v in List)
+                    {
+                        if (v.VariableType == GMCode.Bytecode.Instruction.InstanceType.Global)
+                            VarCount1++;
+                        else if (v.VariableID >= 0 && v.VariableType == GMCode.Bytecode.Instruction.InstanceType.Self)
+                            VarCount2++;
+                    }
+                } else
+                {
+                    VarCount1 = 0;
+                    foreach (GMVariable v in List)
+                    {
+                        if (v.VariableType == GMCode.Bytecode.Instruction.InstanceType.Global)
+                            VarCount1++;
+                        else if (v.VariableID >= 0 && v.VariableType == GMCode.Bytecode.Instruction.InstanceType.Self)
+                            VarCount1++;
+                    }
+                    VarCount2 = VarCount1;
+                }
+                writer.Write(VarCount1);
+                writer.Write(VarCount2);
 
                 // Set MaxLocalVarCount to highest amount of locals within all entires
                 MaxLocalVarCount = 0;
                 foreach (GMLocalsEntry item in ((GMChunkFUNC)writer.Data.Chunks["FUNC"]).Locals)
                 {
-                    MaxLocalVarCount = (uint)Math.Max(MaxLocalVarCount, item.Entries.Count);
+                    MaxLocalVarCount = Math.Max(MaxLocalVarCount, item.Entries.Count);
                 }
 
                 writer.Write(MaxLocalVarCount);
@@ -43,9 +68,12 @@ namespace DogScepterLib.Core.Chunks
 
             if (reader.VersionInfo.FormatID > 14)
             {
-                InstanceVarCount = reader.ReadUInt32();
-                reader.Offset += 4;
-                MaxLocalVarCount = reader.ReadUInt32();
+                VarCount1 = reader.ReadInt32();
+                VarCount2 = reader.ReadInt32();
+                MaxLocalVarCount = reader.ReadInt32();
+
+                if (VarCount1 != VarCount2)
+                    reader.VersionInfo.DifferentVarCounts = true;
             }
 
             int varLength = (reader.VersionInfo.FormatID > 14) ? 20 : 12;

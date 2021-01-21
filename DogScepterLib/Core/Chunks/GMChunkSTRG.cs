@@ -28,10 +28,14 @@ namespace DogScepterLib.Core.Chunks
             base.Unserialize(reader);
 
             List = new GMPointerList<GMString>();
-            List.Unserialize(reader, (reader, i, count) => 
+            List.Unserialize(reader, null, null, (GMDataReader reader, bool notLast) => 
             {
+                int ptr = reader.ReadInt32();
+
                 // Check if strings are aligned to 4 byte offsets
-                reader.VersionInfo.AlignStringsTo4 &= (reader.Offset % 4 == 0);
+                reader.VersionInfo.AlignStringsTo4 &= (ptr % 4 == 0);
+
+                return reader.ReadPointerObject<GMString>(ptr, notLast);
             });
         }
     }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DogScepterLib.Core.Chunks;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -7,22 +8,12 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains information about a GameMaker variable.
     /// </summary>
-    class GMVariable : GMSerializable
+    public class GMVariable : GMSerializable
     {
-        public enum VariableTypeEnum : short
-        {
-            Self = -1,
-            Global = -5,
-            NotSpecified = -6,
-            Local = -7,
-            Static = -16
-        }
-
         public GMString Name;
-        public VariableTypeEnum VariableType;
+        public GMCode.Bytecode.Instruction.InstanceType VariableType;
         public int VariableID;
-        public uint Occurrences;
-        public uint FirstAddress; // TODO: Should be a bytecode instruction
+        public int Occurrences;
 
         public void Serialize(GMDataWriter writer)
         {
@@ -33,9 +24,34 @@ namespace DogScepterLib.Core.Models
                 writer.Write((int)VariableType);
                 writer.Write(VariableID);
             }
+
+            List<int> references;
+            if (writer.VariableReferences.TryGetValue(this, out references))
+                Occurrences = references.Count;
+            else
+                Occurrences = 0;
+
             writer.Write(Occurrences);
             if (Occurrences > 0)
-                writer.Write(FirstAddress);
+            {
+                writer.Write(references[0]);
+
+                int returnTo = writer.Offset;
+                for (int i = 0; i < references.Count; i++)
+                {
+                    int curr = references[i];
+
+                    int nextDiff;
+                    if (i < references.Count - 1)
+                        nextDiff = references[i + 1] - curr;
+                    else
+                        nextDiff = ((GMChunkSTRG)writer.Data.Chunks["STRG"]).List.IndexOf(Name);
+
+                    writer.Offset = curr + 4;
+                    writer.WriteInt24(nextDiff);
+                }
+                writer.Offset = returnTo;
+            }
             else
                 writer.Write((int)-1);
         }
@@ -46,19 +62,27 @@ namespace DogScepterLib.Core.Models
 
             if (reader.VersionInfo.FormatID > 14)
             {
-                VariableType = (VariableTypeEnum)reader.ReadInt32();
+                VariableType = (GMCode.Bytecode.Instruction.InstanceType)reader.ReadInt32();
                 VariableID = reader.ReadInt32();
             }
-            Occurrences = reader.ReadUInt32();
+            Occurrences = reader.ReadInt32();
             if (Occurrences > 0)
             {
-                FirstAddress = reader.ReadUInt32();
+                int addr = reader.ReadInt32();
+
+                // Parse reference chain
+                GMCode.Bytecode.Instruction curr;
+                for (int i = Occurrences; i > 0; i--)
+                {
+                    curr = reader.Instructions[addr];
+                    curr.Variable.Target = this;
+                    addr += curr.Variable.NextOccurrence;
+                }
             }
             else
             {
                 if (reader.ReadInt32() != -1)
                     reader.Warnings.Add(new GMWarning("Variable with no occurrences, but still has a first occurrence address"));
-                FirstAddress = 0;
             }
         }
 
