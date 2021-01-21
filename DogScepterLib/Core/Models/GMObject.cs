@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a GameMaker 
+    /// </summary>
     public class GMObject : GMSerializable
     {
         public enum CollisionShape : int
@@ -93,6 +96,11 @@ namespace DogScepterLib.Core.Models
             }
             Events = new GMPointerList<GMPointerList<Event>>();
             Events.Unserialize(reader);
+        }
+
+        public override string ToString()
+        {
+            return $"Object: \"{Name.Content}\"";
         }
 
         public class PhysicsVertex : GMSerializable

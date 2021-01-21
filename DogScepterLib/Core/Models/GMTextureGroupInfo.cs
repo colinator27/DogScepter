@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains metadata about GameMaker texture groups.
+    /// </summary>
     public class GMTextureGroupInfo : GMSerializable
     {
         public GMString Name;
@@ -43,6 +46,11 @@ namespace DogScepterLib.Core.Models
             SpineSpriteIDs = reader.ReadPointerObject<GMList<ResourceID>>();
             FontIDs = reader.ReadPointerObject<GMList<ResourceID>>();
             TilesetIDs = reader.ReadPointerObject<GMList<ResourceID>>();
+        }
+
+        public override string ToString()
+        {
+            return $"Texture Group Info: \"{Name.Content}\"";
         }
 
         public class ResourceID : GMSerializable

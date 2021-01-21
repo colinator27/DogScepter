@@ -5,6 +5,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a GameMaker texture page.
+    /// </summary>
     public class GMTexturePage : GMSerializable
     {
         public uint Scaled;

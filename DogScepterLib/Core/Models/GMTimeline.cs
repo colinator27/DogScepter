@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a GameMaker timeline.
+    /// </summary>
     public class GMTimeline : GMSerializable
     {
         public GMString Name;
@@ -34,6 +37,11 @@ namespace DogScepterLib.Core.Models
                 int time = reader.ReadInt32();
                 Moments.Add((time, reader.ReadPointerObject<GMPointerList<GMObject.Event.Action>>()));
             }
+        }
+
+        public override string ToString()
+        {
+            return $"Timeline: \"{Name.Content}\"";
         }
     }
 }

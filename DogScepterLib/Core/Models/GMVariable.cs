@@ -4,6 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains information about a GameMaker variable.
+    /// </summary>
     class GMVariable : GMSerializable
     {
         public enum VariableTypeEnum : short
@@ -57,6 +60,11 @@ namespace DogScepterLib.Core.Models
                     reader.Warnings.Add(new GMWarning("Variable with no occurrences, but still has a first occurrence address"));
                 FirstAddress = 0;
             }
+        }
+
+        public override string ToString()
+        {
+            return $"Variable: \"{Name.Content}\"";
         }
     }
 }

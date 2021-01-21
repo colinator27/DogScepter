@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains information about a GameMaker function.
+    /// </summary>
     class GMFunctionEntry : GMSerializable
     {
         public GMString Name;
@@ -52,5 +56,11 @@ namespace DogScepterLib.Core.Models
                 FirstAddress = 0;
             }
         }
+
+        public override string ToString()
+        {
+            return $"Function: \"{Name.Content}\"";
+        }
+
     }
 }

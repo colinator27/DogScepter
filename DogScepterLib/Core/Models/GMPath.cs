@@ -5,13 +5,16 @@ using SkiaSharp;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a GameMaker path.
+    /// </summary>
     public class GMPath : GMSerializable
     {
         public GMString Name;
         public bool Smooth;
         public bool Closed;
         public uint Precision;
-        public GMList<GMPathPoint> Points;
+        public GMList<Point> Points;
 
         public void Serialize(GMDataWriter writer)
         {
@@ -28,29 +31,34 @@ namespace DogScepterLib.Core.Models
             Smooth = reader.ReadWideBoolean();
             Closed = reader.ReadWideBoolean();
             Precision = reader.ReadUInt32();
-            Points = new GMList<GMPathPoint>();
+            Points = new GMList<Point>();
             Points.Unserialize(reader);
         }
-    }
 
-    public class GMPathPoint : GMSerializable
-    {
-        public float X;
-        public float Y;
-        public float Speed;
-
-        public void Serialize(GMDataWriter writer)
+        public override string ToString()
         {
-            writer.Write(X);
-            writer.Write(Y);
-            writer.Write(Speed);
+            return $"Path: \"{Name.Content}\"";
         }
 
-        public void Unserialize(GMDataReader reader)
+        public class Point : GMSerializable
         {
-            X = reader.ReadSingle();
-            Y = reader.ReadSingle();
-            Speed = reader.ReadSingle();
+            public float X;
+            public float Y;
+            public float Speed;
+
+            public void Serialize(GMDataWriter writer)
+            {
+                writer.Write(X);
+                writer.Write(Y);
+                writer.Write(Speed);
+            }
+
+            public void Unserialize(GMDataReader reader)
+            {
+                X = reader.ReadSingle();
+                Y = reader.ReadSingle();
+                Speed = reader.ReadSingle();
+            }
         }
     }
 }

@@ -4,6 +4,10 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
+    /// <summary>
+    /// Contains a GameMaker texture item.
+    /// A texture item is the location and size of a single graphic within a texture page.
+    /// </summary>
     public class GMTextureItem : GMSerializable
     {
         /*

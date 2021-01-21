@@ -4,7 +4,9 @@ using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
-
+    /// <summary>
+    /// Contains a tileset since GameMaker Studio 2, contains a background otherwise.
+    /// </summary>
     public class GMBackground : GMSerializable
     {
         public GMString Name;
@@ -90,6 +92,11 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
+        }
+
+        public override string ToString()
+        {
+            return $"Background: \"{Name.Content}\"";
         }
     }
 }
