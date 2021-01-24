@@ -33,14 +33,14 @@ namespace DogScepterLib.Core.Chunks
                     }
                 } else
                 {
-                    VarCount1 = 0;
+                    VarCount1 = -1;
                     foreach (GMVariable v in List)
                     {
-                        if (v.VariableType == GMCode.Bytecode.Instruction.InstanceType.Global)
-                            VarCount1++;
-                        else if (v.VariableID >= 0 && v.VariableType == GMCode.Bytecode.Instruction.InstanceType.Self)
-                            VarCount1++;
+                        if (v.VariableType == GMCode.Bytecode.Instruction.InstanceType.Global || 
+                            v.VariableType == GMCode.Bytecode.Instruction.InstanceType.Self)
+                            VarCount1 = Math.Max(VarCount1, v.VariableID);
                     }
+                    VarCount1 += 1;
                     VarCount2 = VarCount1;
                 }
                 writer.Write(VarCount1);

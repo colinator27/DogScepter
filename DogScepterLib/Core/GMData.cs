@@ -17,6 +17,7 @@ namespace DogScepterLib.Core
 
             public bool AlignChunksTo16 = true;
             public bool AlignStringsTo4 = true;
+            public bool AlignBackgroundsTo8 = true;
 
             public bool RoomObjectPreCreate = false;
 

@@ -70,6 +70,8 @@ namespace DogScepterLib.Core.Models
             if (reader.VersionInfo.Major >= 2)
             {
                 TileUnknown1 = reader.ReadUInt32();
+                if (TileUnknown1 != 2)
+                    reader.Warnings.Add(new GMWarning("Expected 2 in BGND"));
                 TileWidth = reader.ReadUInt32();
                 TileHeight = reader.ReadUInt32();
                 TileOutputBorderX = reader.ReadUInt32();
@@ -78,6 +80,8 @@ namespace DogScepterLib.Core.Models
                 uint tileFrameCount = reader.ReadUInt32();
                 uint tileCount = reader.ReadUInt32();
                 TileUnknown2 = reader.ReadUInt32();
+                if (TileUnknown2 != 0)
+                    reader.Warnings.Add(new GMWarning("Expected 0 in BGND"));
                 TileFrameLength = reader.ReadInt64();
 
                 Tiles = new List<List<uint>>((int)tileCount);
