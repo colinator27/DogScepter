@@ -15,7 +15,7 @@ namespace DogScepterLib.Core.Chunks
 
             List.Serialize(writer, (writer, i, count) =>
             {
-                // Align to 4 byte offsets if necessary
+                // Align to 8 byte offsets if necessary
                 if (writer.VersionInfo.AlignBackgroundsTo8)
                     writer.Pad(8);
             });
@@ -31,7 +31,7 @@ namespace DogScepterLib.Core.Chunks
             {
                 int ptr = reader.ReadInt32();
 
-                // Check if strings are aligned to 4 byte offsets
+                // Check if backgrounds are aligned to 8 byte offsets
                 reader.VersionInfo.AlignBackgroundsTo8 &= (ptr % 8 == 0);
 
                 return reader.ReadPointerObject<GMBackground>(ptr, notLast);
