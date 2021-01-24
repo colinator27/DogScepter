@@ -63,6 +63,7 @@ namespace DogScepterLib.Core
             { "GLOB", typeof(GMChunkGLOB) },
             { "SHDR", typeof(GMChunkSHDR) },
             { "CODE", typeof(GMChunkCODE) },
+            { "SEQN", typeof(GMChunkSEQN) },
         };
 
         public override void Serialize(GMDataWriter writer)
@@ -125,7 +126,7 @@ namespace DogScepterLib.Core
             {
                 reader.Offset = ChunkOffsets[i];
 #if DEBUG
-                Console.WriteLine("Reading " + ChunkNames[i] + " at " + reader.Offset.ToString());
+                Console.WriteLine("Reading " + ChunkNames[i] + " at " + reader.Offset.ToString("X"));
 #endif
 
                 Type type;
