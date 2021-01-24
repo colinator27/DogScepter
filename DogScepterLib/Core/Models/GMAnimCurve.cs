@@ -18,10 +18,16 @@ namespace DogScepterLib.Core.Models
         public GMString Name;
         public GraphTypeEnum GraphType;
         public GMList<Channel> Channels;
-        
+
         public void Serialize(GMDataWriter writer)
         {
-            writer.WritePointerString(Name);
+            Serialize(writer, true);
+        }
+
+        public void Serialize(GMDataWriter writer, bool includeName)
+        {
+            if (includeName)
+                writer.WritePointerString(Name);
             writer.Write((uint)GraphType);
 
             Channels.Serialize(writer);
@@ -29,7 +35,13 @@ namespace DogScepterLib.Core.Models
 
         public void Unserialize(GMDataReader reader)
         {
-            Name = reader.ReadStringPointerObject();
+            Unserialize(reader, true);
+        }
+
+        public void Unserialize(GMDataReader reader, bool includeName)
+        {
+            if (includeName)
+                Name = reader.ReadStringPointerObject();
             GraphType = (GraphTypeEnum)reader.ReadUInt32();
 
             Channels = new GMList<Channel>();
@@ -59,7 +71,7 @@ namespace DogScepterLib.Core.Models
             {
                 writer.WritePointerString(Name);
                 writer.Write((uint)FunctionType);
-                writer.Write(Iterations);
+                writer.Write((uint)Iterations);
 
                 Points.Serialize(writer);
             }

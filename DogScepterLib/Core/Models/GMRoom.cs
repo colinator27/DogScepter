@@ -53,7 +53,7 @@ namespace DogScepterLib.Core.Models
             writer.Write(CreationCodeID);
             int flags = (int)Flags;
             if (writer.VersionInfo.IsNumberAtLeast(2, 3))
-                flags |= 0x60000;
+                flags |= 0x30000;
             else if (writer.VersionInfo.IsNumberAtLeast(2))
                 flags |= 0x20000;
             writer.Write(flags);
@@ -116,7 +116,7 @@ namespace DogScepterLib.Core.Models
             CreationCodeID = reader.ReadInt32();
             int flags = reader.ReadInt32();
             if (reader.VersionInfo.IsNumberAtLeast(2, 3))
-                flags &= ~0x60000;
+                flags &= ~0x30000;
             else if (reader.VersionInfo.IsNumberAtLeast(2))
                 flags &= ~0x20000;
             Flags = (RoomFlags)flags;
