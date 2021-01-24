@@ -16,8 +16,9 @@
 * Planned features include an actual editor, a superior editing mode for modding purposes, and eventually decompilation/compilation (potentially).
 
 ## Roadmap (subject to change)
-- [ ] Stage 1: Core library (work in progress)
+- [x] Stage 1: Core library
     - Fully parse GameMaker IFF data files, store in memory, and be able to serialize them to new files byte-for-byte.
+	- Fully supports format ID 14 (an unknown version of GM:S 1.4) up to the latest GMS 2.3.1 runtime!
 - [ ] Stage 2: Abstraction layer in library
     - [ ] Convert the output of the Core into a project-esque format, where IDs resolve to asset names, strings become unique, textures get split, and so on.
     - [ ] Be able to convert this *back* into the structures of the Core.

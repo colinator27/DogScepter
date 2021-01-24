@@ -13,7 +13,6 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Serialize(writer);
 
-            writer.Pad(4);
             writer.Write((uint)1);
 
             List.Serialize(writer);
@@ -23,7 +22,6 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
-            reader.Pad(4);
             if (reader.ReadUInt32() != 1)
                 reader.Warnings.Add(new GMWarning("Unknown SEQN version, expected 1."));
 
