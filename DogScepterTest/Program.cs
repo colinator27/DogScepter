@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 
 using DogScepterLib.Core;
+using DogScepterLib.Project;
 
 namespace DogScepterTest
 {
@@ -17,7 +18,13 @@ namespace DogScepterTest
                 GMDataReader reader = new GMDataReader(fs);
                 foreach (GMWarning w in reader.Warnings)
                     Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
-                using (FileStream fs2 = new FileStream("out.win", FileMode.Create))
+
+
+                ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "testproj/test.json"));
+                pf.ExportAllPaths();
+                pf.WriteMainFile();
+
+                /*using (FileStream fs2 = new FileStream("out.win", FileMode.Create))
                 {
                     using (GMDataWriter writer = new GMDataWriter(reader.Data, fs2, reader.Length))
                     {
@@ -25,7 +32,7 @@ namespace DogScepterTest
                         foreach (GMWarning w in writer.Warnings)
                             Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
                     }
-                }
+                }*/
             }
             s.Stop();
             Console.WriteLine(string.Format("Took {0} ms, {1} seconds.", s.Elapsed.TotalMilliseconds, Math.Round(s.Elapsed.TotalMilliseconds/1000, 2)));

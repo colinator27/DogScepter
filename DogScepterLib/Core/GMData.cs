@@ -1,4 +1,6 @@
-﻿using System;
+﻿using DogScepterLib.Core.Chunks;
+using DogScepterLib.Core.Models;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -82,5 +84,21 @@ namespace DogScepterLib.Core
         {
             VersionInfo = new GMVersionInfo();
         }
+
+        public GMString DefineString(string content)
+        {
+            var list = (GMChunkSTRG)Chunks["STRG"];
+            foreach (GMString str in list)
+            {
+                if (str.Content == content)
+                    return str;
+            }
+
+            GMString res = new GMString();
+            res.Content = content;
+            list.Add(res);
+            return res;
+        }
+
     }
 }
