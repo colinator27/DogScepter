@@ -87,7 +87,7 @@ namespace DogScepterLib.Core
 
         public GMString DefineString(string content)
         {
-            var list = (GMChunkSTRG)Chunks["STRG"];
+            var list = ((GMChunkSTRG)Chunks["STRG"]).List;
             foreach (GMString str in list)
             {
                 if (str.Content == content)

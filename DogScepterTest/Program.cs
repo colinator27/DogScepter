@@ -20,11 +20,16 @@ namespace DogScepterTest
                     Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
 
 
-                ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "testproj/test.json"));
-                pf.ExportAllPaths();
-                pf.WriteMainFile();
+                ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
+                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project")))
+                    pf.Save();
+                else
+                {
+                    pf.Load();
+                    pf.RebuildData();
+                }
 
-                /*using (FileStream fs2 = new FileStream("out.win", FileMode.Create))
+                using (FileStream fs2 = new FileStream("out.win", FileMode.Create))
                 {
                     using (GMDataWriter writer = new GMDataWriter(reader.Data, fs2, reader.Length))
                     {
@@ -32,7 +37,7 @@ namespace DogScepterTest
                         foreach (GMWarning w in writer.Warnings)
                             Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
                     }
-                }*/
+                }
             }
             s.Stop();
             Console.WriteLine(string.Format("Took {0} ms, {1} seconds.", s.Elapsed.TotalMilliseconds, Math.Round(s.Elapsed.TotalMilliseconds/1000, 2)));
