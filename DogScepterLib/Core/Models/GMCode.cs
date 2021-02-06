@@ -100,7 +100,7 @@ namespace DogScepterLib.Core.Models
                 int end = begin + length;
                 while (reader.Offset < end)
                 {
-                    Instruction i = new Instruction((reader.Offset - begin) / 4);
+                    Instruction i = new Instruction(reader.Offset - begin);
                     i.Unserialize(reader);
                     Instructions.Add(i);
                 }

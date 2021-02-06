@@ -5,7 +5,7 @@ using System.Text;
 namespace DogScepterLib.Core.Models
 {
     /// <summary>
-    /// Contains a GameMaker 
+    /// Contains a GameMaker object (as in the game world/room)
     /// </summary>
     public class GMObject : GMSerializable
     {
