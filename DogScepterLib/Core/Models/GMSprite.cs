@@ -32,6 +32,7 @@ namespace DogScepterLib.Core.Models
         public AnimSpeedType GMS2_PlaybackSpeedType;
 
         public SequenceReference GMS2_3_Sequence;
+        public NineSlice GMS2_3_2_NineSlice;
 
         public GMRemotePointerList<GMTextureItem> TextureItems;
         public List<byte[]> CollisionMasks;
@@ -77,14 +78,25 @@ namespace DogScepterLib.Core.Models
             {
                 // Special/GMS2 sprite type
                 writer.Write(-1);
-                writer.Write(GMS2_3_Sequence == null ? 1 : 2);
+                if (writer.VersionInfo.IsNumberAtLeast(2, 3, 2))
+                    writer.Write(3);
+                else if (writer.VersionInfo.IsNumberAtLeast(2, 3))
+                    writer.Write(2);
+                else
+                    writer.Write(1);
                 writer.Write((int)S_SpriteType);
                 if (writer.VersionInfo.IsNumberAtLeast(2))
                 {
                     writer.Write(GMS2_PlaybackSpeed);
                     writer.Write((int)GMS2_PlaybackSpeedType);
-                    if (GMS2_3_Sequence != null)
+                    if (writer.VersionInfo.IsNumberAtLeast(2, 3))
+                    {
                         writer.WritePointer(GMS2_3_Sequence);
+                        if (writer.VersionInfo.IsNumberAtLeast(2, 3, 2))
+                        {
+                            writer.WritePointer(GMS2_3_2_NineSlice);
+                        }
+                    }
                 }
 
                 switch (S_SpriteType)
@@ -107,8 +119,16 @@ namespace DogScepterLib.Core.Models
 
                 if (GMS2_3_Sequence != null)
                 {
+                    writer.Pad(4);
                     writer.WriteObjectPointer(GMS2_3_Sequence);
                     GMS2_3_Sequence.Serialize(writer);
+                }
+
+                if (GMS2_3_2_NineSlice != null)
+                {
+                    writer.Pad(4);
+                    writer.WriteObjectPointer(GMS2_3_2_NineSlice);
+                    GMS2_3_2_NineSlice.Serialize(writer);
                 }
             } else
             {
@@ -148,7 +168,14 @@ namespace DogScepterLib.Core.Models
                     GMS2_PlaybackSpeed = reader.ReadSingle();
                     GMS2_PlaybackSpeedType = (AnimSpeedType)reader.ReadInt32();
                     if (version >= 2)
+                    {
                         GMS2_3_Sequence = reader.ReadPointerObject<SequenceReference>();
+                        if (version >= 3)
+                        {
+                            reader.VersionInfo.SetNumber(2, 3, 2);
+                            GMS2_3_2_NineSlice = reader.ReadPointerObject<NineSlice>();
+                        }
+                    }
                 }
 
                 switch (S_SpriteType)
@@ -284,6 +311,44 @@ namespace DogScepterLib.Core.Models
             public override string ToString()
             {
                 return Sequence.ToString();
+            }
+        }
+
+        public class NineSlice : GMSerializable
+        {
+            public int Left, Top, Right, Bottom;
+            public bool Enabled;
+            public TileMode[] TileModes = new TileMode[5];
+
+            public enum TileMode : int
+            {
+                Stretch = 0,
+                Repeat = 1,
+                Mirror = 2,
+                BlankRepeat = 3,
+                Hide = 4
+            }
+
+            public void Serialize(GMDataWriter writer)
+            {
+                writer.Write(Left);
+                writer.Write(Top);
+                writer.Write(Right);
+                writer.Write(Bottom);
+                writer.WriteWideBoolean(Enabled);
+                for (int i = 0; i < 5; i++)
+                    writer.Write((int)TileModes[i]);
+            }
+
+            public void Unserialize(GMDataReader reader)
+            {
+                Left = reader.ReadInt32();
+                Top = reader.ReadInt32();
+                Right = reader.ReadInt32();
+                Bottom = reader.ReadInt32();
+                Enabled = reader.ReadWideBoolean();
+                for (int i = 0; i < 5; i++)
+                    TileModes[i] = (TileMode)reader.ReadInt32();
             }
         }
     }
