@@ -501,7 +501,7 @@ namespace DogScepterLib.Core.Models
 
                 // GMS 2.3+
                 public GMPointerList<AssetInstance> Sequences;
-                public GMPointerList<AssetInstance> NineSlices;
+                public GMPointerList<AssetInstance> NineSlices; // apparently removed in 2.3.2
 
                 public void Serialize(GMDataWriter writer)
                 {
@@ -510,7 +510,8 @@ namespace DogScepterLib.Core.Models
                     if (writer.VersionInfo.IsNumberAtLeast(2, 3))
                     {
                         writer.WritePointer(Sequences);
-                        writer.WritePointer(NineSlices);
+                        if (!writer.VersionInfo.IsNumberAtLeast(2, 3, 2))
+                            writer.WritePointer(NineSlices);
                     }
 
                     writer.WriteObjectPointer(LegacyTiles);
@@ -521,8 +522,16 @@ namespace DogScepterLib.Core.Models
                     {
                         writer.WriteObjectPointer(Sequences);
                         Sequences.Serialize(writer);
-                        writer.WriteObjectPointer(NineSlices);
-                        NineSlices.Serialize(writer);
+                        if (!writer.VersionInfo.IsNumberAtLeast(2, 3, 2))
+                        {
+                            if (NineSlices == null)
+                                writer.Write(0); // Even if it's 2.3.2 but we don't detect it, this shouldn't break format... probably
+                            else
+                            {
+                                writer.WriteObjectPointer(NineSlices);
+                                NineSlices.Serialize(writer);
+                            }
+                        }
                     }
                 }
 
@@ -534,7 +543,8 @@ namespace DogScepterLib.Core.Models
                     if (reader.VersionInfo.IsNumberAtLeast(2, 3))
                     {
                         Sequences = reader.ReadPointerObject<GMPointerList<AssetInstance>>();
-                        NineSlices = reader.ReadPointerObject<GMPointerList<AssetInstance>>();
+                        if (!reader.VersionInfo.IsNumberAtLeast(2, 3, 2))
+                            NineSlices = reader.ReadPointerObject<GMPointerList<AssetInstance>>();
                     }
                 }
             }
