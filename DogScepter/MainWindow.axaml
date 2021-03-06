@@ -1,0 +1,28 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:t="clr-namespace:DogScepter"
+		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="DogScepter.MainWindow"
+        Title="DogScepter"
+		Icon="/Assets/icon.ico">
+	<DockPanel>
+		<Menu DockPanel.Dock="Top" Background="#111111">
+			<MenuItem Header="{t:Text menu.file}">
+				<MenuItem Header="{t:Text menu.file.open}" Command="{Binding Menu_Open}"/>
+				<Separator/>
+				<MenuItem Header="{t:Text menu.file.settings}" Command="{Binding Menu_Settings}"/>
+				<MenuItem Header="{t:Text menu.file.exit}" Command="{Binding Menu_Exit}"/>
+			</MenuItem>
+			<MenuItem Header="{t:Text menu.help}">
+				<MenuItem Header="{t:Text menu.help.about}" Command="{Binding Menu_About}"/>
+				<MenuItem Header="{t:Text menu.help.github}" Command="{Binding Menu_GitHub}"/>
+				<MenuItem Header="{t:Text menu.help.report_issues}" Command="{Binding Menu_ReportIssues}"/>
+			</MenuItem>
+		</Menu>
+		<Border DockPanel.Dock="Bottom" Background="#222222" Padding="15">
+			
+		</Border>
+	</DockPanel>
+</Window>

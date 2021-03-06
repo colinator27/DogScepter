@@ -1,0 +1,14 @@
+{
+  "menu.file": "_File",
+  "menu.file.open": "_Open...",
+  "menu.file.settings": "_Settings",
+  "menu.file.exit": "_Exit",
+  "menu.help": "_Help",
+  "menu.help.about": "_About",
+  "menu.help.github": "_GitHub",
+  "menu.help.report_issues": "_Report issues",
+
+  "about.title": "DogScepter - About",
+  "about.content": "DogScepter version ~ver\n\nBy colinator27, TheEternalShine, and various other contributors",
+  "about.github": "Visit GitHub page"
+}
