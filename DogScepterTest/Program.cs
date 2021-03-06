@@ -22,12 +22,21 @@ namespace DogScepterTest
                 foreach (GMWarning w in reader.Warnings)
                     Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
 
-                /*string dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "testcode/");
-                Directory.CreateDirectory(dir);
-                foreach (GMCode c in ((GMChunkCODE)reader.Data.Chunks["CODE"]).List)
+                ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"), 
+                    (ProjectFile.WarningType type) => 
+                    {
+                        Console.WriteLine($"Project warn: {type}");
+                    });
+                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project")))
+                {
+                    pf.AddAllPathsToJSON();
+                    pf.Save();
+                }
+                else
                 {
                     pf.Load();
-                    pf.RebuildData();
+                    pf.PurgeUnmodifiedPaths();
+                    pf.ConvertToData();
                 }
 
                 using (FileStream fs2 = new FileStream("out.win", FileMode.Create))

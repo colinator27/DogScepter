@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using DogScepterLib.Core.Models;
 using DogScepterLib.Core.Util;
@@ -19,6 +20,12 @@ namespace DogScepterLib.Core
         public GMDataReader(Stream stream) : base(stream)
         {
             Data = new GMData();
+            
+            // Get hash for comparing later
+            using (SHA1Managed sha1 = new SHA1Managed())
+                Data.Hash = sha1.ComputeHash(Buffer);
+            Data.Length = Buffer.Length;
+
             Warnings = new List<GMWarning>();
             PointerOffsets = new Dictionary<int, GMSerializable>();
             Instructions = new Dictionary<int, GMCode.Bytecode.Instruction>();

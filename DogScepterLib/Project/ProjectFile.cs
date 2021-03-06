@@ -13,8 +13,15 @@ namespace DogScepterLib.Project
 {
     public class ProjectFile
     {
+        public enum WarningType
+        {
+            DataFileMismatch
+        }
+        public delegate void Warning(WarningType type);
+
         public string DirectoryPath;
         public GMData DataHandle;
+        public Warning WarningHandler;
 
         public ProjectJson JsonFile;
         public List<AssetPath> Paths;
@@ -26,178 +33,135 @@ namespace DogScepterLib.Project
             ReadCommentHandling = JsonCommentHandling.Skip
         };
 
-        public ProjectFile(GMData dataHandle, string directoryPath)
+        public ProjectFile(GMData dataHandle, string directoryPath, Warning warningHandler = null)
         {
             DataHandle = dataHandle;
             DirectoryPath = directoryPath;
+            WarningHandler = warningHandler;
+
+            JsonFile = new ProjectJson();
+
+            ConvertDataToProject.Convert(this);
         }
 
         public void Save()
         {
             Directory.CreateDirectory(DirectoryPath);
-            JsonFile = new ProjectJson();
 
-            SaveInfo((GMChunkGEN8)DataHandle.Chunks["GEN8"]);
-            SavePaths(DirectoryPath + "/paths", ((GMChunkPATH)DataHandle.Chunks["PATH"]).List);
+            SavePaths();
 
-            File.WriteAllText(Path.Combine(DirectoryPath, "project.json"), JsonSerializer.Serialize(JsonFile, JsonOptions));
+            File.WriteAllBytes(Path.Combine(DirectoryPath, "project.json"), JsonSerializer.SerializeToUtf8Bytes(JsonFile, JsonOptions));
         }
 
         public void Load()
         {
             JsonFile = JsonSerializer.Deserialize<ProjectJson>(
-            File.ReadAllBytes(Path.Combine(DirectoryPath, "project.json")),
-            JsonOptions);
+                File.ReadAllBytes(Path.Combine(DirectoryPath, "project.json")),
+                JsonOptions);
 
-            Paths = LoadPaths();
-        }
-
-        public void RebuildData()
-        {
-            RebuildInfo();
-            RebuildPaths();
-        }
-
-        private void SaveInfo(GMChunkGEN8 generalInfo)
-        {
-            Dictionary<string, object> info = new Dictionary<string, object>();
-
-            info["DisableDebug"] = generalInfo.DisableDebug;
-            info["FormatID"] = generalInfo.FormatID;
-            info["Unknown"] = generalInfo.Unknown;
-            info["Filename"] = generalInfo.Filename.Content;
-            info["Config"] = generalInfo.Config.Content;
-            info["LastObjectID"] = generalInfo.LastObjectID;
-            info["LastTileID"] = generalInfo.LastTileID;
-            info["GameID"] = generalInfo.GameID;
-            if (DataHandle.VersionInfo.IsNumberAtLeast(2))
+            // Compare data file for mismatch
+            unsafe
             {
-                info["FPS"] = generalInfo.GMS2_FPS;
-                info["AllowStatistics"] = generalInfo.GMS2_AllowStatistics;
-                info["GUID"] = generalInfo.GMS2_GameGUID;
-            }
-            else
-                info["GUID"] = generalInfo.LegacyGUID;
-            info["Name"] = generalInfo.GameName.Content;
-            info["Major"] = generalInfo.Major;
-            info["Minor"] = generalInfo.Minor;
-            info["Release"] = generalInfo.Release;
-            info["Build"] = generalInfo.Build;
-            info["DefaultWindowWidth"] = generalInfo.DefaultWindowWidth;
-            info["DefaultWindowHeight"] = generalInfo.DefaultWindowHeight;
-            info["Info"] = generalInfo.Info.ToString();
-            info["LicenseCRC32"] = generalInfo.LicenseCRC32;
-            info["LicenseMD5"] = generalInfo.LicenseMD5;
-            info["Timestamp"] = generalInfo.Timestamp;
-            info["DisplayName"] = generalInfo.DisplayName.Content;
-            info["ActiveTargets"] = generalInfo.ActiveTargets;
-            info["FunctionClassifications"] = generalInfo.FunctionClassifications.ToString();
-            info["SteamAppID"] = generalInfo.SteamAppID;
-            info["DebuggerPort"] = generalInfo.DebuggerPort;
-
-            JsonFile.Info = info;
-            
-        }
-
-        private void SavePaths(string assetsPath, GMList<GMPath> dataAssets)
-        {
-            if (dataAssets.Count > 0)
-                Directory.CreateDirectory(assetsPath);
-
-            for (int i = 0; i < dataAssets.Count; i++)
-            {
-                GMPath asset = dataAssets[i];
-                AssetPath projectAsset = new AssetPath()
+                fixed (byte* a = DataHandle.Hash, b = JsonFile.BaseFileHash)
                 {
-                    Name = asset.Name.Content,
-                    Smooth = asset.Smooth,
-                    Closed = asset.Closed,
-                    Precision = asset.Precision,
-                    Points = new List<AssetPath.Point>()
-                };
-                foreach (GMPath.Point point in asset.Points)
-                    projectAsset.Points.Add(new AssetPath.Point() { X = point.X, Y = point.Y, Speed = point.Speed });
-                projectAsset.Write(assetsPath, projectAsset.Name);
-                    JsonFile.Assets["Paths"].Add(new ProjectJson.AssetEntry() { Name = projectAsset.Name,
-                        Path = Path.Combine($"paths/{projectAsset.Name}.json") });
+                    int* ai = (int*)a, bi = (int*)b;
+                    if (DataHandle.Length != JsonFile.BaseFileLength || ai[0] != bi[0] || ai[1] != bi[1] || ai[2] != bi[2] || ai[3] != bi[3] || ai[4] != bi[4])
+                        WarningHandler?.Invoke(WarningType.DataFileMismatch);
+                }
             }
+
+            LoadPaths();
         }
 
-        private List<AssetPath> LoadPaths()
+        public void ConvertToData()
         {
-            List<AssetPath> assetList = new List<AssetPath>();
-            Directory.CreateDirectory(Path.Combine(DirectoryPath, "paths"));
+            Load();
+            ConvertProjectToData.Convert(this);
+        }
+
+        private void SavePaths()
+        {
+            // Collect IDs of existing assets in project
+            Dictionary<string, int> dataPathIndices = new Dictionary<string, int>();
+            for (int i = 0; i < Paths.Count; i++)
+                dataPathIndices[Paths[i].Name] = i;
 
             foreach (ProjectJson.AssetEntry entry in JsonFile.Assets["Paths"])
             {
-                assetList.Add(AssetPath.Load(DirectoryPath, entry.Path));
+                int ind;
+                if (dataPathIndices.TryGetValue(entry.Name, out ind))
+                {
+                    var asset = Paths[ind];
+                    asset.Write(Path.Combine(DirectoryPath, entry.Path));
+                }
             }
-
-            return assetList;
         }
 
-        private void RebuildInfo()
+        private void LoadPaths()
         {
-            GMChunkGEN8 info = (GMChunkGEN8)DataHandle.Chunks["GEN8"];
-
-            int GetInt(string propertyName) { return ((JsonElement)JsonFile.Info[propertyName]).GetInt32(); }
-            GMString GetString(string propertyName) { return DataHandle.DefineString(((JsonElement)JsonFile.Info[propertyName]).GetString()); }
-
-            info.DisableDebug = ((JsonElement)JsonFile.Info["DisableDebug"]).GetBoolean();
-            info.FormatID = ((JsonElement)JsonFile.Info["FormatID"]).GetByte();
-            info.Unknown = ((JsonElement)JsonFile.Info["Unknown"]).GetInt16();
-            info.Filename = GetString("Filename");
-            info.Config = GetString("Config");
-            info.LastObjectID = GetInt("LastObjectID");
-            info.LastTileID = GetInt("LastTileID");
-            info.GameID = GetInt("GameID");
-            if (DataHandle.VersionInfo.IsNumberAtLeast(2))
-            {
-                info.GMS2_FPS = ((JsonElement)JsonFile.Info["FPS"]).GetSingle();
-                info.GMS2_AllowStatistics = ((JsonElement)JsonFile.Info["AllowStatistics"]).GetBoolean();
-                info.GMS2_GameGUID = ((JsonElement)JsonFile.Info["GUID"]).GetGuid();
-            }
-            else
-                info.LegacyGUID = ((JsonElement)JsonFile.Info["GUID"]).GetGuid();
-            info.GameName = GetString("Name");
-            info.Major = GetInt("Major");
-            info.Minor = GetInt("Minor");
-            info.Release = GetInt("Release");
-            info.Build = GetInt("Build");
-            info.DefaultWindowWidth = GetInt("DefaultWindowWidth");
-            info.DefaultWindowHeight = GetInt("DefaultWindowHeight");
-            info.Info = Enum.Parse<GMChunkGEN8.InfoFlags>(((JsonElement)JsonFile.Info["Info"]).GetString());
-            info.LicenseCRC32 = GetInt("LicenseCRC32");
-            info.LicenseMD5 = ((JsonElement)JsonFile.Info["LicenseMD5"]).GetBytesFromBase64();
-            info.Timestamp = ((JsonElement)JsonFile.Info["Timestamp"]).GetInt64();
-            info.DisplayName = GetString("DisplayName");
-            info.ActiveTargets = ((JsonElement)JsonFile.Info["ActiveTargets"]).GetInt64();
-            info.FunctionClassifications = Enum.Parse<GMChunkGEN8.FunctionClassification>(((JsonElement)JsonFile.Info["FunctionClassifications"]).GetString());
-            info.SteamAppID = GetInt("SteamAppID");
-            info.DebuggerPort = GetInt("DebuggerPort");
-        }
-
-        private void RebuildPaths()
-        {
-            GMList<GMPath> dataAssets = ((GMChunkPATH)DataHandle.Chunks["PATH"]).List;
-
-            dataAssets.Clear();
+            // Collect IDs of existing assets in project
+            Dictionary<string, int> dataPathIndices = new Dictionary<string, int>();
             for (int i = 0; i < Paths.Count; i++)
-            {
-                AssetPath assetPath = Paths[i];
-                dataAssets.Add(new GMPath()
-                    {
-                    Name = DataHandle.DefineString(assetPath.Name),
-                    Smooth = assetPath.Smooth,
-                    Closed = assetPath.Closed,
-                    Precision = assetPath.Precision,
-                    Points = new GMList<GMPath.Point>()
-                });
+                dataPathIndices[Paths[i].Name] = i;
 
-                GMPath gmPath = dataAssets[dataAssets.Count - 1];
-                foreach (AssetPath.Point point in assetPath.Points)
-                    gmPath.Points.Add(new GMPath.Point() { X = point.X, Y = point.Y, Speed = point.Speed });
+            foreach (ProjectJson.AssetEntry entry in JsonFile.Assets["Paths"])
+            {
+                if (dataPathIndices.ContainsKey(entry.Name))
+                    Paths[dataPathIndices[entry.Name]] = AssetPath.Load(Path.Combine(DirectoryPath, entry.Path));
+                else
+                    Paths.Add(AssetPath.Load(Path.Combine(DirectoryPath, entry.Path)));
             }
+        }
+
+        public void AddAllPathsToJSON()
+        {
+            JsonFile.Assets["Paths"] = new List<ProjectJson.AssetEntry>();
+            foreach (var asset in Paths)
+            {
+                JsonFile.Assets["Paths"].Add(new ProjectJson.AssetEntry()
+                {
+                    Name = asset.Name,
+                    Path = $"paths/{asset.Name}.json"
+                });
+            }
+        }
+
+        public void PurgeUnmodifiedPaths()
+        {
+            var unmodifiedList = ConvertDataToProject.ConvertPaths(DataHandle);
+            Dictionary<string, AssetPath> unmodifiedNames = new Dictionary<string, AssetPath>();
+            foreach (var path in unmodifiedList)
+            {
+                path.ComputeHash();
+                unmodifiedNames[path.Name] = path;
+            }
+
+            // Collect IDs of existing assets in project
+            Dictionary<string, int> dataPathIndices = new Dictionary<string, int>();
+            for (int i = 0; i < Paths.Count; i++)
+                dataPathIndices[Paths[i].Name] = i;
+
+            List<ProjectJson.AssetEntry> entries = JsonFile.Assets["Paths"];
+            for (int i = entries.Count - 1; i >= 0; i--)
+            {
+                ProjectJson.AssetEntry entry = entries[i];
+                if (dataPathIndices.ContainsKey(entry.Name))
+                {
+                    AssetPath path = Paths[dataPathIndices[entry.Name]];
+                    AssetPath other;
+                    if (unmodifiedNames.TryGetValue(path.Name, out other))
+                    {
+                        if (path.CompareHash(other))
+                        {
+                            // Identical. Purge!
+                            File.Delete(Path.Combine(DirectoryPath, entry.Path));
+                            entries.RemoveAt(i);
+                        }
+                    }
+                }
+            }
+
+            Save();
         }
     }
 
@@ -210,8 +174,10 @@ namespace DogScepterLib.Project
         }
 
         public int Version { get; private set; } = 1;
-        public Dictionary<string, List<AssetEntry>> Assets { get; set; }
+        public int BaseFileLength { get; set; }
+        public byte[] BaseFileHash { get; set; }
         public Dictionary<string, object> Info { get; set; }
+        public Dictionary<string, List<AssetEntry>> Assets { get; set; }
 
         public ProjectJson()
         {

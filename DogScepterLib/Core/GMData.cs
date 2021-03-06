@@ -80,6 +80,9 @@ namespace DogScepterLib.Core
         public GMChunkFORM FORM;
         public Dictionary<string, GMChunk> Chunks => FORM.Chunks;
 
+        public byte[] Hash;
+        public int Length;
+
         public GMData()
         {
             VersionInfo = new GMVersionInfo();
