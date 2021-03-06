@@ -26,12 +26,9 @@ namespace DogScepterTest
                 Directory.CreateDirectory(dir);
                 foreach (GMCode c in ((GMChunkCODE)reader.Data.Chunks["CODE"]).List)
                 {
-                    if (c.BytecodeOffset == 0)
-                        File.WriteAllText(Path.Combine(dir, c.Name.Content.Substring(0, Math.Min(c.Name.Content.Length, 40)) + ".gmasm"), Disassembler.Disassemble(c, reader.Data));
-                }*/
-                //ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "testproj/test.json"));
-                //pf.ExportAllPaths();
-                //pf.WriteMainFile();
+                    pf.Load();
+                    pf.RebuildData();
+                }
 
                 using (FileStream fs2 = new FileStream("out.win", FileMode.Create))
                 {

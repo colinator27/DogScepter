@@ -17,7 +17,7 @@ namespace DogScepterLib.Project.Assets
         public static AssetPath Load(string assetDir, string assetName)
         {
             return JsonSerializer.Deserialize<AssetPath>(
-                File.ReadAllBytes(Path.Combine(assetDir, assetName + ".json")), 
+                File.ReadAllBytes(Path.Combine(assetDir, assetName)), 
                     ProjectFile.JsonOptions);
         }
 
