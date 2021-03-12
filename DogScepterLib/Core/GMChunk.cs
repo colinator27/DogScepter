@@ -61,6 +61,7 @@ namespace DogScepterLib.Core
             { "OBJT", typeof(GMChunkOBJT) },
             { "TMLN", typeof(GMChunkTMLN) },
             { "GLOB", typeof(GMChunkGLOB) },
+            { "GMEN", typeof(GMChunkGMEN) },
             { "SHDR", typeof(GMChunkSHDR) },
             { "CODE", typeof(GMChunkCODE) },
             { "SEQN", typeof(GMChunkSEQN) },

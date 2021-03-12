@@ -4,8 +4,8 @@ using System.Text;
 
 namespace DogScepterLib.Core.Chunks
 {
-    // Global init code entries
-    public class GMChunkGLOB : GMChunk
+    // Game end code entries (undocumented)
+    public class GMChunkGMEN : GMChunk
     {
         public List<int> List;
 
