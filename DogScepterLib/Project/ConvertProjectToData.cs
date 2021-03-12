@@ -12,6 +12,9 @@ using System.Threading.Tasks;
 
 namespace DogScepterLib.Project
 {
+    /// <summary>
+    /// Converts DogScepter project data into proper GameMaker format
+    /// </summary>
     public static class ConvertProjectToData
     {
         public static void Convert(ProjectFile pf)

@@ -9,7 +9,6 @@ namespace DogScepterLib.Project.Assets
 {
     public class AssetPath : Asset
     {
-        public string Name { get; set; }
         public bool Smooth { get; set; }
         public bool Closed { get; set; }
         public uint Precision { get; set; }
@@ -22,13 +21,11 @@ namespace DogScepterLib.Project.Assets
             public float Speed { get; set; }
         }
 
-        public static AssetPath Load(string assetPath)
+        public new static Asset Load(string assetPath)
         {
             byte[] buff = File.ReadAllBytes(assetPath);
             var res = JsonSerializer.Deserialize<AssetPath>(buff, ProjectFile.JsonOptions);
-            using (SHA1Managed sha1 = new SHA1Managed())
-                res.Hash = sha1.ComputeHash(buff);
-            res.Length = buff.Length;
+            ComputeHash(res, buff);
             return res;
         }
 
@@ -42,6 +39,12 @@ namespace DogScepterLib.Project.Assets
                     fs.Write(buff, 0, buff.Length);
             }
             return buff;
+        }
+
+        public override void Delete(string assetPath)
+        {
+            if (File.Exists(assetPath))
+                File.Delete(assetPath);
         }
     }
 }

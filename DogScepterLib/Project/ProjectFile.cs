@@ -15,9 +15,10 @@ namespace DogScepterLib.Project
     {
         public enum WarningType
         {
-            DataFileMismatch
+            DataFileMismatch,
+            MissingAsset
         }
-        public delegate void Warning(WarningType type);
+        public delegate void Warning(WarningType type, string info = null);
 
         public string DirectoryPath;
         public GMData DataHandle;
@@ -25,6 +26,15 @@ namespace DogScepterLib.Project
 
         public ProjectJson JsonFile;
         public List<AssetPath> Paths;
+
+        private delegate List<Asset> _convertToProjDelegateFunc(GMData data);
+        private static Delegate _convertToProjDelegate(string funcName) =>
+            Delegate.CreateDelegate(typeof(_convertToProjDelegateFunc), typeof(ConvertDataToProject), funcName);
+                
+        protected readonly static Dictionary<Type, Delegate> AssetTypeConvertToProject = new Dictionary<Type, Delegate>()
+        {
+            { typeof(AssetPath), _convertToProjDelegate("ConvertPaths") }
+        };
 
         public static JsonSerializerOptions JsonOptions = new JsonSerializerOptions
         {
@@ -48,7 +58,7 @@ namespace DogScepterLib.Project
         {
             Directory.CreateDirectory(DirectoryPath);
 
-            SavePaths();
+            SaveAssets(Paths);
 
             File.WriteAllBytes(Path.Combine(DirectoryPath, "project.json"), JsonSerializer.SerializeToUtf8Bytes(JsonFile, JsonOptions));
         }
@@ -70,97 +80,123 @@ namespace DogScepterLib.Project
                 }
             }
 
-            LoadPaths();
+            LoadAssets(Paths);
         }
 
+        /// <summary>
+        /// Converts this project file to the GameMaker format
+        /// </summary>
         public void ConvertToData()
         {
             Load();
             ConvertProjectToData.Convert(this);
         }
 
-        private void SavePaths()
+        /// <summary>
+        /// Writes out all assets in main project JSON
+        /// </summary>
+        private void SaveAssets<T>(List<T> list) where T : Asset
         {
             // Collect IDs of existing assets in project
-            Dictionary<string, int> dataPathIndices = new Dictionary<string, int>();
-            for (int i = 0; i < Paths.Count; i++)
-                dataPathIndices[Paths[i].Name] = i;
+            Dictionary<string, int> assetIndices = new Dictionary<string, int>();
+            for (int i = 0; i < list.Count; i++)
+                assetIndices[list[i].Name] = i;
 
-            foreach (ProjectJson.AssetEntry entry in JsonFile.Assets["Paths"])
+            // Write them out
+            foreach (ProjectJson.AssetEntry entry in JsonFile.Assets[ProjectJson.AssetTypeName[typeof(T)]])
             {
                 int ind;
-                if (dataPathIndices.TryGetValue(entry.Name, out ind))
+                if (assetIndices.TryGetValue(entry.Name, out ind))
                 {
-                    var asset = Paths[ind];
+                    T asset = list[ind];
                     asset.Write(Path.Combine(DirectoryPath, entry.Path));
                 }
             }
         }
 
-        private void LoadPaths()
+        /// <summary>
+        /// Loads assets from disk, using the JSON entries
+        /// </summary>
+        private void LoadAssets<T>(List<T> list) where T : Asset
         {
             // Collect IDs of existing assets in project
-            Dictionary<string, int> dataPathIndices = new Dictionary<string, int>();
-            for (int i = 0; i < Paths.Count; i++)
-                dataPathIndices[Paths[i].Name] = i;
+            Dictionary<string, int> assetIndices = new Dictionary<string, int>();
+            for (int i = 0; i < list.Count; i++)
+                assetIndices[list[i].Name] = i;
 
-            foreach (ProjectJson.AssetEntry entry in JsonFile.Assets["Paths"])
+            // Now load the assets from disk
+            var loadMethod = typeof(T).GetMethod("Load");
+            foreach (ProjectJson.AssetEntry entry in JsonFile.Assets[ProjectJson.AssetTypeName[typeof(T)]])
             {
-                if (dataPathIndices.ContainsKey(entry.Name))
-                    Paths[dataPathIndices[entry.Name]] = AssetPath.Load(Path.Combine(DirectoryPath, entry.Path));
+                string path = Path.Combine(DirectoryPath, entry.Path);
+                if (!File.Exists(path))
+                {
+                    WarningHandler.Invoke(WarningType.MissingAsset, entry.Name);
+                    continue;
+                }
+
+                if (assetIndices.ContainsKey(entry.Name))
+                    list[assetIndices[entry.Name]] = (T)loadMethod.Invoke(null, new object[] { path });
                 else
-                    Paths.Add(AssetPath.Load(Path.Combine(DirectoryPath, entry.Path)));
+                    list.Add((T)loadMethod.Invoke(null, new object[] { path }));
             }
         }
 
-        public void AddAllPathsToJSON()
+        /// <summary>
+        /// Adds all assets of this type in the project to the JSON; essentially marking them to be exported
+        /// </summary>
+        public void AddAllAssetsToJSON<T>(List<T> list, string assetDir) where T : Asset
         {
-            JsonFile.Assets["Paths"] = new List<ProjectJson.AssetEntry>();
-            foreach (var asset in Paths)
+            string jsonName = ProjectJson.AssetTypeName[typeof(T)];
+            JsonFile.Assets[jsonName] = new List<ProjectJson.AssetEntry>();
+            foreach (T asset in list)
             {
-                JsonFile.Assets["Paths"].Add(new ProjectJson.AssetEntry()
+                JsonFile.Assets[jsonName].Add(new ProjectJson.AssetEntry()
                 {
                     Name = asset.Name,
-                    Path = $"paths/{asset.Name}.json"
+                    Path = $"{assetDir}/{asset.Name}.json"
                 });
             }
         }
 
-        public void PurgeUnmodifiedPaths()
+        public void PurgeUnmodifiedAssets<T>(List<T> list) where T : Asset
         {
-            var unmodifiedList = ConvertDataToProject.ConvertPaths(DataHandle);
-            Dictionary<string, AssetPath> unmodifiedNames = new Dictionary<string, AssetPath>();
-            foreach (var path in unmodifiedList)
+            // Compute hashes of unmodified asset list
+            List<Asset> unmodifiedList = (List<Asset>)AssetTypeConvertToProject[typeof(T)].Method.Invoke(null, new object[] { DataHandle });
+            Dictionary<string, T> unmodifiedNames = new Dictionary<string, T>();
+            foreach (T asset in unmodifiedList)
             {
-                path.ComputeHash();
-                unmodifiedNames[path.Name] = path;
+                asset.ComputeHash();
+                unmodifiedNames[asset.Name] = asset;
             }
 
             // Collect IDs of existing assets in project
-            Dictionary<string, int> dataPathIndices = new Dictionary<string, int>();
-            for (int i = 0; i < Paths.Count; i++)
-                dataPathIndices[Paths[i].Name] = i;
+            Dictionary<string, int> assetIndices = new Dictionary<string, int>();
+            for (int i = 0; i < list.Count; i++)
+                assetIndices[list[i].Name] = i;
 
-            List<ProjectJson.AssetEntry> entries = JsonFile.Assets["Paths"];
+            // Now scan through and delete relevant files on disk
+            List<ProjectJson.AssetEntry> entries = JsonFile.Assets[ProjectJson.AssetTypeName[typeof(T)]];
             for (int i = entries.Count - 1; i >= 0; i--)
             {
                 ProjectJson.AssetEntry entry = entries[i];
-                if (dataPathIndices.ContainsKey(entry.Name))
+                if (assetIndices.ContainsKey(entry.Name))
                 {
-                    AssetPath path = Paths[dataPathIndices[entry.Name]];
-                    AssetPath other;
-                    if (unmodifiedNames.TryGetValue(path.Name, out other))
+                    T asset = list[assetIndices[entry.Name]];
+                    T other;
+                    if (unmodifiedNames.TryGetValue(asset.Name, out other))
                     {
-                        if (path.CompareHash(other))
+                        if (asset.CompareHash(other))
                         {
                             // Identical. Purge!
-                            File.Delete(Path.Combine(DirectoryPath, entry.Path));
+                            asset.Delete(Path.Combine(DirectoryPath, entry.Path));
                             entries.RemoveAt(i);
                         }
                     }
                 }
             }
 
+            // Save the main JSON file to reflect the removed assets
             Save();
         }
     }
@@ -179,10 +215,17 @@ namespace DogScepterLib.Project
         public Dictionary<string, object> Info { get; set; }
         public Dictionary<string, List<AssetEntry>> Assets { get; set; }
 
+
+        public readonly static Dictionary<Type, string> AssetTypeName = new Dictionary<Type, string>()
+        {
+            { typeof(AssetPath), "Paths" }
+        };
+
         public ProjectJson()
         {
             Assets = new Dictionary<string, List<AssetEntry>>();
-            Assets.Add("Paths", new List<AssetEntry>());
+            foreach (var pair in AssetTypeName)
+                Assets.Add(pair.Value, new List<AssetEntry>());
         }
     }
 }

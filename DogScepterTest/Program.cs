@@ -23,19 +23,19 @@ namespace DogScepterTest
                     Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
 
                 ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"), 
-                    (ProjectFile.WarningType type) => 
+                    (ProjectFile.WarningType type, string info) => 
                     {
-                        Console.WriteLine($"Project warn: {type}");
+                        Console.WriteLine($"Project warn: {type} {info ?? ""}");
                     });
                 if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project")))
                 {
-                    pf.AddAllPathsToJSON();
+                    pf.AddAllAssetsToJSON(pf.Paths, "paths");
                     pf.Save();
                 }
                 else
                 {
                     pf.Load();
-                    pf.PurgeUnmodifiedPaths();
+                    pf.PurgeUnmodifiedAssets(pf.Paths);
                     pf.ConvertToData();
                 }
 

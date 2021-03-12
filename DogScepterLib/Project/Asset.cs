@@ -11,6 +11,7 @@ namespace DogScepterLib.Project
     /// </summary>
     public abstract class Asset : INotifyPropertyChanged
     {
+        public string Name { get; set; }
         public byte[] Hash;
         public int Length;
 
@@ -25,21 +26,45 @@ namespace DogScepterLib.Project
 
             if (buff == null)
                 return;
-            Length = buff.Length;
-            using (SHA1Managed sha1 = new SHA1Managed())
-                Hash = sha1.ComputeHash(buff);
+            ComputeHash(this, buff);
         }
 
+        public static Asset Load(string assetPath)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Stores and computes the length and hash of a given asset's buffer
+        /// </summary>
+        public static void ComputeHash(Asset asset, byte[] buff)
+        {
+            asset.Length = buff.Length;
+            using (SHA1Managed sha1 = new SHA1Managed())
+                asset.Hash = sha1.ComputeHash(buff);
+        }
+
+        /// <summary>
+        /// Computes an asset's hash by writing it to memory, and then discarding of it
+        /// </summary>
         public void ComputeHash()
         {
             byte[] buff = WriteInternal(null, false);
             if (buff == null)
                 return;
-            Length = buff.Length;
-            using (SHA1Managed sha1 = new SHA1Managed())
-                Hash = sha1.ComputeHash(buff);
+            ComputeHash(this, buff);
         }
 
+        /// <summary>
+        /// Deletes on-disk files for this asset at this path
+        /// </summary>
+        /// <param name="assetPath"></param>
+        public abstract void Delete(string assetPath);
+
+        /// <summary>
+        /// Somewhat quickly compares the hash and length of one asset's buffer to another
+        /// </summary>
+        /// <returns>Whether the buffers are equivalent</returns>
         public unsafe bool CompareHash(Asset other)
         {
             unsafe

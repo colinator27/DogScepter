@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace DogScepterLib.Project
 {
+    /// <summary>
+    /// Converts data file structures into a DogScepter project file structure
+    /// </summary>
     public static class ConvertDataToProject
     {
         public static void Convert(ProjectFile pf)
@@ -18,7 +21,7 @@ namespace DogScepterLib.Project
             pf.JsonFile.BaseFileLength = pf.DataHandle.Length;
             pf.JsonFile.BaseFileHash = pf.DataHandle.Hash;
             pf.JsonFile.Info = ConvertInfo(pf);
-            pf.Paths = ConvertPaths(pf.DataHandle);
+            pf.Paths = ConvertPaths(pf.DataHandle).OfType<AssetPath>().ToList();
         }
 
         private static Dictionary<string, object> ConvertInfo(ProjectFile pf)
@@ -63,10 +66,10 @@ namespace DogScepterLib.Project
             return info;
         }
 
-        public static List<AssetPath> ConvertPaths(GMData data)
+        public static List<Asset> ConvertPaths(GMData data)
         {
             var dataAssets = ((GMChunkPATH)data.Chunks["PATH"]).List;
-            List<AssetPath> list = new List<AssetPath>();
+            List<Asset> list = new List<Asset>();
             for (int i = 0; i < dataAssets.Count; i++)
             {
                 GMPath asset = dataAssets[i];
