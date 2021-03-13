@@ -17,7 +17,7 @@ namespace DogScepterLib.Core
         public Dictionary<int, GMSerializable> PointerOffsets;
         public Dictionary<int, GMCode.Bytecode.Instruction> Instructions;
 
-        public GMDataReader(Stream stream) : base(stream)
+        public GMDataReader(Stream stream, string path) : base(stream)
         {
             Data = new GMData();
             
@@ -25,6 +25,10 @@ namespace DogScepterLib.Core
             using (SHA1Managed sha1 = new SHA1Managed())
                 Data.Hash = sha1.ComputeHash(Buffer);
             Data.Length = Buffer.Length;
+
+            // Get directory of the data file for later usage
+            if (path != null)
+                Data.Directory = Path.GetDirectoryName(path);
 
             Warnings = new List<GMWarning>();
             PointerOffsets = new Dictionary<int, GMSerializable>();

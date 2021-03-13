@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
@@ -16,9 +17,9 @@ namespace DogScepterTest
         {
             Stopwatch s = new Stopwatch();
             s.Start();
-            using (FileStream fs = new FileStream(@"in.win", FileMode.Open))
+            using (FileStream fs = new FileStream(@"input/data.win", FileMode.Open))
             {
-                GMDataReader reader = new GMDataReader(fs);
+                GMDataReader reader = new GMDataReader(fs, fs.Name);
                 foreach (GMWarning w in reader.Warnings)
                     Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
 
@@ -27,22 +28,28 @@ namespace DogScepterTest
                     {
                         Console.WriteLine($"Project warn: {type} {info ?? ""}");
                     });
-                if (!Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project")))
+
+                bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
+                if (first)
                 {
                     pf.AddAllAssetsToJSON(pf.Paths, "paths");
+                    pf.AddAllAssetsToJSON(pf.Sounds, "sounds");
                     pf.Save();
-                }
-                else
+                } else
                 {
                     pf.Load();
                     pf.PurgeUnmodifiedAssets(pf.Paths);
-                    pf.ConvertToData();
+                    pf.PurgeUnmodifiedAssets(pf.Sounds);
                 }
 
-                using (FileStream fs2 = new FileStream("out.win", FileMode.Create))
+                Directory.CreateDirectory("output");
+                using (FileStream fs2 = new FileStream("output/data.win", FileMode.Create))
                 {
-                    using (GMDataWriter writer = new GMDataWriter(reader.Data, fs2, reader.Length))
+                    using (GMDataWriter writer = new GMDataWriter(reader.Data, fs2, fs2.Name, reader.Length))
                     {
+                        if (!first)
+                            pf.ConvertToData();
+                        writer.Write();
                         writer.Flush();
                         foreach (GMWarning w in writer.Warnings)
                             Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));

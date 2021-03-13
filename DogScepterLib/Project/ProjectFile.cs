@@ -26,6 +26,7 @@ namespace DogScepterLib.Project
 
         public ProjectJson JsonFile;
         public List<AssetPath> Paths;
+        public List<AssetSound> Sounds;
 
         private delegate List<Asset> _convertToProjDelegateFunc(GMData data);
         private static Delegate _convertToProjDelegate(string funcName) =>
@@ -33,14 +34,16 @@ namespace DogScepterLib.Project
                 
         protected readonly static Dictionary<Type, Delegate> AssetTypeConvertToProject = new Dictionary<Type, Delegate>()
         {
-            { typeof(AssetPath), _convertToProjDelegate("ConvertPaths") }
+            { typeof(AssetPath), _convertToProjDelegate("ConvertPaths") },
+            { typeof(AssetSound), _convertToProjDelegate("ConvertSounds") },
         };
 
         public static JsonSerializerOptions JsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
             AllowTrailingCommas = true,
-            ReadCommentHandling = JsonCommentHandling.Skip
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            Converters = { new JsonStringEnumConverter() }
         };
 
         public ProjectFile(GMData dataHandle, string directoryPath, Warning warningHandler = null)
@@ -59,6 +62,7 @@ namespace DogScepterLib.Project
             Directory.CreateDirectory(DirectoryPath);
 
             SaveAssets(Paths);
+            SaveAssets(Sounds);
 
             File.WriteAllBytes(Path.Combine(DirectoryPath, "project.json"), JsonSerializer.SerializeToUtf8Bytes(JsonFile, JsonOptions));
         }
@@ -81,6 +85,7 @@ namespace DogScepterLib.Project
             }
 
             LoadAssets(Paths);
+            LoadAssets(Sounds);
         }
 
         /// <summary>
@@ -149,13 +154,29 @@ namespace DogScepterLib.Project
         {
             string jsonName = ProjectJson.AssetTypeName[typeof(T)];
             JsonFile.Assets[jsonName] = new List<ProjectJson.AssetEntry>();
-            foreach (T asset in list)
+            if (ProjectJson.AssetUsesFolder.Contains(typeof(T)))
             {
-                JsonFile.Assets[jsonName].Add(new ProjectJson.AssetEntry()
+                // Use a folder, with a JSON inside of it
+                foreach (T asset in list)
                 {
-                    Name = asset.Name,
-                    Path = $"{assetDir}/{asset.Name}.json"
-                });
+                    JsonFile.Assets[jsonName].Add(new ProjectJson.AssetEntry()
+                    {
+                        Name = asset.Name,
+                        Path = $"{assetDir}/{asset.Name}/{asset.Name}.json"
+                    });
+                }
+            }
+            else
+            {
+                // Use a direct JSON file
+                foreach (T asset in list)
+                {
+                    JsonFile.Assets[jsonName].Add(new ProjectJson.AssetEntry()
+                    {
+                        Name = asset.Name,
+                        Path = $"{assetDir}/{asset.Name}.json"
+                    });
+                }
             }
         }
 
@@ -213,12 +234,18 @@ namespace DogScepterLib.Project
         public int BaseFileLength { get; set; }
         public byte[] BaseFileHash { get; set; }
         public Dictionary<string, object> Info { get; set; }
+        public List<string> AudioGroups { get; set; }
         public Dictionary<string, List<AssetEntry>> Assets { get; set; }
 
 
         public readonly static Dictionary<Type, string> AssetTypeName = new Dictionary<Type, string>()
         {
-            { typeof(AssetPath), "Paths" }
+            { typeof(AssetPath), "Paths" },
+            { typeof(AssetSound), "Sounds" },
+        };
+        public readonly static HashSet<Type> AssetUsesFolder = new HashSet<Type>()
+        {
+            typeof(AssetSound)
         };
 
         public ProjectJson()

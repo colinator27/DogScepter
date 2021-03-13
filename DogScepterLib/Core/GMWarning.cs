@@ -7,6 +7,7 @@ namespace DogScepterLib.Core
     public class GMWarning
     {
         public string Message;
+        public string File; // Set when not in main WAD/data file
         public WarningLevel Level;
         public WarningKind Kind;
 

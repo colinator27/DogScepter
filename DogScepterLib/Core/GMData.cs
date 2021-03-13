@@ -25,6 +25,8 @@ namespace DogScepterLib.Core
 
             public bool DifferentVarCounts = false;
 
+            public int BuiltinAudioGroupID => (Major >= 2 || (Major == 1 && (Build >= 1354 || (Build >= 161 && Build < 1000)))) ? 0 : 1;
+
             /// <summary>
             /// Sets the major/minor/release/build version, only if higher
             /// </summary>
@@ -80,8 +82,9 @@ namespace DogScepterLib.Core
         public GMChunkFORM FORM;
         public Dictionary<string, GMChunk> Chunks => FORM.Chunks;
 
+        public string Directory;
         public byte[] Hash;
-        public int Length;
+        public int Length = 1024; // just give it a semi-reasonable minimum size
 
         public GMData()
         {

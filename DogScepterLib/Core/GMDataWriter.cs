@@ -22,11 +22,21 @@ namespace DogScepterLib.Core
         public Dictionary<GMVariable, List<int>> VariableReferences = new Dictionary<GMVariable, List<int>>();
         public Dictionary<GMFunctionEntry, List<int>> FunctionReferences = new Dictionary<GMFunctionEntry, List<int>>();
 
-        public GMDataWriter(GMData data, Stream stream, int baseSize = 1024 * 1024 * 32) : base(stream, baseSize)
+        public GMDataWriter(GMData data, Stream stream, string path, int baseSize = 1024 * 1024 * 32) : base(stream, baseSize)
         {
             Data = data;
             Warnings = new List<GMWarning>();
 
+            // Get directory of the data file for later usage
+            if (path != null)
+                Data.Directory = Path.GetDirectoryName(path);
+        }
+
+        /// <summary>
+        /// Do the actual work
+        /// </summary>
+        public void Write()
+        {
             // Write the root chunk, FORM
             Write("FORM".ToCharArray());
             Data.FORM.Serialize(this);
