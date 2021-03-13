@@ -24,6 +24,8 @@ namespace DogScepterLib.Project
             ConvertAudioGroups(pf);
             ConvertPaths(pf);
             ConvertSounds(pf);
+            // TODO sprites need to be converted before objects
+            ConvertObjects(pf);
         }
 
         private static void ConvertInfo(ProjectFile pf)
@@ -184,13 +186,12 @@ namespace DogScepterLib.Project
                         File.WriteAllBytes(Path.Combine(pf.DataHandle.Directory, asset.SoundFile), asset.SoundFileBuffer);
                         break;
                     case AssetSound.Attribute.UncompressOnLoad:
+                    case AssetSound.Attribute.Uncompressed:
                         dataAsset.Flags |= GMSound.AudioEntryFlags.IsEmbedded;
                         goto case AssetSound.Attribute.CompressedNotStreamed;
                     case AssetSound.Attribute.CompressedNotStreamed:
-                        dataAsset.Flags |= GMSound.AudioEntryFlags.IsCompressed;
-                        goto case AssetSound.Attribute.Uncompressed;
-                    case AssetSound.Attribute.Uncompressed:
-                        dataAsset.Flags |= GMSound.AudioEntryFlags.IsEmbedded;
+                        if (asset.Attributes != AssetSound.Attribute.Uncompressed)
+                            dataAsset.Flags |= GMSound.AudioEntryFlags.IsCompressed;
 
                         int ind;
                         GMChunkAUDO chunk;
@@ -213,6 +214,154 @@ namespace DogScepterLib.Project
             {
                 dataAssets.Add(finalMap[snd]);
             }
+        }
+
+        private static void ConvertObjects(ProjectFile pf)
+        {
+            GMList<GMObject> dataAssets = ((GMChunkOBJT)pf.DataHandle.Chunks["OBJT"]).List;
+            GMList<GMSprite> dataSprites = ((GMChunkSPRT)pf.DataHandle.Chunks["SPRT"]).List;
+            GMList<GMCode> dataCode = ((GMChunkCODE)pf.DataHandle.Chunks["CODE"]).List;
+
+            int getSprite(string name)
+            {
+                if (name == null)
+                    return -1;
+                try
+                {
+                    return dataSprites.Select((elem, index) => new { elem, index }).First(p => p.elem.Name.Content == name).index;
+                }
+                catch (InvalidOperationException)
+                {
+                    return -1;
+                }
+            }
+            int getCode(string name)
+            {
+                try
+                {
+                    return dataCode.Select((elem, index) => new { elem, index }).First(p => p.elem.Name.Content == name).index;
+                }
+                catch (InvalidOperationException)
+                {
+                    return -1;
+                }
+            }
+            int getObject(string name)
+            {
+                if (name == null)
+                    return -1;
+                if (name == "<undefined>")
+                    return -100;
+                try
+                {
+                    return dataAssets.Select((elem, index) => new { elem, index }).First(p => p.elem.Name.Content == name).index;
+                }
+                catch (InvalidOperationException)
+                {
+                    return -1;
+                }
+            }
+
+            List<GMObject> newList = new List<GMObject>();
+            for (int i = 0; i < pf.Objects.Count; i++)
+            {
+                AssetObject projectAsset = pf.Objects[i];
+                GMObject dataAsset = new GMObject()
+                {
+                    Name = pf.DataHandle.DefineString(projectAsset.Name),
+                    SpriteID = getSprite(projectAsset.Sprite),
+                    Visible = projectAsset.Visible,
+                    Solid = projectAsset.Solid,
+                    Depth = projectAsset.Depth,
+                    Persistent = projectAsset.Persistent,
+                    ParentObjectID = getObject(projectAsset.ParentObject),
+                    MaskSpriteID = getSprite(projectAsset.MaskSprite),
+                    Physics = projectAsset.Physics,
+                    PhysicsSensor = projectAsset.PhysicsSensor,
+                    PhysicsShape = projectAsset.PhysicsShape,
+                    PhysicsDensity = projectAsset.PhysicsDensity,
+                    PhysicsRestitution = projectAsset.PhysicsRestitution,
+                    PhysicsGroup = projectAsset.PhysicsGroup,
+                    PhysicsLinearDamping = projectAsset.PhysicsLinearDamping,
+                    PhysicsAngularDamping = projectAsset.PhysicsAngularDamping,
+                    PhysicsVertices = new List<GMObject.PhysicsVertex>(),
+                    PhysicsFriction = projectAsset.PhysicsFriction,
+                    PhysicsAwake = projectAsset.PhysicsAwake,
+                    PhysicsKinematic = projectAsset.PhysicsKinematic,
+                    Events = new GMPointerList<GMPointerList<GMObject.Event>>()
+                };
+
+                foreach (AssetObject.PhysicsVertex v in projectAsset.PhysicsVertices)
+                    dataAsset.PhysicsVertices.Add(new GMObject.PhysicsVertex() { X = v.X, Y = v.Y });
+
+                foreach (var events in projectAsset.Events.Values)
+                {
+                    var newEvents = new GMPointerList<GMObject.Event>();
+                    foreach (var ev in events)
+                    {
+                        GMObject.Event newEv = new GMObject.Event()
+                        {
+                            Subtype = 0,
+                            Actions = new GMPointerList<GMObject.Event.Action>()
+                            {
+                                new GMObject.Event.Action()
+                                {
+                                    LibID = 1,
+                                    ID = ev.Actions[0].ID,
+                                    Kind = 7,
+                                    UseRelative = false,
+                                    IsQuestion = false,
+                                    UseApplyTo = ev.Actions[0].UseApplyTo,
+                                    ExeType = 2,
+                                    ActionName = ev.Actions[0].ActionName != null ? pf.DataHandle.DefineString(ev.Actions[0].ActionName) : null,
+                                    CodeID = getCode(ev.Actions[0].Code),
+                                    ArgumentCount = ev.Actions[0].ArgumentCount,
+                                    Who = -1,
+                                    Relative = false,
+                                    IsNot = false
+                                }
+                            }
+                        };
+
+                        // Handle subtype
+                        switch (ev)
+                        {
+                            case AssetObject.EventAlarm e:
+                                newEv.Subtype = e.AlarmNumber;
+                                break;
+                            case AssetObject.EventStep e:
+                                newEv.Subtype = (int)e.SubtypeStep;
+                                break;
+                            case AssetObject.EventCollision e:
+                                newEv.Subtype = getObject(e.ObjectName);
+                                break;
+                            case AssetObject.EventKeyboard e:
+                                newEv.Subtype = (int)e.SubtypeKey;
+                                break;
+                            case AssetObject.EventMouse e:
+                                newEv.Subtype = (int)e.SubtypeMouse;
+                                break;
+                            case AssetObject.EventOther e:
+                                newEv.Subtype = (int)e.SubtypeOther;
+                                break;
+                            case AssetObject.EventDraw e:
+                                newEv.Subtype = (int)e.SubtypeDraw;
+                                break;
+                            case AssetObject.EventGesture e:
+                                newEv.Subtype = (int)e.SubtypeGesture;
+                                break;
+                        }
+                        newEvents.Add(newEv);
+                    }
+                    dataAsset.Events.Add(newEvents);
+                }
+
+                newList.Add(dataAsset);
+            }
+
+            dataAssets.Clear();
+            foreach (var obj in newList)
+                dataAssets.Add(obj);
         }
     }
 }

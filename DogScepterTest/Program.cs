@@ -34,12 +34,14 @@ namespace DogScepterTest
                 {
                     pf.AddAllAssetsToJSON(pf.Paths, "paths");
                     pf.AddAllAssetsToJSON(pf.Sounds, "sounds");
+                    pf.AddAllAssetsToJSON(pf.Objects, "objects");
                     pf.Save();
                 } else
                 {
                     pf.Load();
                     pf.PurgeUnmodifiedAssets(pf.Paths);
                     pf.PurgeUnmodifiedAssets(pf.Sounds);
+                    pf.PurgeUnmodifiedAssets(pf.Objects);
                 }
 
                 Directory.CreateDirectory("output");

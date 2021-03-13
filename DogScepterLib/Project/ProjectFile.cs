@@ -27,6 +27,7 @@ namespace DogScepterLib.Project
         public ProjectJson JsonFile;
         public List<AssetPath> Paths;
         public List<AssetSound> Sounds;
+        public List<AssetObject> Objects;
 
         private delegate List<Asset> _convertToProjDelegateFunc(GMData data);
         private static Delegate _convertToProjDelegate(string funcName) =>
@@ -36,14 +37,25 @@ namespace DogScepterLib.Project
         {
             { typeof(AssetPath), _convertToProjDelegate("ConvertPaths") },
             { typeof(AssetSound), _convertToProjDelegate("ConvertSounds") },
+            { typeof(AssetObject), _convertToProjDelegate("ConvertObjects") },
         };
 
+        // From https://github.com/dotnet/runtime/issues/33112
+        [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false)]
+        public class JsonInterfaceConverterAttribute : JsonConverterAttribute
+        {
+            public JsonInterfaceConverterAttribute(Type converterType)
+                : base(converterType)
+            {
+            }
+        }
         public static JsonSerializerOptions JsonOptions = new JsonSerializerOptions
         {
             WriteIndented = true,
             AllowTrailingCommas = true,
             ReadCommentHandling = JsonCommentHandling.Skip,
-            Converters = { new JsonStringEnumConverter() }
+            Converters = { new JsonStringEnumConverter() },
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
         public ProjectFile(GMData dataHandle, string directoryPath, Warning warningHandler = null)
@@ -63,6 +75,7 @@ namespace DogScepterLib.Project
 
             SaveAssets(Paths);
             SaveAssets(Sounds);
+            SaveAssets(Objects);
 
             File.WriteAllBytes(Path.Combine(DirectoryPath, "project.json"), JsonSerializer.SerializeToUtf8Bytes(JsonFile, JsonOptions));
         }
@@ -86,6 +99,7 @@ namespace DogScepterLib.Project
 
             LoadAssets(Paths);
             LoadAssets(Sounds);
+            LoadAssets(Objects);
         }
 
         /// <summary>
@@ -242,10 +256,12 @@ namespace DogScepterLib.Project
         {
             { typeof(AssetPath), "Paths" },
             { typeof(AssetSound), "Sounds" },
+            { typeof(AssetObject), "Objects" },
         };
         public readonly static HashSet<Type> AssetUsesFolder = new HashSet<Type>()
         {
-            typeof(AssetSound)
+            typeof(AssetSound),
+            typeof(AssetObject), // Code entries not implemented yet, will be eventually
         };
 
         public ProjectJson()

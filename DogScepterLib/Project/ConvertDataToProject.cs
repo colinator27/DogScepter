@@ -26,6 +26,7 @@ namespace DogScepterLib.Project
             pf.JsonFile.AudioGroups = ConvertAudioGroups(pf);
             pf.Paths = ConvertPaths(pf.DataHandle).OfType<AssetPath>().ToList();
             pf.Sounds = ConvertSounds(pf.DataHandle).OfType<AssetSound>().ToList();
+            pf.Objects = ConvertObjects(pf.DataHandle).OfType<AssetObject>().ToList();
         }
 
         private static Dictionary<string, object> ConvertInfo(ProjectFile pf)
@@ -186,6 +187,184 @@ namespace DogScepterLib.Project
 
                 list.Add(projectAsset);
             }
+            return list;
+        }
+
+        public static List<Asset> ConvertObjects(GMData data)
+        {
+            var dataAssets = ((GMChunkOBJT)data.Chunks["OBJT"]).List;
+            var dataSprites = ((GMChunkSPRT)data.Chunks["SPRT"]).List;
+            var dataCode = ((GMChunkCODE)data.Chunks["CODE"])?.List;
+
+            List<Asset> list = new List<Asset>();
+            for (int i = 0; i < dataAssets.Count; i++)
+            {
+                GMObject asset = dataAssets[i];
+                AssetObject projectAsset = new AssetObject()
+                {
+                    Name = asset.Name.Content,
+                    Sprite = asset.SpriteID >= 0 ? dataSprites[asset.SpriteID].Name.Content : null,
+                    Visible = asset.Visible,
+                    Solid = asset.Solid,
+                    Depth = asset.Depth,
+                    Persistent = asset.Persistent,
+                    ParentObject = asset.ParentObjectID >= 0 ? dataAssets[asset.ParentObjectID].Name.Content 
+                                        : (asset.ParentObjectID == -100 ? "<undefined>" : null),
+                    MaskSprite = asset.MaskSpriteID >= 0 ? dataSprites[asset.MaskSpriteID].Name.Content : null,
+                    Physics = asset.Physics,
+                    PhysicsSensor = asset.PhysicsSensor,
+                    PhysicsShape = asset.PhysicsShape,
+                    PhysicsDensity = asset.PhysicsDensity,
+                    PhysicsRestitution = asset.PhysicsRestitution,
+                    PhysicsGroup = asset.PhysicsGroup,
+                    PhysicsLinearDamping = asset.PhysicsLinearDamping,
+                    PhysicsAngularDamping = asset.PhysicsAngularDamping,
+                    PhysicsVertices = new List<AssetObject.PhysicsVertex>(),
+                    PhysicsFriction = asset.PhysicsFriction,
+                    PhysicsAwake = asset.PhysicsAwake,
+                    PhysicsKinematic = asset.PhysicsKinematic,
+                    Events = new SortedDictionary<AssetObject.EventType, List<AssetObject.Event>>()
+                };
+                list.Add(projectAsset);
+
+                foreach (GMObject.PhysicsVertex v in asset.PhysicsVertices)
+                    projectAsset.PhysicsVertices.Add(new AssetObject.PhysicsVertex() { X = v.X, Y = v.Y });
+                for (int j = 0; j < asset.Events.Count; j++)
+                {
+                    List<AssetObject.Event> projectEvents = new List<AssetObject.Event>();
+                    AssetObject.EventType type = (AssetObject.EventType)j;
+                    projectAsset.Events[type] = projectEvents;
+
+                    void addActions(GMObject.Event ev, AssetObject.Event newEv)
+                    {
+                        foreach (var ac in ev.Actions)
+                        {
+                            newEv.Actions.Add(new AssetObject.Action()
+                            {
+                                Code = (dataCode == null) ? ac.CodeID.ToString() : dataCode[ac.CodeID].Name.Content,
+                                ID = ac.ID,
+                                UseApplyTo = ac.UseApplyTo,
+                                ActionName = ac.ActionName?.Content,
+                                ArgumentCount = ac.ArgumentCount
+                            });
+                        }
+                    }
+
+                    switch (type)
+                    {
+                        case AssetObject.EventType.Alarm:
+                            foreach (var ev in asset.Events[j])
+                            {
+                                var newEv = new AssetObject.EventAlarm()
+                                {
+                                    Actions = new List<AssetObject.Action>(),
+                                    AlarmNumber = ev.Subtype
+                                };
+                                addActions(ev, newEv);
+                                projectEvents.Add(newEv);
+                            }
+                            break;
+                        case AssetObject.EventType.Step:
+                            foreach (var ev in asset.Events[j])
+                            {
+                                var newEv = new AssetObject.EventStep()
+                                {
+                                    Actions = new List<AssetObject.Action>(),
+                                    SubtypeStep = (AssetObject.EventStep.Subtype)ev.Subtype
+                                };
+                                addActions(ev, newEv);
+                                projectEvents.Add(newEv);
+                            }
+                            break;
+                        case AssetObject.EventType.Collision:
+                            foreach (var ev in asset.Events[j])
+                            {
+                                var newEv = new AssetObject.EventCollision()
+                                {
+                                    Actions = new List<AssetObject.Action>(),
+                                    ObjectName = dataAssets[ev.Subtype].Name.Content
+                                };
+                                addActions(ev, newEv);
+                                projectEvents.Add(newEv);
+                            }
+                            break;
+                        case AssetObject.EventType.Keyboard:
+                        case AssetObject.EventType.KeyPress:
+                        case AssetObject.EventType.KeyRelease:
+                            foreach (var ev in asset.Events[j])
+                            {
+                                var newEv = new AssetObject.EventKeyboard()
+                                {
+                                    Actions = new List<AssetObject.Action>(),
+                                    SubtypeKey = (AssetObject.EventKeyboard.Subtype)ev.Subtype
+                                };
+                                addActions(ev, newEv);
+                                projectEvents.Add(newEv);
+                            }
+                            break;
+                        case AssetObject.EventType.Mouse:
+                            foreach (var ev in asset.Events[j])
+                            {
+                                var newEv = new AssetObject.EventMouse()
+                                {
+                                    Actions = new List<AssetObject.Action>(),
+                                    SubtypeMouse = (AssetObject.EventMouse.Subtype)ev.Subtype
+                                };
+                                addActions(ev, newEv);
+                                projectEvents.Add(newEv);
+                            }
+                            break;
+                        case AssetObject.EventType.Other:
+                            foreach (var ev in asset.Events[j])
+                            {
+                                var newEv = new AssetObject.EventOther()
+                                {
+                                    Actions = new List<AssetObject.Action>(),
+                                    SubtypeOther = (AssetObject.EventOther.Subtype)ev.Subtype
+                                };
+                                addActions(ev, newEv);
+                                projectEvents.Add(newEv);
+                            }
+                            break;
+                        case AssetObject.EventType.Draw:
+                            foreach (var ev in asset.Events[j])
+                            {
+                                var newEv = new AssetObject.EventDraw()
+                                {
+                                    Actions = new List<AssetObject.Action>(),
+                                    SubtypeDraw = (AssetObject.EventDraw.Subtype)ev.Subtype
+                                };
+                                addActions(ev, newEv);
+                                projectEvents.Add(newEv);
+                            }
+                            break;
+                        case AssetObject.EventType.Gesture:
+                            foreach (var ev in asset.Events[j])
+                            {
+                                var newEv = new AssetObject.EventGesture()
+                                {
+                                    Actions = new List<AssetObject.Action>(),
+                                    SubtypeGesture = (AssetObject.EventGesture.Subtype)ev.Subtype
+                                };
+                                addActions(ev, newEv);
+                                projectEvents.Add(newEv);
+                            }
+                            break;
+                        default:
+                            foreach (var ev in asset.Events[j])
+                            {
+                                var newEv = new AssetObject.EventNormal()
+                                {
+                                    Actions = new List<AssetObject.Action>()
+                                };
+                                addActions(ev, newEv);
+                                projectEvents.Add(newEv);
+                            }
+                            break;
+                    }
+                }
+            }
+
             return list;
         }
     }
