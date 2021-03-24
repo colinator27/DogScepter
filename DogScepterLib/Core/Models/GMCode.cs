@@ -21,6 +21,8 @@ namespace DogScepterLib.Core.Models
         public void Serialize(GMDataWriter writer)
         {
             writer.WritePointerString(Name);
+            if (BytecodeEntry != null)
+                Length = BytecodeEntry.GetLength() * 4;
             writer.Write(Length);
 
             if (writer.VersionInfo.FormatID <= 14)
@@ -82,6 +84,18 @@ namespace DogScepterLib.Core.Models
         public class Bytecode : GMSerializable
         {
             public List<Instruction> Instructions = new List<Instruction>();
+
+            /// <summary>
+            /// Returns length in terms of 32-bit parts of instructions
+            /// (multiply the return value by 4 to get the number of bytes)
+            /// </summary>
+            public int GetLength()
+            {
+                int len = 0;
+                foreach (Instruction i in Instructions)
+                    len += i.GetLength();
+                return len;
+            }
 
             public void Serialize(GMDataWriter writer)
             {
@@ -146,6 +160,26 @@ namespace DogScepterLib.Core.Models
                         NextOccurrence = reader.ReadInt24();
                         Type = (VariableType)reader.ReadByte();
                     }
+                }
+
+                /// <summary>
+                /// Returns the number of 32-bit parts of the instruction
+                /// (multiply the return value by 4 to get the number of bytes)
+                /// </summary>
+                public int GetLength()
+                {
+                    if (Variable != null || Function != null)
+                        return 2;
+
+                    if (GetInstructionType(Kind) == InstructionType.Push)
+                    {
+                        if (Type1 == DataType.Double || Type1 == DataType.Int64)
+                            return 3;
+                        if (Type1 != DataType.Int16)
+                            return 2;
+                    }
+
+                    return 1;
                 }
 
                 public enum Opcode : byte

@@ -5,7 +5,7 @@ using System.Text;
 
 namespace DogScepterLib.Core.Chunks
 {
-    class GMChunkVARI : GMChunk
+    public class GMChunkVARI : GMChunk
     {
         public List<GMVariable> List;
 
