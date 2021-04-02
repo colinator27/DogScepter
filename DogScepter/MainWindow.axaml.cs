@@ -57,7 +57,7 @@ namespace DogScepter
 
         public void HandleException(Exception e)
         {
-            Logger.WriteLine("Exception: " + e.Message + "\n" + e?.StackTrace ?? "<null>");
+            Logger?.WriteLine("Exception: " + e.Message + "\n" + e?.StackTrace ?? "<null>");
             MessageBox.Avalonia.MessageBoxManager.GetMessageBoxStandardWindow("Error", e.Message).ShowDialog(this);
         }
 
