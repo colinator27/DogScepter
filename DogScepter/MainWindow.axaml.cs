@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Reflection;
 using DogScepterLib.Core;
 using DogScepterLib.Project;
+using DogScepter.Localization;
 using System.Runtime.InteropServices;
 using System;
 using System.ComponentModel;

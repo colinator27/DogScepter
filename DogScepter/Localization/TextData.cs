@@ -10,7 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
 
-namespace DogScepter
+namespace DogScepter.Localization
 {
     // Code based on https://www.sakya.it/wordpress/avalonia-ui-framework-localization/
     public class TextData : INotifyPropertyChanged

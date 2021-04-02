@@ -2,18 +2,18 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:t="clr-namespace:DogScepter"
+        xmlns:i18n="clr-namespace:DogScepter.Localization"
 		mc:Ignorable="d"
 		Width="500"
 		Height="300"
         x:Class="DogScepter.SettingsWindow"
-        Title="{t:Text settings.title}"
+        Title="{i18n:Text settings.title}"
 		Icon="/Assets/icon.ico">
 	<Panel>
 		<Border Background="#111111" Padding="15">
 			<StackPanel>
-				<Button HorizontalAlignment="Center" Margin="0,20" Content="{t:Text settings.opendatadirectory}" Command="{Binding Button_OpenDataDirectory}"/>
-				<Button HorizontalAlignment="Center" Content="{t:Text settings.cleartempdata}" Command="{Binding Button_ClearTempData}"/>
+				<Button HorizontalAlignment="Center" Margin="0,20" Content="{i18n:Text settings.opendatadirectory}" Command="{Binding Button_OpenDataDirectory}"/>
+				<Button HorizontalAlignment="Center" Content="{i18n:Text settings.cleartempdata}" Command="{Binding Button_ClearTempData}"/>
 			</StackPanel>
 		</Border>
 	</Panel>

@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DogScepter
+namespace DogScepter.Localization
 {
     public class TextExtension : MarkupExtension
     {
