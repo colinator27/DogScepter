@@ -13,7 +13,7 @@ using System.IO;
 namespace DogScepter
 {
     // Code based on https://www.sakya.it/wordpress/avalonia-ui-framework-localization/
-    public class Text : INotifyPropertyChanged
+    public class TextData : INotifyPropertyChanged
     {
         public string Language;
         public string this[string key]
@@ -35,7 +35,7 @@ namespace DogScepter
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        public Text()
+        public TextData()
         {
 
         }

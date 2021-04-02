@@ -23,7 +23,7 @@ namespace DogScepter
             return new ReflectionBindingExtension($"[{Key}]")
             {
                 Mode = BindingMode.OneWay,
-                Source = MainWindow.Instance?.Text,
+                Source = MainWindow.Instance?.TextData,
             }.ProvideValue(serviceProvider);
         }
     }

@@ -18,7 +18,7 @@ namespace DogScepter
         public ProjectFile ProjectFile;
         public Settings Settings;
         public Logger Logger;
-        public Text Text;
+        public TextData TextData;
 
         public static MainWindow? Instance = null;
         public static string Version = (FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion ?? "????");
@@ -33,8 +33,8 @@ namespace DogScepter
             {
                 Logger = new Logger();
                 Settings = Settings.Load();
-                Text = new Text();
-                Text.LoadLanguage(Settings.Language);
+                TextData = new TextData();
+                TextData.LoadLanguage(Settings.Language);
             } catch (Exception e)
             {
                 HandleException(e);
@@ -57,8 +57,11 @@ namespace DogScepter
 
         public void HandleException(Exception e)
         {
-            Logger?.WriteLine("Exception: " + e.Message + "\n" + e?.StackTrace ?? "<null>");
-            MessageBox.Avalonia.MessageBoxManager.GetMessageBoxStandardWindow("Error", e.Message).ShowDialog(this);
+            if (Logger != null)
+            {
+                Logger.WriteLine("Exception: " + e.Message + "\n" + e?.StackTrace ?? "<null>");
+                MessageBox.Avalonia.MessageBoxManager.GetMessageBoxStandardWindow("Error", e.Message).ShowDialog(this);
+            }
         }
 
         public void UpdateTitle()
@@ -76,8 +79,11 @@ namespace DogScepter
 
             CleanedUp = true;
 
-            Logger.WriteLine("Exiting...");
-            Logger.Dispose();
+            if (Logger != null)
+            {
+                Logger.WriteLine("Exiting...");
+                Logger.Dispose();
+            }
         }
 
         public async void Menu_Settings()
