@@ -8,7 +8,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker sound file.
     /// </summary>
-    public class GMSound : GMSerializable
+    public class GMSound : GMNamedSerializable
     {
         [Flags]
         public enum AudioEntryFlags : uint
@@ -18,7 +18,7 @@ namespace DogScepterLib.Core.Models
             Regular = 0x64,
         }
 
-        public GMString Name;
+        public GMString Name { get; set; }
         public AudioEntryFlags Flags;
         public GMString Type;
         public GMString File;

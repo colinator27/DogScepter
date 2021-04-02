@@ -5,6 +5,7 @@ using DogScepterLib.Project.Assets;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -25,20 +26,11 @@ namespace DogScepterLib.Project
         public Warning WarningHandler;
 
         public ProjectJson JsonFile;
-        public List<AssetPath> Paths;
-        public List<AssetSound> Sounds;
-        public List<AssetObject> Objects;
+        public List<AssetRef<AssetPath>> Paths = new List<AssetRef<AssetPath>>();
+        public List<AssetRef<AssetSound>> Sounds = new List<AssetRef<AssetSound>>();
+        public List<AssetRef<AssetObject>> Objects = new List<AssetRef<AssetObject>>();
 
-        private delegate List<Asset> _convertToProjDelegateFunc(GMData data);
-        private static Delegate _convertToProjDelegate(string funcName) =>
-            Delegate.CreateDelegate(typeof(_convertToProjDelegateFunc), typeof(ConvertDataToProject), funcName);
-                
-        protected readonly static Dictionary<Type, Delegate> AssetTypeConvertToProject = new Dictionary<Type, Delegate>()
-        {
-            { typeof(AssetPath), _convertToProjDelegate("ConvertPaths") },
-            { typeof(AssetSound), _convertToProjDelegate("ConvertSounds") },
-            { typeof(AssetObject), _convertToProjDelegate("ConvertObjects") },
-        };
+        public Dictionary<int, GMChunkAUDO> _CachedAudioChunks;
 
         // From https://github.com/dotnet/runtime/issues/33112
         [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false)]
@@ -66,22 +58,37 @@ namespace DogScepterLib.Project
 
             JsonFile = new ProjectJson();
 
-            ConvertDataToProject.Convert(this);
+            DataHandle.Logger?.Invoke($"Initializing ProjectFile at {directoryPath}");
+
+            ConvertDataToProject.FastConvert(this);
+        }
+        public void SaveMain()
+        {
+            DataHandle.Logger?.Invoke("Saving project JSON...");
+
+            Directory.CreateDirectory(DirectoryPath);
+            File.WriteAllBytes(Path.Combine(DirectoryPath, "project.json"), JsonSerializer.SerializeToUtf8Bytes(JsonFile, JsonOptions));
+
+            DataHandle.Logger?.Invoke("...finished.");
         }
 
-        public void Save()
+        public void SaveAll()
         {
-            Directory.CreateDirectory(DirectoryPath);
+            SaveMain();
+
+            DataHandle.Logger?.Invoke("Saving assets...");
 
             SaveAssets(Paths);
             SaveAssets(Sounds);
             SaveAssets(Objects);
-
-            File.WriteAllBytes(Path.Combine(DirectoryPath, "project.json"), JsonSerializer.SerializeToUtf8Bytes(JsonFile, JsonOptions));
+            
+            DataHandle.Logger?.Invoke("...finished.");
         }
 
-        public void Load()
+        public void LoadMain()
         {
+            DataHandle.Logger?.Invoke("Loading project JSON...");
+
             JsonFile = JsonSerializer.Deserialize<ProjectJson>(
                 File.ReadAllBytes(Path.Combine(DirectoryPath, "project.json")),
                 JsonOptions);
@@ -97,9 +104,20 @@ namespace DogScepterLib.Project
                 }
             }
 
+            DataHandle.Logger?.Invoke("...finished.");
+        }
+
+        public void LoadAll()
+        {
+            LoadMain();
+
+            DataHandle.Logger?.Invoke("Loading assets...");
+
             LoadAssets(Paths);
             LoadAssets(Sounds);
             LoadAssets(Objects);
+
+            DataHandle.Logger?.Invoke("...finished.");
         }
 
         /// <summary>
@@ -107,14 +125,17 @@ namespace DogScepterLib.Project
         /// </summary>
         public void ConvertToData()
         {
-            Load();
+            DataHandle.Logger?.Invoke("Converting ProjectFile back to data...");
+
             ConvertProjectToData.Convert(this);
+
+            DataHandle.Logger?.Invoke("...finished.");
         }
 
         /// <summary>
         /// Writes out all assets in main project JSON
         /// </summary>
-        private void SaveAssets<T>(List<T> list) where T : Asset
+        private void SaveAssets<T>(List<AssetRef<T>> list) where T : Asset
         {
             // Collect IDs of existing assets in project
             Dictionary<string, int> assetIndices = new Dictionary<string, int>();
@@ -127,8 +148,12 @@ namespace DogScepterLib.Project
                 int ind;
                 if (assetIndices.TryGetValue(entry.Name, out ind))
                 {
-                    T asset = list[ind];
-                    asset.Write(Path.Combine(DirectoryPath, entry.Path));
+                    T asset = list[ind].Asset;
+                    if (asset != null && asset.Dirty)
+                    {
+                        asset.Write(Path.Combine(DirectoryPath, entry.Path));
+                        asset.Dirty = false;
+                    }
                 }
             }
         }
@@ -136,7 +161,7 @@ namespace DogScepterLib.Project
         /// <summary>
         /// Loads assets from disk, using the JSON entries
         /// </summary>
-        private void LoadAssets<T>(List<T> list) where T : Asset
+        private void LoadAssets<T>(List<AssetRef<T>> list) where T : Asset
         {
             // Collect IDs of existing assets in project
             Dictionary<string, int> assetIndices = new Dictionary<string, int>();
@@ -155,24 +180,27 @@ namespace DogScepterLib.Project
                 }
 
                 if (assetIndices.ContainsKey(entry.Name))
-                    list[assetIndices[entry.Name]] = (T)loadMethod.Invoke(null, new object[] { path });
+                    list[assetIndices[entry.Name]].Asset = (T)loadMethod.Invoke(null, new object[] { path });
                 else
-                    list.Add((T)loadMethod.Invoke(null, new object[] { path }));
+                    list.Add(new AssetRef<T>(entry.Name, (T)loadMethod.Invoke(null, new object[] { path })));
             }
         }
 
         /// <summary>
-        /// Adds all assets of this type in the project to the JSON; essentially marking them to be exported
+        /// Adds all dirty assets of this type in the project to the JSON; essentially marking them to be exported
         /// </summary>
-        public void AddAllAssetsToJSON<T>(List<T> list, string assetDir) where T : Asset
+        public void AddDirtyAssetsToJSON<T>(List<AssetRef<T>> list, string assetDir) where T : Asset
         {
             string jsonName = ProjectJson.AssetTypeName[typeof(T)];
             JsonFile.Assets[jsonName] = new List<ProjectJson.AssetEntry>();
             if (ProjectJson.AssetUsesFolder.Contains(typeof(T)))
             {
                 // Use a folder, with a JSON inside of it
-                foreach (T asset in list)
+                foreach (AssetRef<T> asset in list)
                 {
+                    if (asset.Asset == null || !asset.Asset.Dirty)
+                        continue; // Skip if this isn't modified
+
                     JsonFile.Assets[jsonName].Add(new ProjectJson.AssetEntry()
                     {
                         Name = asset.Name,
@@ -183,8 +211,11 @@ namespace DogScepterLib.Project
             else
             {
                 // Use a direct JSON file
-                foreach (T asset in list)
+                foreach (AssetRef<T> asset in list)
                 {
+                    if (asset.Asset == null || !asset.Asset.Dirty)
+                        continue; // Skip if this isn't modified
+
                     JsonFile.Assets[jsonName].Add(new ProjectJson.AssetEntry()
                     {
                         Name = asset.Name,
@@ -194,21 +225,14 @@ namespace DogScepterLib.Project
             }
         }
 
-        public void PurgeUnmodifiedAssets<T>(List<T> list) where T : Asset
+        public void PurgeIdenticalAssetsOnDisk<T>(List<AssetRef<T>> list) where T : Asset
         {
-            // Compute hashes of unmodified asset list
-            List<Asset> unmodifiedList = (List<Asset>)AssetTypeConvertToProject[typeof(T)].Method.Invoke(null, new object[] { DataHandle });
-            Dictionary<string, T> unmodifiedNames = new Dictionary<string, T>();
-            foreach (T asset in unmodifiedList)
-            {
-                asset.ComputeHash();
-                unmodifiedNames[asset.Name] = asset;
-            }
-
             // Collect IDs of existing assets in project
             Dictionary<string, int> assetIndices = new Dictionary<string, int>();
             for (int i = 0; i < list.Count; i++)
                 assetIndices[list[i].Name] = i;
+
+            var loadMethod = typeof(T).GetMethod("Load");
 
             // Now scan through and delete relevant files on disk
             List<ProjectJson.AssetEntry> entries = JsonFile.Assets[ProjectJson.AssetTypeName[typeof(T)]];
@@ -217,22 +241,70 @@ namespace DogScepterLib.Project
                 ProjectJson.AssetEntry entry = entries[i];
                 if (assetIndices.ContainsKey(entry.Name))
                 {
-                    T asset = list[assetIndices[entry.Name]];
-                    T other;
-                    if (unmodifiedNames.TryGetValue(asset.Name, out other))
+                    string path = Path.Combine(DirectoryPath, entry.Path);
+                    if (!File.Exists(path))
                     {
-                        if (asset.CompareHash(other))
-                        {
-                            // Identical. Purge!
-                            asset.Delete(Path.Combine(DirectoryPath, entry.Path));
-                            entries.RemoveAt(i);
-                        }
+                        WarningHandler.Invoke(WarningType.MissingAsset, entry.Name);
+                        continue;
+                    }
+
+                    T asset = list[assetIndices[entry.Name]].Asset;
+                    T assetOnDisk = (T)loadMethod.Invoke(null, new object[] { path });
+                    if (asset.CompareHash(assetOnDisk))
+                    {
+                        // Identical. Purge!
+                        asset.Delete(Path.Combine(DirectoryPath, entry.Path));
+                        entries.RemoveAt(i);
                     }
                 }
             }
 
             // Save the main JSON file to reflect the removed assets
-            Save();
+            SaveMain();
+        }
+    }
+
+    public class AssetRef<T> where T : Asset
+    {
+        public string Name { get; set; }
+        public T Asset { get; set; } = null;
+        public int DataIndex { get; set; } = -1;
+        public GMSerializable DataAsset { get; set; } = null;
+        public CachedRefData CachedData { get; set; } = null;
+
+        public AssetRef(string name)
+        {
+            Name = name;
+        }
+
+        public AssetRef(string name, T asset, int dataIndex = -1)
+        {
+            Name = name;
+            Asset = asset;
+            DataIndex = dataIndex;
+        }
+
+        public AssetRef(string name, int dataIndex, GMSerializable dataAsset = null)
+        {
+            Name = name;
+            DataIndex = dataIndex;
+            DataAsset = dataAsset;
+        }
+    }
+
+    public interface CachedRefData
+    {
+    }
+
+    public class CachedSoundRefData : CachedRefData
+    {
+        public byte[] SoundBuffer { get; set; }
+        public string AudioGroupName { get; set; }
+
+        public CachedSoundRefData(byte[] soundBuffer, string audioGroupName)
+        {
+            SoundBuffer = soundBuffer;
+            AudioGroupName = audioGroupName;
         }
     }
 

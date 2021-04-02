@@ -14,6 +14,7 @@ namespace DogScepterLib.Project
         public string Name { get; set; }
         public byte[] Hash;
         public int Length;
+        public bool Dirty = false;
 
         // Note: This is handled by Fody.PropertyChanged entirely, so no manual work has to be done
         public event PropertyChangedEventHandler PropertyChanged;

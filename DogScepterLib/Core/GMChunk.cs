@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 using DogScepterLib.Core.Chunks;
@@ -66,6 +67,7 @@ namespace DogScepterLib.Core
             { "CODE", typeof(GMChunkCODE) },
             { "SEQN", typeof(GMChunkSEQN) },
         };
+        public static readonly Dictionary<Type, string> ChunkMapReverse = ChunkMap.ToDictionary(x => x.Value, x => x.Key);
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -79,6 +81,8 @@ namespace DogScepterLib.Core
                 GMChunk chunk;
                 if (Chunks.TryGetValue(ChunkNames[i], out chunk))
                 {
+                    writer.Data.Logger?.Invoke($"Writing {ChunkNames[i]} at {writer.Offset.ToString("X")}");
+
                     // Write chunk name, length, and content
                     writer.Write(ChunkNames[i].ToCharArray());
                     int chunkBeg = writer.BeginLength();
@@ -126,9 +130,7 @@ namespace DogScepterLib.Core
             for (int i = 0; i < ChunkNames.Count; i++)
             {
                 reader.Offset = ChunkOffsets[i];
-#if DEBUG
-                Console.WriteLine("Reading " + ChunkNames[i] + " at " + reader.Offset.ToString("X"));
-#endif
+                reader.Data.Logger?.Invoke($"Reading {ChunkNames[i]} at {reader.Offset.ToString("X")}");
 
                 Type type;
                 if (!ChunkMap.TryGetValue(ChunkNames[i], out type))

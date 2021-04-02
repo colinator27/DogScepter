@@ -18,7 +18,7 @@ namespace DogScepterLib.Core.Chunks
             foreach (GMExtension e in List)
             {
                 if (e.ProductID != null)
-                    writer.Write(e.ProductID.ToByteArray());
+                    writer.Write(e.ProductID?.ToByteArray());
             }
         }
 

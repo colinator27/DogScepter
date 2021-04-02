@@ -71,7 +71,7 @@ namespace DogScepterLib.Project
 
         private static void ConvertAudioGroups(ProjectFile pf)
         {
-            GMChunkAGRP groups = (GMChunkAGRP)pf.DataHandle.Chunks["AGRP"];
+            GMChunkAGRP groups = pf.DataHandle.GetChunk<GMChunkAGRP>();
 
             groups.List.Clear();
             int ind = 0;
@@ -106,12 +106,21 @@ namespace DogScepterLib.Project
 
         private static void ConvertPaths(ProjectFile pf)
         {
-            GMList<GMPath> dataAssets = ((GMChunkPATH)pf.DataHandle.Chunks["PATH"]).List;
+            GMList<GMPath> dataAssets = pf.DataHandle.GetChunk<GMChunkPATH>().List;
 
             dataAssets.Clear();
             for (int i = 0; i < pf.Paths.Count; i++)
             {
-                AssetPath assetPath = pf.Paths[i];
+                AssetPath assetPath = pf.Paths[i].Asset;
+                if (assetPath == null)
+                {
+                    // This asset was never converted, so handle references and re-add it
+                    GMPath p = (GMPath)pf.Paths[i].DataAsset;
+                    p.Name = pf.DataHandle.DefineString(p.Name.Content);
+                    dataAssets.Add(p);
+                    continue;
+                }
+
                 dataAssets.Add(new GMPath()
                 {
                     Name = pf.DataHandle.DefineString(assetPath.Name),
@@ -129,17 +138,17 @@ namespace DogScepterLib.Project
 
         private static void ConvertSounds(ProjectFile pf)
         {
-            var dataAssets = ((GMChunkSOND)pf.DataHandle.Chunks["SOND"]).List;
-            var agrp = (GMChunkAGRP)pf.DataHandle.Chunks["AGRP"];
+            var dataAssets = pf.DataHandle.GetChunk<GMChunkSOND>().List;
+            var agrp = pf.DataHandle.GetChunk<GMChunkAGRP>();
             var groups = agrp.List;
 
             bool updatedVersion = pf.DataHandle.VersionInfo.IsNumberAtLeast(1, 0, 0, 9999);
 
             // First, sort sounds alphabetically
-            List<AssetSound> sortedSounds = updatedVersion ? pf.Sounds.OrderBy(x => x.Name).ToList() : pf.Sounds;
+            List<AssetRef<AssetSound>> sortedSounds = updatedVersion ? pf.Sounds.OrderBy(x => x.Name).ToList() : pf.Sounds;
 
             // Get all the AUDO chunk handles in the game
-            GMChunkAUDO defaultChunk = (GMChunkAUDO)pf.DataHandle.Chunks["AUDO"];
+            GMChunkAUDO defaultChunk = pf.DataHandle.GetChunk<GMChunkAUDO>();
             defaultChunk.List.Clear();
             Dictionary<string, GMChunkAUDO> audioChunks = new Dictionary<string, GMChunkAUDO>();
             Dictionary<string, int> audioChunkIndices = new Dictionary<string, int>();
@@ -149,7 +158,7 @@ namespace DogScepterLib.Project
                 {
                     if (agrp.AudioData.ContainsKey(i))
                     {
-                        var currChunk = (GMChunkAUDO)agrp.AudioData[i].Chunks["AUDO"];
+                        var currChunk = agrp.AudioData[i].GetChunk<GMChunkAUDO>();
                         currChunk.List.Clear();
                         audioChunks.Add(groups[i].Name.Content, currChunk);
                         audioChunkIndices.Add(groups[i].Name.Content, i);
@@ -158,10 +167,46 @@ namespace DogScepterLib.Project
             }
 
             dataAssets.Clear();
-            Dictionary<AssetSound, GMSound> finalMap = new Dictionary<AssetSound, GMSound>();
+            Dictionary<AssetRef<AssetSound>, GMSound> finalMap = new Dictionary<AssetRef<AssetSound>, GMSound>();
             for (int i = 0; i < sortedSounds.Count; i++)
             {
-                AssetSound asset = sortedSounds[i];
+                AssetSound asset = sortedSounds[i].Asset;
+                if (asset == null)
+                {
+                    // This asset was never converted, so handle references and re-add it
+                    GMSound s = (GMSound)pf.Sounds[i].DataAsset;
+                    s.Name = pf.DataHandle.DefineString(s.Name.Content);
+                    s.File = pf.DataHandle.DefineString(s.File.Content);
+                    if (s.Type != null)
+                        s.Type = pf.DataHandle.DefineString(s.Type.Content);
+
+                    // Get the group name from the cache
+                    var cachedData = (CachedSoundRefData)pf.Sounds[i].CachedData;
+
+                    // Potentially handle the internal sound buffer
+                    if (cachedData.SoundBuffer != null)
+                    {
+                        string groupName = cachedData.AudioGroupName;
+
+                        int ind;
+                        GMChunkAUDO chunk;
+                        if (!audioChunkIndices.TryGetValue(groupName, out ind))
+                        {
+                            ind = pf.DataHandle.VersionInfo.BuiltinAudioGroupID; // might be wrong
+                            chunk = defaultChunk;
+                        }
+                        else
+                            chunk = audioChunks[groupName];
+
+                        s.GroupID = ind;
+                        s.AudioID = chunk.List.Count;
+                        chunk.List.Add(new GMAudio() { Data = cachedData.SoundBuffer });
+                    }
+
+                    finalMap[sortedSounds[i]] = s;
+                    continue;
+                }
+
                 GMSound dataAsset = new GMSound()
                 {
                     Name = pf.DataHandle.DefineString(asset.Name),
@@ -172,7 +217,7 @@ namespace DogScepterLib.Project
                     File = pf.DataHandle.DefineString(asset.OriginalSoundFile),
                     Type = (asset.Type != null) ? pf.DataHandle.DefineString(asset.Type) : null
                 };
-                finalMap[asset] = dataAsset;
+                finalMap[sortedSounds[i]] = dataAsset;
 
                 switch (asset.Attributes)
                 {
@@ -210,15 +255,17 @@ namespace DogScepterLib.Project
             }
 
             // Actually add sounds to the data
-            foreach (AssetSound snd in pf.Sounds)
+            foreach (var assetRef in pf.Sounds)
             {
-                dataAssets.Add(finalMap[snd]);
+                dataAssets.Add(finalMap[assetRef]);
             }
         }
 
         private static void ConvertObjects(ProjectFile pf)
         {
-            GMList<GMObject> dataAssets = ((GMChunkOBJT)pf.DataHandle.Chunks["OBJT"]).List;
+            var dataAssets = pf.DataHandle.GetChunk<GMChunkOBJT>().List;
+
+            // TODO use refs once added, probably
             GMList<GMSprite> dataSprites = ((GMChunkSPRT)pf.DataHandle.Chunks["SPRT"]).List;
             GMList<GMCode> dataCode = ((GMChunkCODE)pf.DataHandle.Chunks["CODE"]).List;
 
@@ -254,7 +301,7 @@ namespace DogScepterLib.Project
                     return -100;
                 try
                 {
-                    return dataAssets.Select((elem, index) => new { elem, index }).First(p => p.elem.Name.Content == name).index;
+                    return pf.Objects.Select((elem, index) => new { elem, index }).First(p => p.elem.Name == name).index;
                 }
                 catch (InvalidOperationException)
                 {
@@ -265,7 +312,26 @@ namespace DogScepterLib.Project
             List<GMObject> newList = new List<GMObject>();
             for (int i = 0; i < pf.Objects.Count; i++)
             {
-                AssetObject projectAsset = pf.Objects[i];
+                AssetObject projectAsset = pf.Objects[i].Asset;
+                if (projectAsset == null)
+                {
+                    // This asset was never converted, so handle references and re-add it
+                    GMObject o = (GMObject)pf.Objects[i].DataAsset;
+                    o.Name = pf.DataHandle.DefineString(o.Name.Content);
+                    foreach (var evList in o.Events)
+                    {
+                        foreach (var ev in evList)
+                        {
+                            foreach (var ac in ev.Actions)
+                            {
+                                ac.ActionName = pf.DataHandle.DefineString(ac.ActionName.Content);
+                            }
+                        }
+                    }
+                    newList.Add(o);
+                    continue;
+                }
+
                 GMObject dataAsset = new GMObject()
                 {
                     Name = pf.DataHandle.DefineString(projectAsset.Name),

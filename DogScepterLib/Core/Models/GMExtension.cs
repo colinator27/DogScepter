@@ -14,7 +14,7 @@ namespace DogScepterLib.Core.Models
         public GMString ClassName;
         public GMPointerList<ExtensionFile> Files;
 
-        public Guid ProductID; // Set seemingly in 1.4.9999 and up
+        public Guid? ProductID = null; // Set seemingly in 1.4.9999 and up
 
         public enum ExtensionKind : uint
         {

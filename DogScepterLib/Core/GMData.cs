@@ -6,6 +6,8 @@ using System.Text;
 
 namespace DogScepterLib.Core
 {
+    public delegate void Log(string message);
+
     public class GMData
     {
         public class GMVersionInfo
@@ -81,6 +83,11 @@ namespace DogScepterLib.Core
 
         public GMChunkFORM FORM;
         public Dictionary<string, GMChunk> Chunks => FORM.Chunks;
+#if DEBUG
+        public Log Logger = Console.WriteLine;
+#else
+        public Log Logger = null;
+#endif
 
         public string Directory;
         public byte[] Hash;
@@ -106,5 +113,12 @@ namespace DogScepterLib.Core
             return res;
         }
 
+        public T GetChunk<T>() where T : GMChunk
+        {
+            GMChunk chunk;
+            if (Chunks.TryGetValue(GMChunkFORM.ChunkMapReverse[typeof(T)], out chunk))
+                return (T)chunk;
+            return null;
+        }
     }
 }

@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker object (as in the game world/room)
     /// </summary>
-    public class GMObject : GMSerializable
+    public class GMObject : GMNamedSerializable
     {
         public enum CollisionShape : int
         {
@@ -16,7 +16,7 @@ namespace DogScepterLib.Core.Models
             Custom = 2
         }
 
-        public GMString Name;
+        public GMString Name { get; set; }
         public int SpriteID;
         public bool Visible;
         public bool Solid;

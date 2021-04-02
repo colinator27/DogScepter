@@ -6,29 +6,46 @@ using System.Reflection;
 using DogScepterLib.Core;
 using DogScepterLib.Project;
 using System.Runtime.InteropServices;
+using System;
+using System.ComponentModel;
+using System.IO;
 
 namespace DogScepter
 {
     public class MainWindow : Window
     {
-        public GMData? DataFile = null;
-        public ProjectFile? ProjectFile = null;
-        public Text? Text = null;
+        public GMData DataFile;
+        public ProjectFile ProjectFile;
+        public Settings Settings;
+        public Logger Logger;
+        public Text Text;
 
         public static MainWindow? Instance = null;
         public static string Version = (FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion ?? "????");
+
+        public bool CleanedUp { get; private set; } = false;
 
         public MainWindow()
         {
             Instance = this;
             DataContext = this;
-            Text = new Text();
-            Text.LoadLanguage("en_US"); // todo: get settings
+            try
+            {
+                Logger = new Logger();
+                Settings = Settings.Load();
+                Text = new Text();
+                Text.LoadLanguage(Settings.Language);
+            } catch (Exception e)
+            {
+                HandleException(e);
+            }
 
             InitializeComponent();
 #if DEBUG
             this.AttachDevTools();
 #endif
+
+            Closing += (object? sender, CancelEventArgs e) => Cleanup(); // TODO prompt for saving
 
             UpdateTitle();
         }
@@ -36,6 +53,12 @@ namespace DogScepter
         private void InitializeComponent()
         {
             AvaloniaXamlLoader.Load(this);
+        }
+
+        public void HandleException(Exception e)
+        {
+            Logger.WriteLine("Exception: " + e.Message + "\n" + e?.StackTrace ?? "<null>");
+            MessageBox.Avalonia.MessageBoxManager.GetMessageBoxStandardWindow("Error", e.Message).ShowDialog(this);
         }
 
         public void UpdateTitle()
@@ -46,15 +69,39 @@ namespace DogScepter
             Title += " v" + Version;
         }
 
+        public void Cleanup()
+        {
+            if (CleanedUp)
+                return;
+
+            CleanedUp = true;
+
+            Logger.WriteLine("Exiting...");
+            Logger.Dispose();
+        }
+
+        public async void Menu_Settings()
+        {
+            SettingsWindow window = new SettingsWindow()
+            {
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
+            await window.ShowDialog(this);
+        }
+
         public void Menu_Exit()
         {
-            // TODO: cleanup, also prompt for saving changes potentially
+            // TODO: prompt for saving changes potentially
+            Cleanup();
             Close();
         }
 
         public async void Menu_About()
         {
-            var window = new AboutWindow();
+            AboutWindow window = new AboutWindow()
+            {
+                WindowStartupLocation = WindowStartupLocation.CenterOwner
+            };
             await window.ShowDialog(this);
         }
 
@@ -71,29 +118,54 @@ namespace DogScepter
         /// From https://github.com/AvaloniaUI/Avalonia/blob/master/src/Avalonia.Dialogs/AboutAvaloniaDialog.xaml.cs
         public static void OpenBrowser(string url)
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            try
             {
-                using (var process = Process.Start(
-                    new ProcessStartInfo
-                    {
-                        FileName = "/bin/sh",
-                        Arguments = $"-c \"{$"xdg-open {url}".Replace("\"", "\\\"")}\"",
-                        RedirectStandardOutput = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        WindowStyle = ProcessWindowStyle.Hidden
-                    }
-                )) { }
-            }
-            else
-            {
-                using (var process = Process.Start(new ProcessStartInfo
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
                 {
-                    FileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? url : "open",
-                    Arguments = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? $"{url}" : "",
-                    CreateNoWindow = true,
-                    UseShellExecute = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
-                })) { }
+                    using (var process = Process.Start(
+                        new ProcessStartInfo
+                        {
+                            FileName = "/bin/sh",
+                            Arguments = $"-c \"{$"xdg-open {url}".Replace("\"", "\\\"")}\"",
+                            RedirectStandardOutput = true,
+                            UseShellExecute = false,
+                            CreateNoWindow = true,
+                            WindowStyle = ProcessWindowStyle.Hidden
+                        }
+                    )) { }
+                }
+                else
+                {
+                    using (var process = Process.Start(new ProcessStartInfo
+                    {
+                        FileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? url : "open",
+                        Arguments = RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? $"{url}" : "",
+                        CreateNoWindow = true,
+                        UseShellExecute = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    })) { }
+                }
+            } catch (Exception e)
+            {
+                Instance?.HandleException(e);
+            }
+        }
+
+        public static void OpenFolder(string folder)
+        {
+            if (!folder.EndsWith(Path.DirectorySeparatorChar))
+                folder += Path.DirectorySeparatorChar;
+
+            try
+            {
+                Process.Start(new ProcessStartInfo()
+                {
+                    FileName = folder,
+                    UseShellExecute = true,
+                    Verb = "Open"
+                });
+            } catch (Exception e)
+            {
+                Instance?.HandleException(e);
             }
         }
     }

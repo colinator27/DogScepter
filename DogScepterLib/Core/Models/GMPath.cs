@@ -8,9 +8,9 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker path.
     /// </summary>
-    public class GMPath : GMSerializable
+    public class GMPath : GMNamedSerializable
     {
-        public GMString Name;
+        public GMString Name { get; set; }
         public bool Smooth;
         public bool Closed;
         public uint Precision;

@@ -10,5 +10,9 @@
 
   "about.title": "DogScepter - About",
   "about.content": "DogScepter version ~ver\n\nBy colinator27, TheEternalShine, and various other contributors",
-  "about.github": "Visit GitHub page"
+  "about.github": "Visit GitHub page",
+
+  "settings.title": "DogScepter - Settings",
+  "settings.opendatadirectory": "Open Data Directory",
+  "settings.cleartempdata": "Clear Temporary Data"
 }

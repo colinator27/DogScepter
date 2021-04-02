@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DogScepterLib.Core.Models;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -11,5 +12,10 @@ namespace DogScepterLib.Core
     {
         void Serialize(GMDataWriter writer);
         void Unserialize(GMDataReader reader);
+    }
+
+    public interface GMNamedSerializable : GMSerializable
+    {
+        public GMString Name { get; set; }
     }
 }
