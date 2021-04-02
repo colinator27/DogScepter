@@ -23,7 +23,7 @@ namespace DogScepter
 
         public void Button_OpenDataDirectory()
         {
-            MainWindow.OpenFolder(Storage.DataDirectory + "\\test");
+            MainWindow.OpenFolder(Storage.DataDirectory);
         }
     }
 }
