@@ -34,6 +34,13 @@ namespace DogScepter
             {
                 Logger = new Logger();
                 Settings = Settings.Load();
+            } catch (Exception e)
+            {
+                HandleException(e);
+                Settings = new Settings();
+            }
+            try
+            {
                 TextData = new TextData();
                 TextData.LoadLanguage(Settings.Language);
             } catch (Exception e)

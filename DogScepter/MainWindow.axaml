@@ -2,23 +2,23 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:i18n="clr-namespace:DogScepter.Localization"
+        xmlns:t="clr-namespace:DogScepter.Localization"
 		mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="DogScepter.MainWindow"
         Title="DogScepter"
 		Icon="/Assets/icon.ico">
 	<DockPanel>
 		<Menu DockPanel.Dock="Top" Background="#111111">
-			<MenuItem Header="{i18n:Text menu.file}">
-				<MenuItem Header="{i18n:Text menu.file.open}" Command="{Binding Menu_Open}"/>
+			<MenuItem Header="{t:Text menu.file}">
+				<MenuItem Header="{t:Text menu.file.open}" Command="{Binding Menu_Open}"/>
 				<Separator/>
-				<MenuItem Header="{i18n:Text menu.file.settings}" Command="{Binding Menu_Settings}"/>
-				<MenuItem Header="{i18n:Text menu.file.exit}" Command="{Binding Menu_Exit}"/>
+				<MenuItem Header="{t:Text menu.file.settings}" Command="{Binding Menu_Settings}"/>
+				<MenuItem Header="{t:Text menu.file.exit}" Command="{Binding Menu_Exit}"/>
 			</MenuItem>
-			<MenuItem Header="{i18n:Text menu.help}">
-				<MenuItem Header="{i18n:Text menu.help.about}" Command="{Binding Menu_About}"/>
-				<MenuItem Header="{i18n:Text menu.help.github}" Command="{Binding Menu_GitHub}"/>
-				<MenuItem Header="{i18n:Text menu.help.report_issues}" Command="{Binding Menu_ReportIssues}"/>
+			<MenuItem Header="{t:Text menu.help}">
+				<MenuItem Header="{t:Text menu.help.about}" Command="{Binding Menu_About}"/>
+				<MenuItem Header="{t:Text menu.help.github}" Command="{Binding Menu_GitHub}"/>
+				<MenuItem Header="{t:Text menu.help.report_issues}" Command="{Binding Menu_ReportIssues}"/>
 			</MenuItem>
 		</Menu>
 		<Border DockPanel.Dock="Bottom" Background="#222222" Padding="15">

@@ -34,6 +34,7 @@ namespace DogScepter
 
         public static void Rename(string filename, string newName)
         {
+            CreateDirectory();
             string path = Path.Combine(DataDirectory, filename);
             if (File.Exists(path))
                 File.Move(filename, Path.Combine(DataDirectory, newName), true);
@@ -55,6 +56,7 @@ namespace DogScepter
 
         public static StreamWriter AppendText(string filename)
         {
+            CreateDirectory();
             return File.AppendText(Path.Combine(DataDirectory, filename));
         }
     }

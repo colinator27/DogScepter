@@ -18,6 +18,7 @@ namespace DogScepter
 
             writer = Storage.AppendText("log.txt");
             writer.WriteLine($"===============================\n{DateTime.Now.ToLongTimeString()} {DateTime.Now.ToLongDateString()}\nDogScepter {MainWindow.Version}\n===============================");
+            writer.Flush();
         }
 
         public void Write(string text)
