@@ -13,7 +13,8 @@
 		<Border Background="#111111" Padding="15">
 			<StackPanel>
 				<Button HorizontalAlignment="Center" Margin="0,20" Content="{t:Text settings.opendatadirectory}" Command="{Binding Button_OpenDataDirectory}"/>
-				<Button HorizontalAlignment="Center" Content="{t:Text settings.cleartempdata}" Command="{Binding Button_ClearTempData}"/>
+				<Button HorizontalAlignment="Center" Content="{t:Text settings.opentempdirectory}" Command="{Binding Button_OpenTempDirectory}"/>
+				<Button HorizontalAlignment="Center" Content="{t:Text settings.cleartempdirectory}" Command="{Binding Button_ClearTempDirectory}"/>
 			</StackPanel>
 		</Border>
 	</Panel>

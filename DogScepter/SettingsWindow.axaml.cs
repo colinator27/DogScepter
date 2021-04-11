@@ -25,5 +25,20 @@ namespace DogScepter
         {
             MainWindow.OpenFolder(Storage.DataDirectory);
         }
+
+        public void Button_OpenTempDirectory()
+        {
+            Storage.GetTempDirectory();
+            MainWindow.OpenFolder(Storage.TempDirectory);
+        }
+
+        public void Button_ClearTempDirectory()
+        {
+            Storage.ClearTempDirectory();
+            var text = MainWindow.Instance?.TextData;
+            if (text == null)
+                return;
+            MainWindow.Instance?.ShowMessage(text["info.title"], text["info.cleared_temp"], this);
+        }
     }
 }

@@ -9,12 +9,14 @@ namespace DogScepter
 {
     public static class Storage
     {
-        public static string DataDirectory = 
+        public static string DataDirectory =
             Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData, 
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData,
                                           Environment.SpecialFolderOption.DoNotVerify), "dogscepter");
 
-        private static void CreateDirectory()
+        public static string TempDirectory = Path.Combine(Path.GetTempPath(), "dogscepter");
+
+        private static void CreateDataDirectory()
         {
             Directory.CreateDirectory(DataDirectory);
         }
@@ -34,7 +36,7 @@ namespace DogScepter
 
         public static void Rename(string filename, string newName)
         {
-            CreateDirectory();
+            CreateDataDirectory();
             string path = Path.Combine(DataDirectory, filename);
             if (File.Exists(path))
                 File.Move(filename, Path.Combine(DataDirectory, newName), true);
@@ -42,7 +44,7 @@ namespace DogScepter
 
         public static void WriteAllBytes(string filename, byte[] bytes)
         {
-            CreateDirectory();
+            CreateDataDirectory();
             File.WriteAllBytes(Path.Combine(DataDirectory, filename), bytes);
         }
 
@@ -56,8 +58,24 @@ namespace DogScepter
 
         public static StreamWriter AppendText(string filename)
         {
-            CreateDirectory();
+            CreateDataDirectory();
             return File.AppendText(Path.Combine(DataDirectory, filename));
+        }
+
+        public static string GetTempDirectory()
+        {
+            Directory.CreateDirectory(TempDirectory);
+            return TempDirectory;
+        }
+
+        public static void ClearTempDirectory()
+        {
+            DirectoryInfo di = new DirectoryInfo(GetTempDirectory());
+
+            foreach (FileInfo file in di.EnumerateFiles())
+                file.Delete();
+            foreach (DirectoryInfo dir in di.EnumerateDirectories())
+                dir.Delete(true);
         }
     }
 }

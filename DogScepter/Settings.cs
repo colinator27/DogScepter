@@ -10,6 +10,8 @@ namespace DogScepter
     public class Settings
     {
         public string Language { get; set; } = "en_US";
+        public List<string> RecentProjects { get; set; } = new List<string>();
+        public Dictionary<string, string> ProjectDataFiles { get; set; } = new Dictionary<string, string>();
 
         public static JsonSerializerOptions JsonOptions = new JsonSerializerOptions
         {

@@ -1,6 +1,10 @@
 {
   "menu.file": "_File",
-  "menu.file.open": "_Open...",
+  "menu.file.open_data": "_Open game",
+  "menu.file.open_project": "_Open project",
+  "menu.file.save_data": "_Save game",
+  "menu.file.save_project": "_Save project",
+  "menu.file.recent_projects": "_Recent projects",
   "menu.file.settings": "_Settings",
   "menu.file.exit": "_Exit",
   "menu.help": "_Help",
@@ -14,5 +18,12 @@
 
   "settings.title": "DogScepter - Settings",
   "settings.opendatadirectory": "Open Data Directory",
-  "settings.cleartempdata": "Clear Temporary Data"
+  "settings.opentempdirectory": "Open Temporary Directory",
+  "settings.cleartempdirectory": "Clear Temporary Directory",
+
+  "error.title": "Error",
+  "error.file_exists": "The selected file does not exist.",
+
+  "info.title": "Info",
+  "info.cleared_temp": "Temporary directory cleared."
 }

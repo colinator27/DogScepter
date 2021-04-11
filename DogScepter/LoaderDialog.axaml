@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="500" d:DesignHeight="200"
+		Width="500" Height="200"
+        x:Class="DogScepter.LoaderDialog"
+        Title="LoaderDialog"
+		Background="#111111">
+	<Grid Margin="15" RowDefinitions="*,*,*">
+		<TextBlock Grid.Row="0" Name="Status" VerticalAlignment="Center"/>
+		<ProgressBar Grid.Row="1" Name="Progress" IsIndeterminate="True"></ProgressBar>
+		<TextBlock Grid.Row="2" Name="AdditionalText" VerticalAlignment="Center"/>
+	</Grid>
+</Window>

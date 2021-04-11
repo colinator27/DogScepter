@@ -4,6 +4,7 @@ using DogScepterLib.Core.Models;
 using DogScepterLib.Project.Assets;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -12,8 +13,11 @@ using System.Text.Json.Serialization;
 
 namespace DogScepterLib.Project
 {
-    public class ProjectFile
+    public class ProjectFile : INotifyPropertyChanged
     {
+        // Note: This is handled by Fody.PropertyChanged entirely, so no manual work has to be done
+        public event PropertyChangedEventHandler PropertyChanged;
+        
         public enum WarningType
         {
             DataFileMismatch,
@@ -26,9 +30,9 @@ namespace DogScepterLib.Project
         public Warning WarningHandler;
 
         public ProjectJson JsonFile;
-        public List<AssetRef<AssetPath>> Paths = new List<AssetRef<AssetPath>>();
-        public List<AssetRef<AssetSound>> Sounds = new List<AssetRef<AssetSound>>();
-        public List<AssetRef<AssetObject>> Objects = new List<AssetRef<AssetObject>>();
+        public List<AssetRef<AssetPath>> Paths { get; set; } = new List<AssetRef<AssetPath>>();
+        public List<AssetRef<AssetSound>> Sounds { get; set; } = new List<AssetRef<AssetSound>>();
+        public List<AssetRef<AssetObject>> Objects { get; set; } = new List<AssetRef<AssetObject>>();
 
         public Dictionary<int, GMChunkAUDO> _CachedAudioChunks;
 
@@ -62,6 +66,7 @@ namespace DogScepterLib.Project
 
             ConvertDataToProject.FastConvert(this);
         }
+
         public void SaveMain()
         {
             DataHandle.Logger?.Invoke("Saving project JSON...");

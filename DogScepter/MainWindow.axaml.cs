@@ -10,6 +10,11 @@ using System.Runtime.InteropServices;
 using System;
 using System.ComponentModel;
 using System.IO;
+using System.Collections.Generic;
+using MessageBox.Avalonia.DTO;
+using MessageBox.Avalonia.Enums;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace DogScepter
 {
@@ -20,6 +25,10 @@ namespace DogScepter
         public Settings Settings;
         public Logger Logger;
         public TextData TextData;
+
+        public ProjectTree Tree = new ProjectTree();
+
+        public LoaderDialog? Loader;
 
         public static MainWindow? Instance = null;
         public static string Version = (FileVersionInfo.GetVersionInfo(Assembly.GetExecutingAssembly().Location).FileVersion ?? "????");
@@ -63,13 +72,30 @@ namespace DogScepter
             AvaloniaXamlLoader.Load(this);
         }
 
-        public void HandleException(Exception e)
+        public void HandleException(Exception e, Window? owner = null)
         {
             if (Logger != null)
             {
                 Logger.WriteLine("Exception: " + e.Message + "\n" + e?.StackTrace ?? "<null>");
-                MessageBox.Avalonia.MessageBoxManager.GetMessageBoxStandardWindow("Error", e.Message).ShowDialog(this);
+                ShowMessage(TextData["error.title"], e.Message, owner);
             }
+        }
+
+        public void ShowMessage(string title, string message, Window? owner = null)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                // TODO replace this with a custom message box, this one doesn't work well
+                MessageBoxStandardParams p = new MessageBoxStandardParams()
+                {
+                    ContentTitle = title,
+                    ContentMessage = message,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    ButtonDefinitions = ButtonEnum.Ok,
+                    Style = Style.Windows
+                };
+                MessageBox.Avalonia.MessageBoxManager.GetMessageBoxStandardWindow(p).ShowDialog(owner ?? this);
+            });
         }
 
         public void UpdateTitle()
@@ -78,6 +104,17 @@ namespace DogScepter
 
             // Append version number to window title
             Title += " v" + Version;
+        }
+
+        public void UpdateStatus(string status)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (Loader?.IsActive == true)
+                {
+                    Loader.Find<TextBlock>("Status").Text = status;
+                }
+            });
         }
 
         public void Cleanup()
@@ -108,6 +145,82 @@ namespace DogScepter
             // TODO: prompt for saving changes potentially
             Cleanup();
             Close();
+        }
+
+        public async Task<bool> Menu_OpenData()
+        {
+            if (ProjectFile != null)
+            {
+                // TODO dialog asking for saving
+            }
+
+            OpenFileDialog dialog = new OpenFileDialog()
+            {
+                AllowMultiple = false,
+                InitialFileName = "data.win",
+                Filters = new List<FileDialogFilter>()
+                {
+                    new FileDialogFilter() { Name = "GameMaker data files", Extensions = { "win", "ios", "unx", "droid" } },
+                    new FileDialogFilter() { Name = "All files", Extensions = { "*" } }
+                }
+            };
+
+            string[] result = await dialog.ShowAsync(this);
+            if (result != null && result.Length == 1)
+            {
+                string file = result[0];
+                if (File.Exists(file))
+                {
+                    Loader = new LoaderDialog();
+                    _ = Loader.ShowDialog(this);
+                    Task<bool> t = Task.Run(() =>
+                    {
+                        try
+                        {
+                            using (FileStream fs = new FileStream(file, FileMode.Open))
+                            {
+                                UpdateStatus("Loading data file...");
+                                Logger.WriteLine($"Loading data file {file}");
+
+                                GMDataReader reader = new GMDataReader(fs, fs.Name);
+                                foreach (GMWarning w in reader.Warnings)
+                                    Logger.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
+                                DataFile = reader.Data;
+                                DataFile.Logger = Logger.WriteLine;
+
+                                Logger.WriteLine("Finished loading data file");
+
+                                UpdateStatus("Creating temporary project...");
+                                Logger.WriteLine("Making temp project");
+
+                                Storage.ClearTempDirectory();
+                                ProjectFile = new ProjectFile(DataFile, Storage.GetTempDirectory(),
+                                    (ProjectFile.WarningType type, string info) =>
+                                    {
+                                        Logger.WriteLine($"Project warn: {type} {info ?? ""}");
+                                    });
+
+                                Logger.WriteLine("Finished making temp project");
+
+                                return true;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            HandleException(e);
+                        }
+                        return false;
+                    });
+                    await t;
+                    Loader.Close();
+                } else
+                {
+                    ShowMessage(TextData["error.title"], TextData["error.file_exists"]);
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public async void Menu_About()
