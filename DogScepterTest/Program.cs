@@ -23,6 +23,8 @@ namespace DogScepterTest
                 foreach (GMWarning w in reader.Warnings)
                     Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
 
+                //var blockTest = Block.GetBlocks(reader.Data.GetChunk<GMChunkCODE>().List[1]);
+
                 ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"), 
                     (ProjectFile.WarningType type, string info) => 
                     {
