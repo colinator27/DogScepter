@@ -34,15 +34,15 @@ namespace DogScepterTest
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)
                 {
-                    ConvertDataToProject.ConvertPath(pf, 0);
-                    pf.Paths[0].Asset.Dirty = true;
-                    pf.AddDirtyAssetsToJSON(pf.Paths, "paths");
+                    ConvertDataToProject.ConvertSound(pf, 0);
+                    pf.Sounds[0].Asset.Dirty = true;
+                    pf.AddDirtyAssetsToJSON(pf.Sounds, "sounds");
                     pf.SaveAll();
                 } else
                 {
-                    ConvertDataToProject.ConvertPath(pf, 0);
+                    ConvertDataToProject.ConvertSound(pf, 0);
                     pf.LoadMain();
-                    pf.PurgeIdenticalAssetsOnDisk(pf.Paths);
+                    pf.PurgeIdenticalAssetsOnDisk(pf.Sounds);
                     pf.LoadAll();
                 }
 

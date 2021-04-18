@@ -19,11 +19,11 @@ namespace DogScepterLib.Project
         // Note: This is handled by Fody.PropertyChanged entirely, so no manual work has to be done
         public event PropertyChangedEventHandler PropertyChanged;
 
-        protected abstract byte[] WriteInternal(string assetPath, bool actuallyWrite);
+        protected abstract byte[] WriteInternal(ProjectFile pf, string assetPath, bool actuallyWrite);
 
-        public void Write(string assetPath)
+        public void Write(ProjectFile pf, string assetPath)
         {
-            byte[] buff = WriteInternal(assetPath, true);
+            byte[] buff = WriteInternal(pf, assetPath, true);
 
             if (buff == null)
                 return;
@@ -50,7 +50,7 @@ namespace DogScepterLib.Project
         /// </summary>
         public void ComputeHash()
         {
-            byte[] buff = WriteInternal(null, false);
+            byte[] buff = WriteInternal(null, null, false);
             if (buff == null)
                 return;
             ComputeHash(this, buff);

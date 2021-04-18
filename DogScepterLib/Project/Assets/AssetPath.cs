@@ -28,7 +28,7 @@ namespace DogScepterLib.Project.Assets
             return res;
         }
 
-        protected override byte[] WriteInternal(string assetPath, bool actuallyWrite)
+        protected override byte[] WriteInternal(ProjectFile pf, string assetPath, bool actuallyWrite)
         {
             byte[] buff = JsonSerializer.SerializeToUtf8Bytes(this, GetType(), ProjectFile.JsonOptions);
             if (actuallyWrite)

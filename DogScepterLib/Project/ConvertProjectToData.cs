@@ -228,6 +228,7 @@ namespace DogScepterLib.Project
                             dataAsset.AudioID = defaultChunk.List.Count - 1;
                         dataAsset.GroupID = pf.DataHandle.VersionInfo.BuiltinAudioGroupID; // might be wrong
 
+                        pf.DataHandle.Logger?.Invoke($"Writing sound file \"{asset.SoundFile}\"...");
                         File.WriteAllBytes(Path.Combine(pf.DataHandle.Directory, asset.SoundFile), asset.SoundFileBuffer);
                         break;
                     case AssetSound.Attribute.UncompressOnLoad:

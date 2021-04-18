@@ -13,7 +13,7 @@ namespace DogScepterLib.Core.Models
         public bool Transparent;
         public bool Smooth;
         public bool Preload;
-        public GMTextureItem Texture;
+        public GMTextureItem TextureItem;
 
         // GMS2 tiles
         public uint TileUnknown1; // Seems to always be 2
@@ -32,7 +32,7 @@ namespace DogScepterLib.Core.Models
             writer.WriteWideBoolean(Transparent);
             writer.WriteWideBoolean(Smooth);
             writer.WriteWideBoolean(Preload);
-            writer.WritePointer(Texture);
+            writer.WritePointer(TextureItem);
 
             if (writer.VersionInfo.Major >= 2)
             {
@@ -65,7 +65,7 @@ namespace DogScepterLib.Core.Models
             Transparent = reader.ReadWideBoolean();
             Smooth = reader.ReadWideBoolean();
             Preload = reader.ReadWideBoolean();
-            Texture = reader.ReadPointerObject<GMTextureItem>();
+            TextureItem = reader.ReadPointerObject<GMTextureItem>();
 
             if (reader.VersionInfo.Major >= 2)
             {

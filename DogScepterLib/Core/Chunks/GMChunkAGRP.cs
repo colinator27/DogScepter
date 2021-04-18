@@ -28,6 +28,7 @@ namespace DogScepterLib.Core.Chunks
                     using (FileStream fs = new FileStream(path, FileMode.Create))
                     {
                         GMData data = AudioData[pair.Key];
+                        writer.Data.Logger?.Invoke($"Writing audio group \"{fname}\"...");
                         using (GMDataWriter groupWriter = new GMDataWriter(data, fs, fs.Name, data.Length))
                         {
                             groupWriter.Write();
@@ -61,6 +62,7 @@ namespace DogScepterLib.Core.Chunks
                     string path = Path.Combine(dir, fname);
                     if (File.Exists(path))
                     {
+                        reader.Data.Logger?.Invoke($"Reading audio group \"{fname}\"...");
                         using (FileStream fs = new FileStream(path, FileMode.Open))
                         {
                             GMDataReader groupReader = new GMDataReader(fs, fs.Name);

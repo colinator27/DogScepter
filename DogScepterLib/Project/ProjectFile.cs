@@ -35,6 +35,7 @@ namespace DogScepterLib.Project
         public List<AssetRef<AssetObject>> Objects { get; set; } = new List<AssetRef<AssetObject>>();
 
         public Dictionary<int, GMChunkAUDO> _CachedAudioChunks;
+        public Textures Textures;
 
         // From https://github.com/dotnet/runtime/issues/33112
         [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false)]
@@ -64,6 +65,10 @@ namespace DogScepterLib.Project
 
             DataHandle.Logger?.Invoke($"Initializing ProjectFile at {directoryPath}");
 
+            DataHandle.Logger?.Invoke($"Setting up textures...");
+            Textures = new Textures(this);
+
+            DataHandle.Logger?.Invoke($"Performing fast conversion...");
             ConvertDataToProject.FastConvert(this);
         }
 
@@ -73,8 +78,6 @@ namespace DogScepterLib.Project
 
             Directory.CreateDirectory(DirectoryPath);
             File.WriteAllBytes(Path.Combine(DirectoryPath, "project.json"), JsonSerializer.SerializeToUtf8Bytes(JsonFile, JsonOptions));
-
-            DataHandle.Logger?.Invoke("...finished.");
         }
 
         public void SaveAll()
@@ -86,8 +89,6 @@ namespace DogScepterLib.Project
             SaveAssets(Paths);
             SaveAssets(Sounds);
             SaveAssets(Objects);
-            
-            DataHandle.Logger?.Invoke("...finished.");
         }
 
         public void LoadMain()
@@ -108,8 +109,6 @@ namespace DogScepterLib.Project
                         WarningHandler?.Invoke(WarningType.DataFileMismatch);
                 }
             }
-
-            DataHandle.Logger?.Invoke("...finished.");
         }
 
         public void LoadAll()
@@ -121,8 +120,6 @@ namespace DogScepterLib.Project
             LoadAssets(Paths);
             LoadAssets(Sounds);
             LoadAssets(Objects);
-
-            DataHandle.Logger?.Invoke("...finished.");
         }
 
         /// <summary>
@@ -133,8 +130,6 @@ namespace DogScepterLib.Project
             DataHandle.Logger?.Invoke("Converting ProjectFile back to data...");
 
             ConvertProjectToData.Convert(this);
-
-            DataHandle.Logger?.Invoke("...finished.");
         }
 
         /// <summary>
@@ -156,7 +151,7 @@ namespace DogScepterLib.Project
                     T asset = list[ind].Asset;
                     if (asset != null && asset.Dirty)
                     {
-                        asset.Write(Path.Combine(DirectoryPath, entry.Path));
+                        asset.Write(this, Path.Combine(DirectoryPath, entry.Path));
                         asset.Dirty = false;
                     }
                 }
