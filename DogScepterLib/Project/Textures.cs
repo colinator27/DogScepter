@@ -187,12 +187,9 @@ namespace DogScepterLib.Project
                 {
                     // Find entry closest to top left of sheet
                     GMTextureItem entry = entries.MinBy((entry) => entry.SourceX * entry.SourceX + entry.SourceY * entry.SourceY).First();
-                    border = entry.SourceX;
+                    border = Math.Max(entry.SourceX, entry.SourceY);
                     if (entry._HasExtraBorder)
                         border -= extraBorder; // additional border
-#if DEBUG
-                    Debug.Assert(entry.SourceX == entry.SourceY, "Expected X == Y on top left texture entry");
-#endif
 
                     // Check if any entries are cropped
                     foreach (var item in entries)

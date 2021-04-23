@@ -45,9 +45,12 @@ namespace DogScepterLib.Project
             info.GameID = GetInt("GameID");
             if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
             {
-                info.GMS2_FPS = ((JsonElement)pf.JsonFile.Info["FPS"]).GetSingle();
-                info.GMS2_AllowStatistics = ((JsonElement)pf.JsonFile.Info["AllowStatistics"]).GetBoolean();
-                info.GMS2_GameGUID = ((JsonElement)pf.JsonFile.Info["GUID"]).GetGuid();
+                if (pf.JsonFile.Info.ContainsKey("FPS"))
+                {
+                    info.GMS2_FPS = ((JsonElement)pf.JsonFile.Info["FPS"]).GetSingle();
+                    info.GMS2_AllowStatistics = ((JsonElement)pf.JsonFile.Info["AllowStatistics"]).GetBoolean();
+                    info.GMS2_GameGUID = ((JsonElement)pf.JsonFile.Info["GUID"]).GetGuid();
+                }
             }
             else
                 info.LegacyGUID = ((JsonElement)pf.JsonFile.Info["GUID"]).GetGuid();
@@ -228,8 +231,11 @@ namespace DogScepterLib.Project
                             dataAsset.AudioID = defaultChunk.List.Count - 1;
                         dataAsset.GroupID = pf.DataHandle.VersionInfo.BuiltinAudioGroupID; // might be wrong
 
-                        pf.DataHandle.Logger?.Invoke($"Writing sound file \"{asset.SoundFile}\"...");
-                        File.WriteAllBytes(Path.Combine(pf.DataHandle.Directory, asset.SoundFile), asset.SoundFileBuffer);
+                        if (asset.SoundFileBuffer != null)
+                        {
+                            pf.DataHandle.Logger?.Invoke($"Writing sound file \"{asset.SoundFile}\"...");
+                            File.WriteAllBytes(Path.Combine(pf.DataHandle.Directory, asset.SoundFile), asset.SoundFileBuffer);
+                        }
                         break;
                     case AssetSound.Attribute.UncompressOnLoad:
                     case AssetSound.Attribute.Uncompressed:
@@ -325,7 +331,8 @@ namespace DogScepterLib.Project
                         {
                             foreach (var ac in ev.Actions)
                             {
-                                ac.ActionName = pf.DataHandle.DefineString(ac.ActionName.Content);
+                                if (ac.ActionName != null)
+                                    ac.ActionName = pf.DataHandle.DefineString(ac.ActionName.Content);
                             }
                         }
                     }
