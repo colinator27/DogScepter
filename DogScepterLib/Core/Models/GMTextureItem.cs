@@ -32,6 +32,11 @@ namespace DogScepterLib.Core.Models
 
         public short TexturePageID;
 
+        // Used for convenience in the project system primarily
+        public bool _TileHorizontally = false;
+        public bool _TileVertically = false;
+        public bool _HasExtraBorder = false;
+
         public void Serialize(GMDataWriter writer)
         {
             writer.Write(SourceX);

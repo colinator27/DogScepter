@@ -17,11 +17,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Fody" Version="6.3.0">
+    <PackageReference Include="Fody" Version="6.5.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="PropertyChanged.Fody" Version="3.3.2" />
+    <PackageReference Include="morelinq" Version="3.3.2" />
+    <PackageReference Include="PropertyChanged.Fody" Version="3.3.3" />
     <PackageReference Include="SkiaSharp" Version="2.80.2" />
   </ItemGroup>
 

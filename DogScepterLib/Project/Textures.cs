@@ -1,8 +1,10 @@
 ﻿using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
+using MoreLinq;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,8 +13,26 @@ namespace DogScepterLib.Project
 {
     public class Textures
     {
+        public class Group
+        {
+            public HashSet<int> Pages = new HashSet<int>();
+            public List<GMTextureItem> Items = new List<GMTextureItem>();
+
+            public int Border { get; set; } = 2;
+            public bool AllowCrop { get; set; } = true;
+
+            public Group()
+            {
+            }
+
+            public Group(int page)
+            {
+                Pages.Add(page);
+            }
+        }
+
         public ProjectFile Project;
-        public List<HashSet<int>> TextureGroupPages = new List<HashSet<int>>();
+        public List<Group> TextureGroups = new List<Group>();
         public Dictionary<int, int> PageToGroup = new Dictionary<int, int>();
         public Dictionary<int, SKBitmap> CachedTextures = new Dictionary<int, SKBitmap>();
 
@@ -21,6 +41,11 @@ namespace DogScepterLib.Project
             Project = project;
 
             FindTextureGroups();
+
+            // Finds borders and tiled entries to at least somewhat recreate the original texture
+            // This isn't totally accurate to every version, but it's hopefully close enough to look normal
+            DetermineGroupBorders();
+            DetermineTiledEntries();
         }
 
         public void FindTextureGroups()
@@ -29,12 +54,12 @@ namespace DogScepterLib.Project
             int findGroupWithPage(int page)
             {
                 int i;
-                for (i = 0; i < TextureGroupPages.Count; i++)
+                for (i = 0; i < TextureGroups.Count; i++)
                 {
-                    if (TextureGroupPages[i].Contains(page))
+                    if (TextureGroups[i].Pages.Contains(page))
                         return i;
                 }
-                TextureGroupPages.Add(new HashSet<int>() { page });
+                TextureGroups.Add(new Group(page));
                 return i;
             }
 
@@ -50,20 +75,20 @@ namespace DogScepterLib.Project
                     if (item == null)
                         continue;
 
-                    for (int i = 0; i < TextureGroupPages.Count; i++)
+                    for (int i = 0; i < TextureGroups.Count; i++)
                     {
                         if (i == group)
                         {
-                            TextureGroupPages[i].Add(item.TexturePageID);
+                            TextureGroups[i].Pages.Add(item.TexturePageID);
                             continue;
                         }
 
-                        if (TextureGroupPages[i].Contains(item.TexturePageID))
+                        if (TextureGroups[i].Pages.Contains(item.TexturePageID))
                         {
-                            TextureGroupPages[group].UnionWith(TextureGroupPages[i]);
+                            TextureGroups[group].Pages.UnionWith(TextureGroups[i].Pages);
                             if (group > i)
                                 group--;
-                            TextureGroupPages.RemoveAt(i);
+                            TextureGroups.RemoveAt(i);
                             break;
                         }
                     }
@@ -76,7 +101,10 @@ namespace DogScepterLib.Project
             foreach (GMBackground bg in Project.DataHandle.GetChunk<GMChunkBGND>().List)
             {
                 if (bg.TextureItem != null)
+                {
+                    bg.TextureItem._HasExtraBorder = true;
                     findGroupWithPage(bg.TextureItem.TexturePageID);
+                }
             }
             foreach (GMFont fnt in Project.DataHandle.GetChunk<GMChunkFONT>().List)
             {
@@ -84,11 +112,20 @@ namespace DogScepterLib.Project
                     findGroupWithPage(fnt.TextureItem.TexturePageID);
             }
 
+            // Now quickly sort texture groups in case this algorithm gets adjusted
+            TextureGroups = TextureGroups.OrderBy(x => x.Pages.Min()).ToList();
+
             // Assemble dictionary from page IDs to group IDs for convenience
-            for (int i = 0; i < TextureGroupPages.Count; i++)
+            for (int i = 0; i < TextureGroups.Count; i++)
             {
-                foreach (int page in TextureGroupPages[i])
+                foreach (int page in TextureGroups[i].Pages)
                     PageToGroup[page] = i;
+            }
+
+            // Assign all texture entries to groups for further processing
+            foreach (GMTextureItem entry in Project.DataHandle.GetChunk<GMChunkTPAG>().List)
+            {
+                TextureGroups[PageToGroup[entry.TexturePageID]].Items.Add(entry);
             }
         }
 
@@ -132,6 +169,138 @@ namespace DogScepterLib.Project
                                                        entry.SourceX + entry.SourceWidth, entry.SourceY + entry.SourceHeight)))
                 return res;
             return null;
+        }
+
+        public void DetermineGroupBorders()
+        {
+            // Unknown if this check is exactly accurate
+            int extraBorder = Project.DataHandle.VersionInfo.IsNumberAtLeast(2) ? 1 : 2;
+
+            foreach (Group group in TextureGroups)
+            {
+                List<GMTextureItem> entries = group.Items;
+
+                int border = 2;
+                bool allowCrop = false;
+
+                if (entries.Count != 0)
+                {
+                    // Find entry closest to top left of sheet
+                    GMTextureItem entry = entries.MinBy((entry) => entry.SourceX * entry.SourceX + entry.SourceY * entry.SourceY).First();
+                    border = entry.SourceX;
+                    if (entry._HasExtraBorder)
+                        border -= extraBorder; // additional border
+#if DEBUG
+                    Debug.Assert(entry.SourceX == entry.SourceY, "Expected X == Y on top left texture entry");
+#endif
+
+                    // Check if any entries are cropped
+                    foreach (var item in entries)
+                    {
+                        if (item.TargetX != 0 || item.TargetY != 0 ||
+                            item.SourceWidth != item.BoundWidth ||
+                            item.SourceHeight != item.BoundHeight)
+                        {
+                            allowCrop = true;
+                            break;
+                        }
+                    }
+                }
+
+                group.Border = border;
+                group.AllowCrop = allowCrop;
+            }
+        }
+
+        public unsafe void DetermineTiledEntries()
+        {
+            foreach (Group group in TextureGroups)
+            {
+                // If this group's border is > 0
+                // check each entry to see if it either wraps around or duplicates the current side
+                if (group.Border > 0)
+                {
+                    foreach (GMTextureItem entry in group.Items)
+                    {
+                        SKBitmap texture = GetTexture(entry.TexturePageID);
+
+#if DEBUG
+                        Debug.Assert(texture.BytesPerPixel == 4, "expected 32 bits per pixel");
+                        Debug.Assert(texture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
+#endif
+
+                        int stride = (texture.RowBytes / 4);
+                        int* ptr = (int*)texture.GetPixels().ToPointer() 
+                                            + entry.SourceX + (entry.SourceY * stride);
+                        int* basePtr = ptr;
+
+                        // Horizontal check
+                        bool tileHoriz = true;
+                        for (int y = 0; y < entry.SourceHeight; y++)
+                        {
+                            if (*(ptr - 1) != *(ptr + (entry.SourceWidth - 1)) ||
+                                *ptr != *(ptr + entry.SourceWidth))
+                            {
+                                tileHoriz = false;
+                                break;
+                            }
+                            ptr += stride;
+                        }
+                        if (tileHoriz)
+                        {
+                            // Check again to see if it's just the same on the edges anyway
+                            ptr = basePtr;
+                            bool notSame = false;
+                            for (int y = 0; y < entry.SourceHeight; y++)
+                            {
+                                if (*ptr != *(ptr - 1) ||
+                                    *(ptr + (entry.SourceWidth - 1)) != *(ptr + entry.SourceWidth))
+                                {
+                                    notSame = true;
+                                    break;
+                                }
+                                ptr += stride;
+                            }
+                            tileHoriz = notSame;
+                        }
+
+                        // Vertical check
+                        ptr = basePtr;
+                        bool tileVert = true;
+                        int bottom = ((entry.SourceHeight - 1) * stride);
+                        for (int x = 0; x < entry.SourceWidth; x++)
+                        {
+                            if (*(ptr - stride) != *(ptr + bottom) ||
+                                *ptr != *(ptr + bottom + stride))
+                            {
+                                tileVert = false;
+                                break;
+                            }
+                            ptr++;
+                        }
+                        if (tileVert)
+                        {
+                            // Check again to see if it's just the same on the edges anyway
+                            ptr = basePtr;
+                            bool notSame = false;
+                            for (int x = 0; x < entry.SourceWidth; x++)
+                            {
+                                if (*ptr != *(ptr - stride) ||
+                                    *(ptr + bottom) != *(ptr + bottom + stride))
+                                {
+                                    notSame = true;
+                                    break;
+                                }
+                                ptr++;
+                            }
+                            tileVert = notSame;
+                        }
+
+                        entry._TileHorizontally = tileHoriz;
+                        entry._TileVertically = tileVert;
+                    }
+                }
+            }
         }
     }
 }
