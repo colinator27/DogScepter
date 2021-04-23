@@ -32,6 +32,8 @@ namespace DogScepterLib.Project
 
         public ProjectJson JsonFile;
         public Dictionary<string, object> Info { get; set; } = new Dictionary<string, object>();
+
+        public List<string> AudioGroups { get; set; }
         public List<AssetRef<AssetPath>> Paths { get; set; } = new List<AssetRef<AssetPath>>();
         public List<AssetRef<AssetSound>> Sounds { get; set; } = new List<AssetRef<AssetSound>>();
         public List<AssetRef<AssetObject>> Objects { get; set; } = new List<AssetRef<AssetObject>>();
@@ -84,17 +86,33 @@ namespace DogScepterLib.Project
 
         public void SaveInfo()
         {
-            DataHandle.Logger?.Invoke("Saving project info...");
+            if (JsonFile.Info == null || JsonFile.Info == "")
+                return;
 
-            string dir = Path.Combine(DirectoryPath, JsonFile.Info);
+            DataHandle.Logger?.Invoke("Saving info...");
+
+            string path = Path.Combine(DirectoryPath, JsonFile.Info);
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, JsonSerializer.SerializeToUtf8Bytes(Info, JsonOptions));
+        }
+
+        public void SaveAudioGroups()
+        {
+            if (JsonFile.AudioGroups == null || JsonFile.AudioGroups == "")
+                return;
+
+            DataHandle.Logger?.Invoke("Saving audio groups...");
+
+            string dir = Path.Combine(DirectoryPath, JsonFile.AudioGroups);
             Directory.CreateDirectory(Path.GetDirectoryName(dir));
-            File.WriteAllBytes(dir, JsonSerializer.SerializeToUtf8Bytes(Info, JsonOptions));
+            File.WriteAllBytes(dir, JsonSerializer.SerializeToUtf8Bytes(AudioGroups, JsonOptions));
         }
 
         public void SaveAll()
         {
             SaveMain();
             SaveInfo();
+            SaveAudioGroups();
 
             DataHandle.Logger?.Invoke("Saving assets...");
 
@@ -125,7 +143,7 @@ namespace DogScepterLib.Project
 
         public void LoadInfo()
         {
-            DataHandle.Logger?.Invoke("Loading project info...");
+            DataHandle.Logger?.Invoke("Loading info...");
             string path = Path.Combine(DirectoryPath, JsonFile.Info ?? "");
             if (JsonFile.Info == null || JsonFile.Info == "" || !File.Exists(path))
                 Info = ConvertDataToProject.ConvertInfo(this);
@@ -134,10 +152,21 @@ namespace DogScepterLib.Project
                     File.ReadAllBytes(path), JsonOptions);
         }
 
+        public void LoadAudioGroups()
+        {
+            DataHandle.Logger?.Invoke("Loading audio groups...");
+            string path = Path.Combine(DirectoryPath, JsonFile.AudioGroups ?? "");
+            if (JsonFile.AudioGroups == null || JsonFile.AudioGroups == "" || !File.Exists(path))
+                AudioGroups = ConvertDataToProject.ConvertAudioGroups(this);
+            else
+                AudioGroups = JsonSerializer.Deserialize<List<string>>(File.ReadAllBytes(path), JsonOptions);
+        }
+
         public void LoadAll()
         {
             LoadMain();
             LoadInfo();
+            LoadAudioGroups();
 
             DataHandle.Logger?.Invoke("Loading assets...");
 
@@ -344,7 +373,7 @@ namespace DogScepterLib.Project
         public int BaseFileLength { get; set; }
         public byte[] BaseFileHash { get; set; }
         public string Info { get; set; }
-        public List<string> AudioGroups { get; set; }
+        public string AudioGroups { get; set; }
         public Dictionary<string, List<AssetEntry>> Assets { get; set; }
 
 

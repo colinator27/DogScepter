@@ -39,7 +39,8 @@ namespace DogScepterLib.Project
             pf.JsonFile.BaseFileHash = pf.DataHandle.Hash;
             pf.JsonFile.Info = "info.json";
             pf.Info = ConvertInfo(pf);
-            pf.JsonFile.AudioGroups = ConvertAudioGroups(pf);
+            pf.JsonFile.AudioGroups = "audiogroups.json";
+            pf.AudioGroups = ConvertAudioGroups(pf);
 
             EmptyRefsForNamed(pf.DataHandle.GetChunk<GMChunkPATH>().List, pf.Paths);
             EmptyRefsForNamed(pf.DataHandle.GetChunk<GMChunkSOND>().List, pf.Sounds, (asset) =>
@@ -56,8 +57,8 @@ namespace DogScepterLib.Project
                     buff = pf._CachedAudioChunks[sound.GroupID].List[sound.AudioID].Data;
 
                 return new CachedSoundRefData(buff,
-                                                (sound.GroupID >= 0 && sound.GroupID < pf.JsonFile.AudioGroups.Count) 
-                                                    ? pf.JsonFile.AudioGroups[sound.GroupID] : "");
+                                                (sound.GroupID >= 0 && sound.GroupID < pf.AudioGroups.Count) 
+                                                    ? pf.AudioGroups[sound.GroupID] : "");
             });
             EmptyRefsForNamed(pf.DataHandle.GetChunk<GMChunkOBJT>().List, pf.Objects);
         }
@@ -104,7 +105,7 @@ namespace DogScepterLib.Project
             return info;
         }
 
-        private static List<string> ConvertAudioGroups(ProjectFile pf)
+        public static List<string> ConvertAudioGroups(ProjectFile pf)
         {
             var agrp = pf.DataHandle.GetChunk<GMChunkAGRP>();
             var groups = agrp.List;

@@ -155,7 +155,7 @@ namespace DogScepterLib.Project
 
             groups.List.Clear();
             int ind = 0;
-            foreach (string g in pf.JsonFile.AudioGroups)
+            foreach (string g in pf.AudioGroups)
             {
                 if (groups.AudioData != null && ind != 0 && !groups.AudioData.ContainsKey(ind))
                 {
