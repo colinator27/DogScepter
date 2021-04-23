@@ -311,7 +311,7 @@ namespace DogScepterLib.Project
                         if (asset.SoundFileBuffer != null)
                         {
                             pf.DataHandle.Logger?.Invoke($"Writing sound file \"{asset.SoundFile}\"...");
-                            File.WriteAllBytes(Path.Combine(pf.DataHandle.Directory, asset.SoundFile), asset.SoundFileBuffer);
+                            pf.DataHandle.FileWrites.Post(new KeyValuePair<string, byte[]>(Path.Combine(pf.DataHandle.Directory, asset.SoundFile), asset.SoundFileBuffer));
                         }
                         break;
                     case AssetSound.Attribute.UncompressOnLoad:

@@ -62,6 +62,15 @@ namespace DogScepterLib.Core
             });
         }
 
+        public override void Flush()
+        {
+            base.Flush();
+
+            // Finalize all other file write operations if any exist
+            Data.FileWrites.Complete();
+            Data.FileWrites.Completion.GetAwaiter().GetResult();
+        }
+
         /// <summary>
         /// Writes a dummy 32-bit integer to the current location and returns the offset right after it
         /// Return value is meant to be used in conjunction with EndLength(int) to patch lengths

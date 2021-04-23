@@ -13,6 +13,9 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Serialize(writer);
 
+            if (List == null)
+                return;
+
             writer.Write((uint)1);
 
             List.Serialize(writer);
@@ -21,6 +24,10 @@ namespace DogScepterLib.Core.Chunks
         public override void Unserialize(GMDataReader reader)
         {
             base.Unserialize(reader);
+            
+            // This chunk can just be empty sometimes
+            if (Length == 0)
+                return;
 
             if (reader.ReadUInt32() != 1)
                 reader.Warnings.Add(new GMWarning("Unknown SEQN version, expected 1."));

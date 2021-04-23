@@ -1,4 +1,6 @@
-﻿using System;
+﻿using DogScepterLib.Project;
+using SkiaSharp;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -36,6 +38,9 @@ namespace DogScepterLib.Core.Models
         public bool _TileHorizontally = false;
         public bool _TileVertically = false;
         public bool _HasExtraBorder = false;
+        public GMTextureItem _DuplicateOf = null;
+        public TexturePacker.Page.Item _PackItem = null;
+        public SKBitmap _CachedBitmap = null;
 
         public void Serialize(GMDataWriter writer)
         {

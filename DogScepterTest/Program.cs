@@ -31,6 +31,8 @@ namespace DogScepterTest
                         Console.WriteLine($"Project warn: {type} {info ?? ""}");
                     });
 
+                //List<TexturePacker.Page> pages = TexturePacker.Pack(pf.Textures.TextureGroups[2], reader.Data);
+
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)
                 {

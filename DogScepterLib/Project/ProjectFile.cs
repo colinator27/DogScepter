@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks.Dataflow;
 
 namespace DogScepterLib.Project
 {
@@ -17,7 +18,7 @@ namespace DogScepterLib.Project
     {
         // Note: This is handled by Fody.PropertyChanged entirely, so no manual work has to be done
         public event PropertyChangedEventHandler PropertyChanged;
-        
+
         public enum WarningType
         {
             DataFileMismatch,

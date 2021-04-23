@@ -2,7 +2,9 @@
 using DogScepterLib.Core.Models;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
+using System.Threading.Tasks.Dataflow;
 
 namespace DogScepterLib.Core
 {
@@ -88,6 +90,16 @@ namespace DogScepterLib.Core
 #else
         public Log Logger = null;
 #endif
+
+        // Handles writing miscellaneous files asynchronously
+        public ActionBlock<KeyValuePair<string, byte[]>> FileWrites = new ActionBlock<KeyValuePair<string, byte[]>>(f =>
+        {
+            File.WriteAllBytes(f.Key, f.Value);
+        }, new ExecutionDataflowBlockOptions()
+        {
+            MaxDegreeOfParallelism = Environment.ProcessorCount
+        }
+        );
 
         public string Directory;
         public byte[] Hash;
