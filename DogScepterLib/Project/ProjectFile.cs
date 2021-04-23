@@ -30,6 +30,7 @@ namespace DogScepterLib.Project
         public Warning WarningHandler;
 
         public ProjectJson JsonFile;
+        public Dictionary<string, object> Info { get; set; } = new Dictionary<string, object>();
         public List<AssetRef<AssetPath>> Paths { get; set; } = new List<AssetRef<AssetPath>>();
         public List<AssetRef<AssetSound>> Sounds { get; set; } = new List<AssetRef<AssetSound>>();
         public List<AssetRef<AssetObject>> Objects { get; set; } = new List<AssetRef<AssetObject>>();
@@ -80,9 +81,19 @@ namespace DogScepterLib.Project
             File.WriteAllBytes(Path.Combine(DirectoryPath, "project.json"), JsonSerializer.SerializeToUtf8Bytes(JsonFile, JsonOptions));
         }
 
+        public void SaveInfo()
+        {
+            DataHandle.Logger?.Invoke("Saving project info...");
+
+            string dir = Path.Combine(DirectoryPath, JsonFile.Info);
+            Directory.CreateDirectory(Path.GetDirectoryName(dir));
+            File.WriteAllBytes(dir, JsonSerializer.SerializeToUtf8Bytes(Info, JsonOptions));
+        }
+
         public void SaveAll()
         {
             SaveMain();
+            SaveInfo();
 
             DataHandle.Logger?.Invoke("Saving assets...");
 
@@ -111,9 +122,21 @@ namespace DogScepterLib.Project
             }
         }
 
+        public void LoadInfo()
+        {
+            DataHandle.Logger?.Invoke("Loading project info...");
+            string path = Path.Combine(DirectoryPath, JsonFile.Info ?? "");
+            if (JsonFile.Info == null || JsonFile.Info == "" || !File.Exists(path))
+                Info = ConvertDataToProject.ConvertInfo(this);
+            else
+                Info = JsonSerializer.Deserialize<Dictionary<string, object>>(
+                    File.ReadAllBytes(path), JsonOptions);
+        }
+
         public void LoadAll()
         {
             LoadMain();
+            LoadInfo();
 
             DataHandle.Logger?.Invoke("Loading assets...");
 
@@ -319,7 +342,7 @@ namespace DogScepterLib.Project
         public int Version { get; private set; } = 1;
         public int BaseFileLength { get; set; }
         public byte[] BaseFileHash { get; set; }
-        public Dictionary<string, object> Info { get; set; }
+        public string Info { get; set; }
         public List<string> AudioGroups { get; set; }
         public Dictionary<string, List<AssetEntry>> Assets { get; set; }
 

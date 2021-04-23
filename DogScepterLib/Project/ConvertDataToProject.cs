@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using static DogScepterLib.Core.Models.GMSound;
 
@@ -36,7 +37,8 @@ namespace DogScepterLib.Project
         {
             pf.JsonFile.BaseFileLength = pf.DataHandle.Length;
             pf.JsonFile.BaseFileHash = pf.DataHandle.Hash;
-            pf.JsonFile.Info = ConvertInfo(pf);
+            pf.JsonFile.Info = "info.json";
+            pf.Info = ConvertInfo(pf);
             pf.JsonFile.AudioGroups = ConvertAudioGroups(pf);
 
             EmptyRefsForNamed(pf.DataHandle.GetChunk<GMChunkPATH>().List, pf.Paths);
@@ -60,7 +62,7 @@ namespace DogScepterLib.Project
             EmptyRefsForNamed(pf.DataHandle.GetChunk<GMChunkOBJT>().List, pf.Objects);
         }
 
-        private static Dictionary<string, object> ConvertInfo(ProjectFile pf)
+        public static Dictionary<string, object> ConvertInfo(ProjectFile pf)
         {
             var generalInfo = pf.DataHandle.GetChunk<GMChunkGEN8>();
 

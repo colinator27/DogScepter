@@ -28,48 +28,125 @@ namespace DogScepterLib.Project
             ConvertObjects(pf);
         }
 
+        private static int GetInt(this Dictionary<string, object> dict, string name)
+        {
+            object o = dict[name];
+            if (o is JsonElement)
+                return ((JsonElement)dict[name]).GetInt32();
+            return (int)o;
+        }
+
+        private static long GetLong(this Dictionary<string, object> dict, string name)
+        {
+            object o = dict[name];
+            if (o is JsonElement)
+                return ((JsonElement)dict[name]).GetInt64();
+            return (long)o;
+        }
+
+        private static short GetShort(this Dictionary<string, object> dict, string name)
+        {
+            object o = dict[name];
+            if (o is JsonElement)
+                return ((JsonElement)dict[name]).GetInt16();
+            return (short)o;
+        }
+
+        private static byte GetByte(this Dictionary<string, object> dict, string name)
+        {
+            object o = dict[name];
+            if (o is JsonElement)
+                return ((JsonElement)dict[name]).GetByte();
+            return (byte)o;
+        }
+
+        private static bool GetBool(this Dictionary<string, object> dict, string name)
+        {
+            object o = dict[name];
+            if (o is JsonElement)
+                return ((JsonElement)dict[name]).GetBoolean();
+            return (bool)o;
+        }
+
+        private static float GetFloat(this Dictionary<string, object> dict, string name)
+        {
+            object o = dict[name];
+            if (o is JsonElement)
+                return ((JsonElement)dict[name]).GetSingle();
+            return (float)o;
+        }
+
+        private static Guid GetGUID(this Dictionary<string, object> dict, string name)
+        {
+            object o = dict[name];
+            if (o is JsonElement)
+                return ((JsonElement)dict[name]).GetGuid();
+            return (Guid)o;
+        }
+
+        private static string GetString(this Dictionary<string, object> dict, string name)
+        {
+            object o = dict[name];
+            if (o is JsonElement)
+                return ((JsonElement)dict[name]).GetString();
+            return (string)o;
+        }
+
+        private static byte[] GetBytes(this Dictionary<string, object> dict, string name)
+        {
+            object o = dict[name];
+            if (o is JsonElement)
+                return ((JsonElement)dict[name]).GetBytesFromBase64();
+            return (byte[])o;
+        }
+
+        private static GMString GetString(this Dictionary<string, object> dict, ProjectFile pf, string name)
+        {
+            object o = dict[name];
+            if (o is JsonElement)
+                return pf.DataHandle.DefineString(((JsonElement)dict[name]).GetString());
+            return pf.DataHandle.DefineString((string)o);
+        }
+
         private static void ConvertInfo(ProjectFile pf)
         {
             GMChunkGEN8 info = (GMChunkGEN8)pf.DataHandle.Chunks["GEN8"];
 
-            int GetInt(string propertyName) { return ((JsonElement)pf.JsonFile.Info[propertyName]).GetInt32(); }
-            GMString GetString(string propertyName) { return pf.DataHandle.DefineString(((JsonElement)pf.JsonFile.Info[propertyName]).GetString()); }
-
-            info.DisableDebug = ((JsonElement)pf.JsonFile.Info["DisableDebug"]).GetBoolean();
-            info.FormatID = ((JsonElement)pf.JsonFile.Info["FormatID"]).GetByte();
-            info.Unknown = ((JsonElement)pf.JsonFile.Info["Unknown"]).GetInt16();
-            info.Filename = GetString("Filename");
-            info.Config = GetString("Config");
-            info.LastObjectID = GetInt("LastObjectID");
-            info.LastTileID = GetInt("LastTileID");
-            info.GameID = GetInt("GameID");
+            info.DisableDebug = pf.Info.GetBool("DisableDebug");
+            info.FormatID = pf.Info.GetByte("FormatID");
+            info.Unknown = pf.Info.GetShort("Unknown");
+            info.Filename = pf.Info.GetString(pf, "Filename");
+            info.Config = pf.Info.GetString(pf, "Config");
+            info.LastObjectID = pf.Info.GetInt("LastObjectID");
+            info.LastTileID = pf.Info.GetInt("LastTileID");
+            info.GameID = pf.Info.GetInt("GameID");
             if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
             {
-                if (pf.JsonFile.Info.ContainsKey("FPS"))
+                if (pf.Info.ContainsKey("FPS"))
                 {
-                    info.GMS2_FPS = ((JsonElement)pf.JsonFile.Info["FPS"]).GetSingle();
-                    info.GMS2_AllowStatistics = ((JsonElement)pf.JsonFile.Info["AllowStatistics"]).GetBoolean();
-                    info.GMS2_GameGUID = ((JsonElement)pf.JsonFile.Info["GUID"]).GetGuid();
+                    info.GMS2_FPS = pf.Info.GetFloat("FPS");
+                    info.GMS2_AllowStatistics = pf.Info.GetBool("AllowStatistics");
+                    info.GMS2_GameGUID = pf.Info.GetGUID("GUID");
                 }
             }
             else
-                info.LegacyGUID = ((JsonElement)pf.JsonFile.Info["GUID"]).GetGuid();
-            info.GameName = GetString("Name");
-            info.Major = GetInt("Major");
-            info.Minor = GetInt("Minor");
-            info.Release = GetInt("Release");
-            info.Build = GetInt("Build");
-            info.DefaultWindowWidth = GetInt("DefaultWindowWidth");
-            info.DefaultWindowHeight = GetInt("DefaultWindowHeight");
-            info.Info = Enum.Parse<GMChunkGEN8.InfoFlags>(((JsonElement)pf.JsonFile.Info["Info"]).GetString());
-            info.LicenseCRC32 = GetInt("LicenseCRC32");
-            info.LicenseMD5 = ((JsonElement)pf.JsonFile.Info["LicenseMD5"]).GetBytesFromBase64();
-            info.Timestamp = ((JsonElement)pf.JsonFile.Info["Timestamp"]).GetInt64();
-            info.DisplayName = GetString("DisplayName");
-            info.ActiveTargets = ((JsonElement)pf.JsonFile.Info["ActiveTargets"]).GetInt64();
-            info.FunctionClassifications = Enum.Parse<GMChunkGEN8.FunctionClassification>(((JsonElement)pf.JsonFile.Info["FunctionClassifications"]).GetString());
-            info.SteamAppID = GetInt("SteamAppID");
-            info.DebuggerPort = GetInt("DebuggerPort");
+                info.LegacyGUID = pf.Info.GetGUID("GUID");
+            info.GameName = pf.Info.GetString(pf, "Name");
+            info.Major = pf.Info.GetInt("Major");
+            info.Minor = pf.Info.GetInt("Minor");
+            info.Release = pf.Info.GetInt("Release");
+            info.Build = pf.Info.GetInt("Build");
+            info.DefaultWindowWidth = pf.Info.GetInt("DefaultWindowWidth");
+            info.DefaultWindowHeight = pf.Info.GetInt("DefaultWindowHeight");
+            info.Info = Enum.Parse<GMChunkGEN8.InfoFlags>(pf.Info.GetString("Info"));
+            info.LicenseCRC32 = pf.Info.GetInt("LicenseCRC32");
+            info.LicenseMD5 = pf.Info.GetBytes("LicenseMD5");
+            info.Timestamp = pf.Info.GetLong("Timestamp");
+            info.DisplayName = pf.Info.GetString(pf, "DisplayName");
+            info.ActiveTargets = pf.Info.GetLong("ActiveTargets");
+            info.FunctionClassifications = Enum.Parse<GMChunkGEN8.FunctionClassification>(pf.Info.GetString("FunctionClassifications"));
+            info.SteamAppID = pf.Info.GetInt("SteamAppID");
+            info.DebuggerPort = pf.Info.GetInt("DebuggerPort");
         }
 
         private static void ConvertAudioGroups(ProjectFile pf)
@@ -177,14 +254,14 @@ namespace DogScepterLib.Project
                 if (asset == null)
                 {
                     // This asset was never converted, so handle references and re-add it
-                    GMSound s = (GMSound)pf.Sounds[i].DataAsset;
+                    GMSound s = (GMSound)sortedSounds[i].DataAsset;
                     s.Name = pf.DataHandle.DefineString(s.Name.Content);
                     s.File = pf.DataHandle.DefineString(s.File.Content);
                     if (s.Type != null)
                         s.Type = pf.DataHandle.DefineString(s.Type.Content);
 
                     // Get the group name from the cache
-                    var cachedData = (CachedSoundRefData)pf.Sounds[i].CachedData;
+                    var cachedData = (CachedSoundRefData)sortedSounds[i].CachedData;
 
                     // Potentially handle the internal sound buffer
                     if (cachedData.SoundBuffer != null)
