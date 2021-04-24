@@ -2,12 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-
+using System.Threading.Tasks;
 using DogScepterLib.Core;
 using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
 using DogScepterLib.Project;
 using DogScepterLib.Project.Bytecode;
+using SkiaSharp;
 
 namespace DogScepterTest
 {
@@ -31,20 +32,10 @@ namespace DogScepterTest
                         Console.WriteLine($"Project warn: {type} {info ?? ""}");
                     });
 
-                // Some testing of exporting regenerated texture pages
-                int count = 0;
-                foreach (var g in pf.Textures.TextureGroups)
-                {
-                    pf.Textures.ResolveDuplicates(g);
-                    foreach (var page in TexturePacker.Pack(g, reader.Data))
-                    {
-                        using (FileStream imagefs = new FileStream($"txtr{count++}.png", FileMode.Create))
-                        {
-                            pf.Textures.DrawPage(g, page).Encode(imagefs, SkiaSharp.SKEncodedImageFormat.Png, 0);
-                        }
-                    }
-                }
-
+                SKBitmap testImage = SKBitmap.Decode(File.ReadAllBytes("testsprite.png"));
+                foreach (var group in pf.Textures.TextureGroups)
+                    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));
+                pf.Textures.RegenerateTextures();
 
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)

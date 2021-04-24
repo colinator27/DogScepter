@@ -22,6 +22,9 @@ namespace DogScepterLib.Project
             public int Border { get; set; } = 2;
             public bool AllowCrop { get; set; } = true;
 
+            public bool Dirty = false;
+            public List<(TexturePacker.Page, byte[])> GeneratedPages = new List<(TexturePacker.Page, byte[])>();
+
             public Group()
             {
             }
@@ -29,6 +32,22 @@ namespace DogScepterLib.Project
             public Group(int page)
             {
                 Pages.Add(page);
+            }
+
+            public void AddNewEntry(Textures textures, GMTextureItem entry)
+            {
+                Dirty = true;
+
+                Items.Add(entry);
+                if (entry.TexturePageID == -1 && AllowCrop)
+                    entry.Crop();
+
+                long key = textures.GetHashKeyForEntry(entry);
+
+                if (HashedItems.TryGetValue(key, out List<GMTextureItem> list))
+                    list.Add(entry);
+                else
+                    HashedItems[key] = new List<GMTextureItem>() { entry };
             }
         }
 
@@ -48,6 +67,83 @@ namespace DogScepterLib.Project
             DetermineGroupBorders();
             DetermineTiledEntries();
             FillHashTable();
+        }
+
+        public void RegenerateTextures()
+        {
+            // Figure out the groups that need to be regenerated
+            List<Group> toRegenerate = TextureGroups.FindAll(g => g.Dirty);
+
+            // Do the tough work first
+            Parallel.ForEach(toRegenerate, g =>
+            {
+                g.Dirty = false;
+                g.GeneratedPages.Clear();
+                ResolveDuplicates(g);
+                foreach (var page in TexturePacker.Pack(g, Project.DataHandle))
+                {
+                    g.GeneratedPages.Add((page, DrawPage(g, page).Encode(SKEncodedImageFormat.Png, 0).ToArray()));
+                }
+            });
+
+            // Now handle all data file references
+            var tpagList = Project.DataHandle.GetChunk<GMChunkTPAG>().List;
+            var txtrList = Project.DataHandle.GetChunk<GMChunkTXTR>().List;
+
+            void handlePage(int dataIndex, (TexturePacker.Page, byte[]) page)
+            {
+                txtrList[dataIndex].TextureData.Data = page.Item2;
+                foreach (TexturePacker.Page.Item item in page.Item1.Items)
+                {
+                    if (item.TextureItem.TexturePageID == -1)
+                        tpagList.Add(item.TextureItem); // this is a custom entry; add it to the data list
+                    item.TextureItem.TexturePageID = (short)dataIndex;
+                }
+            }
+
+            List<int> freePages = new List<int>();
+
+            foreach (var g in toRegenerate)
+            {
+                int count = g.GeneratedPages.Count;
+                int remaining = count;
+                int groupIndex = TextureGroups.IndexOf(g);
+
+                var pages = g.Pages.SortedMerge(OrderByDirection.Ascending, freePages);
+
+                foreach (int pageInd in pages)
+                {
+                    if (remaining <= 0)
+                    {
+                        // This page can be used by other groups after this
+                        freePages.Add(pageInd);
+                    }
+                    else
+                    {
+                        if (freePages.Contains(pageInd))
+                            freePages.Remove(pageInd);
+
+                        // Work on the pages inline
+                        handlePage(pageInd, g.GeneratedPages[count - remaining]);
+                        PageToGroup[pageInd] = groupIndex;
+                        CachedTextures.Remove(pageInd);
+
+                        remaining--;
+                    }
+                }
+
+                while (remaining > 0)
+                {
+                    // Add new pages to the end
+                    int pageInd = txtrList.Count;
+                    txtrList.Add(new GMTexturePage() { TextureData = new GMTextureData() });
+
+                    handlePage(pageInd, g.GeneratedPages[count - remaining]);
+                    PageToGroup[pageInd] = groupIndex;
+                    CachedTextures.Remove(pageInd);
+                    remaining--;
+                }
+            }
         }
 
         public void FindTextureGroups()
@@ -227,7 +323,7 @@ namespace DogScepterLib.Project
                         SKBitmap texture = GetTexture(entry.TexturePageID);
 
 #if DEBUG
-                        Debug.Assert(texture.BytesPerPixel == 4, "expected 32 bits per pixel");
+                        Debug.Assert(texture.ColorType == SKColorType.Rgba8888 || texture.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
                         Debug.Assert(texture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
 #endif
 
@@ -313,7 +409,7 @@ namespace DogScepterLib.Project
                 SKBitmap texture = entry._Bitmap;
 
 #if DEBUG
-                Debug.Assert(texture.BytesPerPixel == 4, "expected 32 bits per pixel");
+                Debug.Assert(texture.ColorType == SKColorType.Rgba8888 || texture.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
                 Debug.Assert(texture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
 #endif
 
@@ -336,7 +432,7 @@ namespace DogScepterLib.Project
                 SKBitmap texture = GetTexture(entry.TexturePageID);
 
 #if DEBUG
-                Debug.Assert(texture.BytesPerPixel == 4, "expected 32 bits per pixel");
+                Debug.Assert(texture.ColorType == SKColorType.Rgba8888 || texture.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
                 Debug.Assert(texture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
 #endif
 
@@ -387,7 +483,7 @@ namespace DogScepterLib.Project
             data = texture.Bytes;
 
 #if DEBUG
-            Debug.Assert(texture.BytesPerPixel == 4, "expected 32 bits per pixel");
+            Debug.Assert(texture.ColorType == SKColorType.Rgba8888 || texture.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
             Debug.Assert(texture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
 #endif
 
@@ -428,7 +524,7 @@ namespace DogScepterLib.Project
                 entryData = entryTexture.Bytes;
 
 #if DEBUG
-                Debug.Assert(entryTexture.BytesPerPixel == 4, "expected 32 bits per pixel");
+                Debug.Assert(entryTexture.ColorType == SKColorType.Rgba8888 || entryTexture.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
                 Debug.Assert(entryTexture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
 #endif
 
@@ -469,8 +565,16 @@ namespace DogScepterLib.Project
         {
             foreach (var entry in group.Items)
             {
-                List<GMTextureItem> list = group.HashedItems[GetHashKeyForEntry(entry)];
-                if (list.Count != 1)
+                long key = GetHashKeyForEntry(entry);
+                List<GMTextureItem> list;
+                if (!group.HashedItems.TryGetValue(key, out list))
+                {
+                    lock (group.HashedItems)
+                    {
+                        group.HashedItems[key] = new List<GMTextureItem>() { entry };
+                    }
+                }
+                else if (list.Count != 1)
                 {
                     int same = CompareHashedTextures(entry, list);
                     if (same != -1)
@@ -493,8 +597,8 @@ namespace DogScepterLib.Project
 
         public SKBitmap DrawPage(Group group, TexturePacker.Page page)
         {
-            // Unknown if this check is exactly accurate
-            int extraBorder = Project.DataHandle.VersionInfo.IsNumberAtLeast(2) ? 1 : 2;
+            // This is pretty much a complete guess here
+            bool alwaysCropBorder = !Project.DataHandle.VersionInfo.IsNumberAtLeast(2);
 
             SKBitmap bmp = new SKBitmap(page.Width, page.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
 
@@ -504,16 +608,24 @@ namespace DogScepterLib.Project
                 foreach (var item in page.Items)
                 {
                     GMTextureItem entry = item.TextureItem;
+
+                    if (entry._DuplicateOf != null)
+                    {
+                        entry.SourceX = (ushort)item.X;
+                        entry.SourceY = (ushort)item.Y;
+                        continue;
+                    }
+
                     SKBitmap entryBitmap;
                     if (entry.TexturePageID == -1)
                         entryBitmap = entry._Bitmap; // Custom bitmap
                     else
                         entryBitmap = GetTextureEntryBitmapFast(entry);
 
-                    canvas.DrawBitmap(entryBitmap, item.X, item.Y);
-
                     entry.SourceX = (ushort)item.X;
                     entry.SourceY = (ushort)item.Y;
+
+                    canvas.DrawBitmap(entryBitmap, item.X, item.Y);
 
                     if (!entry._EmptyBorder)
                     { 
@@ -549,7 +661,7 @@ namespace DogScepterLib.Project
                             }
                             else if (!entry._TileVertically)
                             {
-                                if (entry.TargetX == 0)
+                                if (alwaysCropBorder || entry.TargetX == 0)
                                 {
                                     // left
                                     canvas.DrawBitmap(entryBitmap, new SKRectI(0, 0, 1, entryBitmap.Height),
@@ -562,7 +674,7 @@ namespace DogScepterLib.Project
                                                                     new SKRectI(item.X - border, item.Y + entryBitmap.Height,
                                                                                 item.X, item.Y + entryBitmap.Height + border));
                                 }
-                                if (entry.TargetX + entry.SourceWidth == entry.TargetWidth)
+                                if (alwaysCropBorder || entry.TargetX + entry.TargetWidth == entry.BoundWidth)
                                 {
                                     // right
                                     canvas.DrawBitmap(entryBitmap, new SKRectI(entryBitmap.Width - 1, 0, entryBitmap.Width, entryBitmap.Height),
@@ -592,13 +704,13 @@ namespace DogScepterLib.Project
                             }
                             else
                             {
-                                if (entry.TargetY == 0)
+                                if (alwaysCropBorder || entry.TargetY == 0)
                                 {
                                     // top
                                     canvas.DrawBitmap(entryBitmap, new SKRectI(0, 0, entryBitmap.Width, 1),
                                                                     new SKRectI(item.X, item.Y - border, item.X + entryBitmap.Width, item.Y));
                                 }
-                                if (entry.TargetY + entry.SourceHeight == entry.TargetHeight)
+                                if (alwaysCropBorder || entry.TargetY + entry.TargetHeight == entry.BoundHeight)
                                 {
                                     // bottom
                                     canvas.DrawBitmap(entryBitmap, new SKRectI(0, entryBitmap.Height - 1, entryBitmap.Width, entryBitmap.Height),
