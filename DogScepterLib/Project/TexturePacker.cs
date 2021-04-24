@@ -198,7 +198,13 @@ namespace DogScepterLib.Project
                     if (full)
                     {
                         if (rect != this)
-                            Children.Remove(rect);
+                            Children.Remove(rect); 
+                        if (clips != null && clips.Count != 0)
+                        {
+                            if (Children == null)
+                                Children = new List<Rect>(64);
+                            AddChildren(clips);
+                        }
                     } else if (clips != null && clips.Count != 0)
                     {
                         if (rect != this)
@@ -209,18 +215,22 @@ namespace DogScepterLib.Project
                     }
 
                     // Search for more clips in the (potentially newly-made) children
-                    for (int i = Children.Count - 1; i > 0; i--)
+                    List<Rect> newChildren = new List<Rect>(64);
+                    for (int i = 0; i < Children.Count; i++)
                     {
                         clips = Children[i].Clip(x, y, width, height, out full);
                         if (full)
                         {
-                            Children.RemoveAt(i);
+                            Children.RemoveAt(i--);
+                            if (clips != null && clips.Count != 0)
+                                newChildren.AddRange(clips);
                         } else if (clips != null && clips.Count != 0)
                         {
-                            Children.RemoveAt(i);
-                            AddChildren(clips);
+                            Children.RemoveAt(i--);
+                            newChildren.AddRange(clips);
                         }
                     }
+                    AddChildren(newChildren);
 
                     // Get rid of rects completely contained in another rect
                     int count = Children.Count;

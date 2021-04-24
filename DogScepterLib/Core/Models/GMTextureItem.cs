@@ -32,15 +32,16 @@ namespace DogScepterLib.Core.Models
         public ushort BoundWidth; // The image's dimensions.
         public ushort BoundHeight;
 
-        public short TexturePageID;
+        public short TexturePageID = -1; // -1 means this is a user-created item
 
         // Used for convenience in the project system primarily
         public bool _TileHorizontally = false;
         public bool _TileVertically = false;
         public bool _HasExtraBorder = false;
+        public bool _EmptyBorder = false;
         public GMTextureItem _DuplicateOf = null;
         public TexturePacker.Page.Item _PackItem = null;
-        public SKBitmap _CachedBitmap = null;
+        public SKBitmap _Bitmap = null;
 
         public void Serialize(GMDataWriter writer)
         {

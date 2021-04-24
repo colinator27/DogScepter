@@ -31,7 +31,20 @@ namespace DogScepterTest
                         Console.WriteLine($"Project warn: {type} {info ?? ""}");
                     });
 
-                //List<TexturePacker.Page> pages = TexturePacker.Pack(pf.Textures.TextureGroups[2], reader.Data);
+                // Some testing of exporting regenerated texture pages
+                int count = 0;
+                foreach (var g in pf.Textures.TextureGroups)
+                {
+                    pf.Textures.ResolveDuplicates(g);
+                    foreach (var page in TexturePacker.Pack(g, reader.Data))
+                    {
+                        using (FileStream imagefs = new FileStream($"txtr{count++}.png", FileMode.Create))
+                        {
+                            pf.Textures.DrawPage(g, page).Encode(imagefs, SkiaSharp.SKEncodedImageFormat.Png, 0);
+                        }
+                    }
+                }
+
 
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)
