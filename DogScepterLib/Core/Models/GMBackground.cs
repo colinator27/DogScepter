@@ -16,13 +16,13 @@ namespace DogScepterLib.Core.Models
         public GMTextureItem TextureItem;
 
         // GMS2 tiles
-        public uint TileUnknown1; // Seems to always be 2
+        public uint TileUnknown1 = 2; // Seems to always be 2
         public uint TileWidth;
         public uint TileHeight;
         public uint TileOutputBorderX; // A setting in the IDE, seems to only change the texture on compile,
         public uint TileOutputBorderY; // and not impact the runner(?)
         public uint TileColumns;
-        public uint TileUnknown2; // Seems to always be 0
+        public uint TileUnknown2 = 0; // Seems to always be 0
         public long TileFrameLength; // time for each frame in microseconds
         public List<List<uint>> Tiles; // Contains entries per tile per frame
 

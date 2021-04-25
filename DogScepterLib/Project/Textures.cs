@@ -213,6 +213,17 @@ namespace DogScepterLib.Project
                 }
             }
 
+            // Find any others that haven't been made yet (happens with unreferenced textures/modded games)
+            var tpagList = Project.DataHandle.GetChunk<GMChunkTPAG>().List;
+            if (PageToGroup.Count != tpagList.Count)
+            {
+                for (int i = 0; i < tpagList.Count; i++)
+                {
+                    if (!PageToGroup.ContainsKey(i))
+                        PageToGroup[i] = findGroupWithPage(i);
+                }
+            }
+
             // Now quickly sort texture groups in case this algorithm gets adjusted
             TextureGroups = TextureGroups.OrderBy(x => x.Pages.Min()).ToList();
 
@@ -226,6 +237,8 @@ namespace DogScepterLib.Project
             // Assign all texture entries to groups for further processing
             foreach (GMTextureItem entry in Project.DataHandle.GetChunk<GMChunkTPAG>().List)
             {
+                if (entry.TexturePageID == -1)
+                    continue;
                 TextureGroups[PageToGroup[entry.TexturePageID]].Items.Add(entry);
             }
         }
@@ -417,7 +430,7 @@ namespace DogScepterLib.Project
 
                 int stride = (texture.RowBytes / 4);
                 int* ptr = (int*)texture.GetPixels().ToPointer();
-                int w = entry.SourceWidth - 1, h = (entry.SourceHeight * (stride - 1));
+                int w = entry.SourceWidth - 1, h = ((entry.SourceHeight - 1) * stride);
 
                 key |= ((long)(*((byte*)ptr + 3)) << 24) |
                        ((long)(*((byte*)(ptr + w) + 3)) << 16) |
@@ -441,7 +454,7 @@ namespace DogScepterLib.Project
                 int stride = (texture.RowBytes / 4);
                 int* ptr = (int*)texture.GetPixels().ToPointer()
                                     + entry.SourceX + (entry.SourceY * stride);
-                int w = entry.SourceWidth - 1, h = (entry.SourceHeight * (stride - 1));
+                int w = entry.SourceWidth - 1, h = ((entry.SourceHeight - 1) * stride);
 
                 key |= ((long)(*((byte*)ptr + 3)) << 24) |
                        ((long)(*((byte*)(ptr + w) + 3)) << 16) |
