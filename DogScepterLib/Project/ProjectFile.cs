@@ -129,14 +129,18 @@ namespace DogScepterLib.Project
                 File.ReadAllBytes(Path.Combine(DirectoryPath, "project.json")),
                 JsonOptions);
 
-            // Compare data file for mismatch
-            unsafe
+            // Check if this project file should be checking for a specific file
+            if (JsonFile.BaseFileLength > 0 && JsonFile.BaseFileHash != null && JsonFile.BaseFileHash.Length != 0)
             {
-                fixed (byte* a = DataHandle.Hash, b = JsonFile.BaseFileHash)
+                // Compare data file for mismatch
+                unsafe
                 {
-                    int* ai = (int*)a, bi = (int*)b;
-                    if (DataHandle.Length != JsonFile.BaseFileLength || ai[0] != bi[0] || ai[1] != bi[1] || ai[2] != bi[2] || ai[3] != bi[3] || ai[4] != bi[4])
-                        WarningHandler?.Invoke(WarningType.DataFileMismatch);
+                    fixed (byte* a = DataHandle.Hash, b = JsonFile.BaseFileHash)
+                    {
+                        int* ai = (int*)a, bi = (int*)b;
+                        if (DataHandle.Length != JsonFile.BaseFileLength || ai[0] != bi[0] || ai[1] != bi[1] || ai[2] != bi[2] || ai[3] != bi[3] || ai[4] != bi[4])
+                            WarningHandler?.Invoke(WarningType.DataFileMismatch);
+                    }
                 }
             }
         }
@@ -370,10 +374,11 @@ namespace DogScepterLib.Project
         }
 
         public int Version { get; private set; } = 1;
-        public int BaseFileLength { get; set; }
-        public byte[] BaseFileHash { get; set; }
-        public string Info { get; set; }
-        public string AudioGroups { get; set; }
+        public int BaseFileLength { get; set; } = 0;
+        public byte[] BaseFileHash { get; set; } = null;
+        public string Info { get; set; } // Filename of info JSON
+        public string AudioGroups { get; set; } // Filename of audio group JSON
+        public string DataFiles { get; set; } = ""; // Folder name of data files
         public Dictionary<string, List<AssetEntry>> Assets { get; set; }
 
 
@@ -381,11 +386,13 @@ namespace DogScepterLib.Project
         {
             { typeof(AssetPath), "Paths" },
             { typeof(AssetSound), "Sounds" },
+            { typeof(AssetBackground), "Backgrounds" },
             { typeof(AssetObject), "Objects" },
         };
         public readonly static HashSet<Type> AssetUsesFolder = new HashSet<Type>()
         {
             typeof(AssetSound),
+            typeof(AssetBackground),
             typeof(AssetObject), // Code entries not implemented yet, will be eventually
         };
 

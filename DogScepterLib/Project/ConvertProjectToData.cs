@@ -20,12 +20,39 @@ namespace DogScepterLib.Project
     {
         public static void Convert(ProjectFile pf)
         {
+            if (!Directory.Exists(pf.DataHandle.Directory))
+                throw new Exception("Missing output directory");
+
             ConvertInfo(pf);
             ConvertAudioGroups(pf);
             ConvertPaths(pf);
             ConvertSounds(pf);
             // TODO sprites need to be converted before objects
             ConvertObjects(pf);
+            CopyDataFiles(pf);
+        }
+
+        public static void CopyDataFiles(ProjectFile pf)
+        {
+            if (pf.JsonFile.DataFiles != null && pf.JsonFile.DataFiles.Trim() != "")
+            {
+                string dataFileDir = Path.Combine(pf.DirectoryPath, pf.JsonFile.DataFiles);
+                if (Directory.Exists(dataFileDir))
+                {
+                    void CopyFiles(DirectoryInfo source, DirectoryInfo target)
+                    {
+                        foreach (DirectoryInfo subDir in source.GetDirectories())
+                            CopyFiles(subDir, target.CreateSubdirectory(subDir.Name));
+                        foreach (FileInfo file in source.GetFiles())
+                        {
+                            pf.DataHandle.Logger?.Invoke($"Writing data file \"{file.Name}\"...");
+                            file.CopyTo(Path.Combine(target.FullName, file.Name), true);
+                        }
+                    }
+
+                    CopyFiles(new DirectoryInfo(dataFileDir), new DirectoryInfo(pf.DataHandle.Directory));
+                }
+            }
         }
 
         private static int GetInt(this Dictionary<string, object> dict, string name)

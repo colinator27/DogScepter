@@ -32,10 +32,10 @@ namespace DogScepterTest
                         Console.WriteLine($"Project warn: {type} {info ?? ""}");
                     });
 
-                SKBitmap testImage = SKBitmap.Decode(File.ReadAllBytes("testsprite.png"));
-                foreach (var group in pf.Textures.TextureGroups)
-                    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));
-                pf.Textures.RegenerateTextures();
+                //SKBitmap testImage = SKBitmap.Decode(File.ReadAllBytes("testsprite.png"));
+                //foreach (var group in pf.Textures.TextureGroups)
+                //    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));
+                //pf.Textures.RegenerateTextures();
 
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)

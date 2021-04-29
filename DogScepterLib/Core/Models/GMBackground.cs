@@ -19,8 +19,8 @@ namespace DogScepterLib.Core.Models
         public uint TileUnknown1 = 2; // Seems to always be 2
         public uint TileWidth;
         public uint TileHeight;
-        public uint TileOutputBorderX; // A setting in the IDE, seems to only change the texture on compile,
-        public uint TileOutputBorderY; // and not impact the runner(?)
+        public uint TileOutputBorderX; // Borders generated around each tile
+        public uint TileOutputBorderY;
         public uint TileColumns;
         public uint TileUnknown2 = 0; // Seems to always be 0
         public long TileFrameLength; // time for each frame in microseconds
