@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace DogScepterLib.Project.Assets
 {
-    class AssetBackground : Asset
+    public class AssetBackground : Asset
     {
         public bool Transparent { get; set; }
         public bool Smooth { get; set; }

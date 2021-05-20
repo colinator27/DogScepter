@@ -36,6 +36,7 @@ namespace DogScepterLib.Project
         public List<string> AudioGroups { get; set; }
         public List<AssetRef<AssetPath>> Paths { get; set; } = new List<AssetRef<AssetPath>>();
         public List<AssetRef<AssetSound>> Sounds { get; set; } = new List<AssetRef<AssetSound>>();
+        public List<AssetRef<AssetBackground>> Backgrounds { get; set; } = new List<AssetRef<AssetBackground>>();
         public List<AssetRef<AssetObject>> Objects { get; set; } = new List<AssetRef<AssetObject>>();
 
         public Dictionary<int, GMChunkAUDO> _CachedAudioChunks;
@@ -84,40 +85,32 @@ namespace DogScepterLib.Project
             File.WriteAllBytes(Path.Combine(DirectoryPath, "project.json"), JsonSerializer.SerializeToUtf8Bytes(JsonFile, JsonOptions));
         }
 
-        public void SaveInfo()
+        public delegate byte[] SerializeJson();
+
+        public void SaveExtraJSON(string filename, SerializeJson serialize)
         {
-            if (JsonFile.Info == null || JsonFile.Info == "")
+            if (filename == null || filename.Trim() == "")
                 return;
 
-            DataHandle.Logger?.Invoke("Saving info...");
+            DataHandle?.Logger?.Invoke($"Saving \"{filename}\"...");
 
-            string path = Path.Combine(DirectoryPath, JsonFile.Info);
+            string path = Path.Combine(DirectoryPath, filename);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            File.WriteAllBytes(path, JsonSerializer.SerializeToUtf8Bytes(Info, JsonOptions));
-        }
-
-        public void SaveAudioGroups()
-        {
-            if (JsonFile.AudioGroups == null || JsonFile.AudioGroups == "")
-                return;
-
-            DataHandle.Logger?.Invoke("Saving audio groups...");
-
-            string dir = Path.Combine(DirectoryPath, JsonFile.AudioGroups);
-            Directory.CreateDirectory(Path.GetDirectoryName(dir));
-            File.WriteAllBytes(dir, JsonSerializer.SerializeToUtf8Bytes(AudioGroups, JsonOptions));
+            File.WriteAllBytes(path, serialize());
         }
 
         public void SaveAll()
         {
             SaveMain();
-            SaveInfo();
-            SaveAudioGroups();
+            SaveExtraJSON(JsonFile.Info, () => JsonSerializer.SerializeToUtf8Bytes(Info, JsonOptions));
+            if (AudioGroups != null)
+                SaveExtraJSON(JsonFile.AudioGroups, () => JsonSerializer.SerializeToUtf8Bytes(AudioGroups, JsonOptions));
 
             DataHandle.Logger?.Invoke("Saving assets...");
 
             SaveAssets(Paths);
             SaveAssets(Sounds);
+            SaveAssets(Backgrounds);
             SaveAssets(Objects);
         }
 
@@ -145,37 +138,41 @@ namespace DogScepterLib.Project
             }
         }
 
-        public void LoadInfo()
+        public void LoadExtraJSON(string filename, Action<byte[]> deserialize, Action convert)
         {
-            DataHandle.Logger?.Invoke("Loading info...");
-            string path = Path.Combine(DirectoryPath, JsonFile.Info ?? "");
-            if (JsonFile.Info == null || JsonFile.Info == "" || !File.Exists(path))
-                Info = ConvertDataToProject.ConvertInfo(this);
-            else
-                Info = JsonSerializer.Deserialize<Dictionary<string, object>>(
-                    File.ReadAllBytes(path), JsonOptions);
-        }
+            if (filename == null || filename.Trim() == "")
+            {
+                convert();
+                return;
+            }
 
-        public void LoadAudioGroups()
-        {
-            DataHandle.Logger?.Invoke("Loading audio groups...");
-            string path = Path.Combine(DirectoryPath, JsonFile.AudioGroups ?? "");
-            if (JsonFile.AudioGroups == null || JsonFile.AudioGroups == "" || !File.Exists(path))
-                AudioGroups = ConvertDataToProject.ConvertAudioGroups(this);
-            else
-                AudioGroups = JsonSerializer.Deserialize<List<string>>(File.ReadAllBytes(path), JsonOptions);
+            string path = Path.Combine(DirectoryPath, filename);
+            if (!File.Exists(filename))
+            {
+                convert();
+                return;
+            }
+
+            DataHandle?.Logger?.Invoke($"Loading \"{filename}\"...");
+
+            deserialize(File.ReadAllBytes(path));
         }
 
         public void LoadAll()
         {
             LoadMain();
-            LoadInfo();
-            LoadAudioGroups();
+            LoadExtraJSON(JsonFile.Info,
+                b => Info = JsonSerializer.Deserialize<Dictionary<string, object>>(b, JsonOptions),
+                () => Info = ConvertDataToProject.ConvertInfo(this));
+            LoadExtraJSON(JsonFile.AudioGroups,
+                b => AudioGroups = JsonSerializer.Deserialize<List<string>>(b, JsonOptions),
+                () => AudioGroups = ConvertDataToProject.ConvertAudioGroups(this));
 
             DataHandle.Logger?.Invoke("Loading assets...");
 
             LoadAssets(Paths);
             LoadAssets(Sounds);
+            LoadAssets(Backgrounds);
             LoadAssets(Objects);
         }
 
@@ -227,19 +224,22 @@ namespace DogScepterLib.Project
 
             // Now load the assets from disk
             var loadMethod = typeof(T).GetMethod("Load");
-            foreach (ProjectJson.AssetEntry entry in JsonFile.Assets[ProjectJson.AssetTypeName[typeof(T)]])
+            if (JsonFile.Assets.TryGetValue(ProjectJson.AssetTypeName[typeof(T)], out var jsonList))
             {
-                string path = Path.Combine(DirectoryPath, entry.Path);
-                if (!File.Exists(path))
+                foreach (ProjectJson.AssetEntry entry in jsonList)
                 {
-                    WarningHandler.Invoke(WarningType.MissingAsset, entry.Name);
-                    continue;
-                }
+                    string path = Path.Combine(DirectoryPath, entry.Path);
+                    if (!File.Exists(path))
+                    {
+                        WarningHandler.Invoke(WarningType.MissingAsset, entry.Name);
+                        continue;
+                    }
 
-                if (assetIndices.ContainsKey(entry.Name))
-                    list[assetIndices[entry.Name]].Asset = (T)loadMethod.Invoke(null, new object[] { path });
-                else
-                    list.Add(new AssetRef<T>(entry.Name, (T)loadMethod.Invoke(null, new object[] { path })));
+                    if (assetIndices.ContainsKey(entry.Name))
+                        list[assetIndices[entry.Name]].Asset = (T)loadMethod.Invoke(null, new object[] { path });
+                    else
+                        list.Add(new AssetRef<T>(entry.Name, (T)loadMethod.Invoke(null, new object[] { path })));
+                }
             }
         }
 

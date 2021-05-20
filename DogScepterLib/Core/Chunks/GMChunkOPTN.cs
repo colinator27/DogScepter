@@ -43,7 +43,7 @@ namespace DogScepterLib.Core.Chunks
 
         public ulong Unknown;
         public OptionsFlags Options;
-        public uint Scale;
+        public int Scale;
         public uint WindowColor;
         public uint ColorDepth;
         public uint Resolution;
@@ -59,43 +59,140 @@ namespace DogScepterLib.Core.Chunks
 
         public GMList<Constant> Constants;
 
+        private void WriteOption(GMDataWriter writer, OptionsFlags flag)
+        {
+            writer.WriteWideBoolean((Options & flag) == flag);
+        }
+
         public override void Serialize(GMDataWriter writer)
         {
             base.Serialize(writer);
 
-            writer.Write(Unknown);
-            writer.Write((ulong)Options);
-            writer.Write(Scale);
-            writer.Write(WindowColor);
-            writer.Write(ColorDepth);
-            writer.Write(Resolution);
-            writer.Write(Frequency);
-            writer.Write(VertexSync);
-            writer.Write(Priority);
-            writer.WritePointer(SplashBackImage);
-            writer.WritePointer(SplashFrontImage);
-            writer.WritePointer(SplashLoadImage);
-            writer.Write(LoadAlpha);
+            if (writer.VersionInfo.OptionBitflag)
+            {
+                writer.Write(Unknown);
+                writer.Write((ulong)Options);
+                writer.Write(Scale);
+                writer.Write(WindowColor);
+                writer.Write(ColorDepth);
+                writer.Write(Resolution);
+                writer.Write(Frequency);
+                writer.Write(VertexSync);
+                writer.Write(Priority);
+                writer.WritePointer(SplashBackImage);
+                writer.WritePointer(SplashFrontImage);
+                writer.WritePointer(SplashLoadImage);
+                writer.Write(LoadAlpha);
+            }
+            else
+            {
+                WriteOption(writer, OptionsFlags.FullScreen);
+                WriteOption(writer, OptionsFlags.InterpolatePixels);
+                WriteOption(writer, OptionsFlags.UseNewAudio);
+                WriteOption(writer, OptionsFlags.NoBorder);
+                WriteOption(writer, OptionsFlags.ShowCursor);
+                writer.Write(Scale);
+                WriteOption(writer, OptionsFlags.Sizeable);
+                WriteOption(writer, OptionsFlags.StayOnTop);
+                writer.Write(WindowColor);
+                WriteOption(writer, OptionsFlags.ChangeResolution);
+                writer.Write(ColorDepth);
+                writer.Write(Resolution);
+                writer.Write(Frequency);
+                WriteOption(writer, OptionsFlags.NoButtons);
+                writer.Write(VertexSync);
+                WriteOption(writer, OptionsFlags.ScreenKey);
+                WriteOption(writer, OptionsFlags.HelpKey);
+                WriteOption(writer, OptionsFlags.QuitKey);
+                WriteOption(writer, OptionsFlags.SaveKey);
+                WriteOption(writer, OptionsFlags.ScreenShotKey);
+                WriteOption(writer, OptionsFlags.CloseSec);
+                writer.Write(Priority);
+                WriteOption(writer, OptionsFlags.Freeze);
+                WriteOption(writer, OptionsFlags.ShowProgress);
+                writer.WritePointer(SplashBackImage);
+                writer.WritePointer(SplashFrontImage);
+                writer.WritePointer(SplashLoadImage);
+                WriteOption(writer, OptionsFlags.LoadTransparent);
+                writer.Write(LoadAlpha);
+                WriteOption(writer, OptionsFlags.ScaleProgress);
+                WriteOption(writer, OptionsFlags.DisplayErrors);
+                WriteOption(writer, OptionsFlags.WriteErrors);
+                WriteOption(writer, OptionsFlags.AbortErrors);
+                WriteOption(writer, OptionsFlags.VariableErrors);
+                WriteOption(writer, OptionsFlags.CreationEventOrder);
+            }
             Constants.Serialize(writer);
+        }
+
+        private void ReadOption(GMDataReader reader, OptionsFlags flag)
+        {
+            if (reader.ReadWideBoolean())
+                Options |= flag;
         }
 
         public override void Unserialize(GMDataReader reader)
         {
             base.Unserialize(reader);
 
-            Unknown = reader.ReadUInt64();
-            Options = (OptionsFlags)reader.ReadUInt64();
-            Scale = reader.ReadUInt32();
-            WindowColor = reader.ReadUInt32();
-            ColorDepth = reader.ReadUInt32();
-            Resolution = reader.ReadUInt32();
-            Frequency = reader.ReadUInt32();
-            VertexSync = reader.ReadUInt32();
-            Priority = reader.ReadUInt32();
-            SplashBackImage = reader.ReadPointerObject<GMTextureItem>();
-            SplashFrontImage = reader.ReadPointerObject<GMTextureItem>();
-            SplashLoadImage = reader.ReadPointerObject<GMTextureItem>();
-            LoadAlpha = reader.ReadUInt32();
+            reader.VersionInfo.OptionBitflag = (reader.ReadInt32() == int.MinValue);
+            reader.Offset -= 4;
+
+            if (reader.VersionInfo.OptionBitflag)
+            {
+                Unknown = reader.ReadUInt64();
+                Options = (OptionsFlags)reader.ReadUInt64();
+                Scale = reader.ReadInt32();
+                WindowColor = reader.ReadUInt32();
+                ColorDepth = reader.ReadUInt32();
+                Resolution = reader.ReadUInt32();
+                Frequency = reader.ReadUInt32();
+                VertexSync = reader.ReadUInt32();
+                Priority = reader.ReadUInt32();
+                SplashBackImage = reader.ReadPointerObject<GMTextureItem>();
+                SplashFrontImage = reader.ReadPointerObject<GMTextureItem>();
+                SplashLoadImage = reader.ReadPointerObject<GMTextureItem>();
+                LoadAlpha = reader.ReadUInt32();
+            }
+            else
+            {
+                Options = 0;
+                ReadOption(reader, OptionsFlags.FullScreen);
+                ReadOption(reader, OptionsFlags.InterpolatePixels);
+                ReadOption(reader, OptionsFlags.UseNewAudio);
+                ReadOption(reader, OptionsFlags.NoBorder);
+                ReadOption(reader, OptionsFlags.ShowCursor);
+                Scale = reader.ReadInt32();
+                ReadOption(reader, OptionsFlags.Sizeable);
+                ReadOption(reader, OptionsFlags.StayOnTop);
+                WindowColor = reader.ReadUInt32();
+                ReadOption(reader, OptionsFlags.ChangeResolution);
+                ColorDepth = reader.ReadUInt32();
+                Resolution = reader.ReadUInt32();
+                Frequency = reader.ReadUInt32();
+                ReadOption(reader, OptionsFlags.NoButtons);
+                VertexSync = reader.ReadUInt32();
+                ReadOption(reader, OptionsFlags.ScreenKey);
+                ReadOption(reader, OptionsFlags.HelpKey);
+                ReadOption(reader, OptionsFlags.QuitKey);
+                ReadOption(reader, OptionsFlags.SaveKey);
+                ReadOption(reader, OptionsFlags.ScreenShotKey);
+                ReadOption(reader, OptionsFlags.CloseSec);
+                Priority = reader.ReadUInt32();
+                ReadOption(reader, OptionsFlags.Freeze);
+                ReadOption(reader, OptionsFlags.ShowProgress);
+                SplashBackImage = reader.ReadPointerObject<GMTextureItem>();
+                SplashFrontImage = reader.ReadPointerObject<GMTextureItem>();
+                SplashLoadImage = reader.ReadPointerObject<GMTextureItem>();
+                ReadOption(reader, OptionsFlags.LoadTransparent);
+                LoadAlpha = reader.ReadUInt32();
+                ReadOption(reader, OptionsFlags.ScaleProgress);
+                ReadOption(reader, OptionsFlags.DisplayErrors);
+                ReadOption(reader, OptionsFlags.WriteErrors);
+                ReadOption(reader, OptionsFlags.AbortErrors);
+                ReadOption(reader, OptionsFlags.VariableErrors);
+                ReadOption(reader, OptionsFlags.CreationEventOrder);
+            }
             Constants = new GMList<Constant>();
             Constants.Unserialize(reader);
         }

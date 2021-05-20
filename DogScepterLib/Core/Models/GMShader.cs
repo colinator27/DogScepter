@@ -29,6 +29,8 @@ namespace DogScepterLib.Core.Models
 
         public List<GMString> VertexAttributes;
 
+        public int Version = 2;
+
         public enum ShaderType : int
         {
             GLSL_ES = 1,
@@ -59,7 +61,7 @@ namespace DogScepterLib.Core.Models
             foreach (GMString s in VertexAttributes)
                 writer.WritePointerString(s);
 
-            writer.Write(2);
+            writer.Write(Version);
 
             writer.WritePointer(PSSL_VertexBuffer);
             writer.Write((PSSL_VertexBuffer != null) ? PSSL_VertexBuffer.Buffer.Length : 0);
@@ -71,10 +73,13 @@ namespace DogScepterLib.Core.Models
             writer.WritePointer(CG_PSV_PixelBuffer);
             writer.Write((CG_PSV_PixelBuffer != null) ? CG_PSV_PixelBuffer.Buffer.Length : 0);
 
-            writer.WritePointer(CG_PS3_VertexBuffer);
-            writer.Write((CG_PS3_VertexBuffer != null) ? CG_PS3_VertexBuffer.Buffer.Length : 0);
-            writer.WritePointer(CG_PS3_PixelBuffer);
-            writer.Write((CG_PS3_PixelBuffer != null) ? CG_PS3_PixelBuffer.Buffer.Length : 0);
+            if (Version >= 2)
+            {
+                writer.WritePointer(CG_PS3_VertexBuffer);
+                writer.Write((CG_PS3_VertexBuffer != null) ? CG_PS3_VertexBuffer.Buffer.Length : 0);
+                writer.WritePointer(CG_PS3_PixelBuffer);
+                writer.Write((CG_PS3_PixelBuffer != null) ? CG_PS3_PixelBuffer.Buffer.Length : 0);
+            }
 
             if (HLSL11_VertexBuffer != null)
             {
@@ -115,17 +120,20 @@ namespace DogScepterLib.Core.Models
                 CG_PSV_PixelBuffer.Serialize(writer);
             }
 
-            if (CG_PS3_VertexBuffer != null)
+            if (Version >= 2)
             {
-                writer.Pad(16);
-                writer.WriteObjectPointer(CG_PS3_VertexBuffer);
-                CG_PS3_VertexBuffer.Serialize(writer);
-            }
-            if (CG_PS3_PixelBuffer != null)
-            {
-                writer.Pad(8);
-                writer.WriteObjectPointer(CG_PS3_PixelBuffer);
-                CG_PS3_PixelBuffer.Serialize(writer);
+                if (CG_PS3_VertexBuffer != null)
+                {
+                    writer.Pad(16);
+                    writer.WriteObjectPointer(CG_PS3_VertexBuffer);
+                    CG_PS3_VertexBuffer.Serialize(writer);
+                }
+                if (CG_PS3_PixelBuffer != null)
+                {
+                    writer.Pad(8);
+                    writer.WriteObjectPointer(CG_PS3_PixelBuffer);
+                    CG_PS3_PixelBuffer.Serialize(writer);
+                }
             }
         }
 
@@ -155,8 +163,7 @@ namespace DogScepterLib.Core.Models
             for (int i = reader.ReadInt32(); i > 0; i--)
                 VertexAttributes.Add(reader.ReadStringPointerObject());
 
-            if (reader.ReadInt32() != 2)
-                reader.Warnings.Add(new GMWarning("expected 2 in SHDR"));
+            Version = reader.ReadInt32();
 
             int ptr3 = reader.ReadInt32();
             PSSL_VertexBuffer = reader.ReadPointer<ShaderBuffer>(ptr3);
@@ -174,13 +181,16 @@ namespace DogScepterLib.Core.Models
             CG_PSV_PixelBuffer = reader.ReadPointer<ShaderBuffer>(currPtr);
             ReadShaderData(reader, CG_PSV_PixelBuffer, currPtr, reader.ReadInt32());
 
-            currPtr = reader.ReadInt32();
-            CG_PS3_VertexBuffer = reader.ReadPointer<ShaderBuffer>(currPtr);
-            ReadShaderData(reader, CG_PSV_VertexBuffer, currPtr, reader.ReadInt32());
+            if (Version >= 2)
+            {
+                currPtr = reader.ReadInt32();
+                CG_PS3_VertexBuffer = reader.ReadPointer<ShaderBuffer>(currPtr);
+                ReadShaderData(reader, CG_PS3_VertexBuffer, currPtr, reader.ReadInt32());
 
-            currPtr = reader.ReadInt32();
-            CG_PS3_PixelBuffer = reader.ReadPointer<ShaderBuffer>(currPtr);
-            ReadShaderData(reader, CG_PSV_PixelBuffer, currPtr, reader.ReadInt32());
+                currPtr = reader.ReadInt32();
+                CG_PS3_PixelBuffer = reader.ReadPointer<ShaderBuffer>(currPtr);
+                ReadShaderData(reader, CG_PS3_PixelBuffer, currPtr, reader.ReadInt32());
+            }
 
             ReadShaderData(reader, HLSL11_VertexBuffer, ptr1, -1, ptr2 == 0 ? endPos : ptr2);
             ReadShaderData(reader, HLSL11_PixelBuffer, ptr2, -1, ptr3 == 0 ? endPos : ptr3);

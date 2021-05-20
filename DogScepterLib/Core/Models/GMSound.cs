@@ -26,7 +26,7 @@ namespace DogScepterLib.Core.Models
         public float Volume;
         public float Pitch;
         public int AudioID;
-        public int GroupID;
+        public int GroupID; // In older versions this can also be a "preload" boolean, but it's always true and for now we don't care
 
         public void Serialize(GMDataWriter writer)
         {

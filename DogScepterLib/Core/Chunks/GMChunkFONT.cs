@@ -9,17 +9,23 @@ namespace DogScepterLib.Core.Chunks
     {
         public GMPointerList<GMFont> List;
 
+        public byte[] Padding;
+
         public override void Serialize(GMDataWriter writer)
         {
             base.Serialize(writer);
 
             List.Serialize(writer);
 
-            // Whatever this is
-            for (short i = 0; i < 0x80; i++)
-                writer.Write(i);
-            for (short i = 0; i < 0x80; i++)
-                writer.Write((short)0x3f);
+            if (Padding == null)
+            {
+                for (ushort i = 0; i < 0x80; i++)
+                    writer.Write(i);
+                for (ushort i = 0; i < 0x80; i++)
+                    writer.Write((ushort)0x3f);
+            }
+            else
+                writer.Write(Padding);
         }
 
         public override void Unserialize(GMDataReader reader)
@@ -29,13 +35,7 @@ namespace DogScepterLib.Core.Chunks
             List = new GMPointerList<GMFont>();
             List.Unserialize(reader);
 
-            // Whatever this is
-            for (short i = 0; i < 0x80; i++)
-                if (reader.ReadInt16() != i)
-                    reader.Warnings.Add(new GMWarning("Incorrect weird values in FONT"));
-            for (short i = 0; i < 0x80; i++)
-                if (reader.ReadInt16() != 0x3f)
-                    reader.Warnings.Add(new GMWarning("Incorrect weird values in FONT (part 2)"));
+            Padding = reader.ReadBytes(512);
         }
     }
 }

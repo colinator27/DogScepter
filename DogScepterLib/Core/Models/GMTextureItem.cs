@@ -51,6 +51,11 @@ namespace DogScepterLib.Core.Models
         // Creates a new texture entry from a bitmap
         public GMTextureItem(SKBitmap bitmap)
         {
+            ReplaceWith(bitmap);
+        }
+
+        public void ReplaceWith(SKBitmap bitmap)
+        {
             _Bitmap = bitmap;
 
 #if DEBUG
@@ -68,6 +73,14 @@ namespace DogScepterLib.Core.Models
             TargetY = 0;
             TargetWidth = BoundWidth;
             TargetHeight = BoundHeight;
+
+            TexturePageID = -1;
+            _TileHorizontally = false;
+            _TileVertically = false;
+            _HasExtraBorder = false;
+            _EmptyBorder = false;
+            _DuplicateOf = null;
+            _PackItem = null;
         }
 
         public unsafe void Crop()

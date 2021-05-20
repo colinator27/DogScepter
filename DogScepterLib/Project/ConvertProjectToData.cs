@@ -23,6 +23,8 @@ namespace DogScepterLib.Project
             if (!Directory.Exists(pf.DataHandle.Directory))
                 throw new Exception("Missing output directory");
 
+            pf.DataHandle.BuildStringCache();
+
             ConvertInfo(pf);
             ConvertAudioGroups(pf);
             ConvertPaths(pf);

@@ -56,10 +56,14 @@ namespace DogScepterLib.Project
                 else
                     buff = pf._CachedAudioChunks[sound.GroupID].List[sound.AudioID].Data;
 
+                if (pf.AudioGroups == null)
+                    return new CachedSoundRefData(buff, "");
+
                 return new CachedSoundRefData(buff,
                                                 (sound.GroupID >= 0 && sound.GroupID < pf.AudioGroups.Count) 
                                                     ? pf.AudioGroups[sound.GroupID] : "");
             });
+            EmptyRefsForNamed(pf.DataHandle.GetChunk<GMChunkBGND>().List, pf.Backgrounds);
             EmptyRefsForNamed(pf.DataHandle.GetChunk<GMChunkOBJT>().List, pf.Objects);
         }
 
@@ -108,6 +112,8 @@ namespace DogScepterLib.Project
         public static List<string> ConvertAudioGroups(ProjectFile pf)
         {
             var agrp = pf.DataHandle.GetChunk<GMChunkAGRP>();
+            if (agrp == null)
+                return null; // format ID <= 13
             var groups = agrp.List;
 
             // Make a cached map of group IDs to chunks

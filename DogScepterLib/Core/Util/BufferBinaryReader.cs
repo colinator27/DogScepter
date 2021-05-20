@@ -7,10 +7,8 @@ namespace DogScepterLib.Core.Util
 {
     public class BufferBinaryReader
     {
-        private readonly Stream stream;
         private readonly byte[] buffer;
-        private Encoding encoding;
-        public Encoding Encoding { get => encoding; }
+        public Encoding Encoding { get; private set; }
 
         public int Offset { get; set; }
         public int Length { get; private set; }
@@ -18,7 +16,6 @@ namespace DogScepterLib.Core.Util
 
         public BufferBinaryReader(Stream stream)
         {
-            this.stream = stream;
             Length = (int)stream.Length;
             buffer = new byte[Length];
             Offset = 0;
@@ -28,7 +25,7 @@ namespace DogScepterLib.Core.Util
             stream.Read(buffer, 0, Length);
             stream.Close();
 
-            encoding = new UTF8Encoding(false);
+            Encoding = new UTF8Encoding(false);
         }
 
         public byte ReadByte()

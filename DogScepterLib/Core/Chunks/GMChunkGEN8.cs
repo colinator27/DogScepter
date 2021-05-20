@@ -159,7 +159,8 @@ namespace DogScepterLib.Core.Chunks
             writer.Write(ActiveTargets);
             writer.Write((ulong)FunctionClassifications);
             writer.Write(SteamAppID);
-            writer.Write(DebuggerPort);
+            if (FormatID >= 14)
+                writer.Write(DebuggerPort);
 
             writer.Write(RoomOrder.Count);
             for (int i = 0; i < RoomOrder.Count; i++)
@@ -242,7 +243,8 @@ namespace DogScepterLib.Core.Chunks
             ActiveTargets = reader.ReadInt64();
             FunctionClassifications = (FunctionClassification)reader.ReadUInt64();
             SteamAppID = reader.ReadInt32();
-            DebuggerPort = reader.ReadInt32();
+            if (FormatID >= 14)
+                DebuggerPort = reader.ReadInt32();
 
             int count = reader.ReadInt32();
             RoomOrder = new List<int>(count);
