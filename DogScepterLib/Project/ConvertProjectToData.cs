@@ -21,15 +21,18 @@ namespace DogScepterLib.Project
         public static void Convert(ProjectFile pf)
         {
             if (!Directory.Exists(pf.DataHandle.Directory))
-                throw new Exception("Missing output directory");
+                throw new Exception($"Missing output directory \"{pf.DataHandle.Directory}\"");
 
             pf.DataHandle.BuildStringCache();
 
             ConvertInfo(pf);
             ConvertAudioGroups(pf);
+            ConvertTextureGroups(pf);
             ConvertPaths(pf);
             ConvertSounds(pf);
             // TODO sprites need to be converted before objects
+            // TODO future note: sprite/font/tileset/etc. IDs need to be updated in TGIN
+            pf.Textures.RegenerateTextures();
             ConvertObjects(pf);
             CopyDataFiles(pf);
         }
@@ -181,6 +184,8 @@ namespace DogScepterLib.Project
         private static void ConvertAudioGroups(ProjectFile pf)
         {
             GMChunkAGRP groups = pf.DataHandle.GetChunk<GMChunkAGRP>();
+            if (groups == null || pf.AudioGroups == null)
+                return;
 
             groups.List.Clear();
             int ind = 0;
@@ -210,6 +215,85 @@ namespace DogScepterLib.Project
                 });
 
                 ind++;
+            }
+        }
+
+        private static void ConvertTextureGroups(ProjectFile pf)
+        {
+            // Sort the texture pages by their ID
+            List<int> newGroupIDs = new List<int>();
+            Dictionary<int, ProjectJson.TextureGroup> newGroups = new Dictionary<int, ProjectJson.TextureGroup>();
+
+            int highest = -1;
+            foreach (var group in pf.TextureGroups)
+            {
+                int thisId = group.ID;
+
+                if (newGroupIDs.Contains(thisId))
+                {
+                    // Duplicate ID? Go one above the highest instead
+                    pf.DataHandle.Logger?.Invoke($"Warning: overlapping texture group ID {thisId}; changing it automatically.");
+                    thisId = highest + 1;
+                }
+                newGroupIDs.Add(thisId);
+
+                if (thisId > highest)
+                    highest = thisId;
+
+                newGroups[thisId] = group;
+            }
+            newGroupIDs.Sort();
+
+            var tginList = pf.DataHandle.GetChunk<GMChunkTGIN>()?.List;
+            int tginEnd = tginList?.Count ?? 0;
+
+            // Add new pages to the end
+            int i;
+            for (i = newGroups.Count; i > pf.Textures.TextureGroups.Count; i--)
+            {
+                var groupInfo = newGroups[newGroupIDs[i]];
+                pf.Textures.TextureGroups.Add(new Textures.Group() 
+                { 
+                    Dirty = true,
+                    Border = groupInfo.Border,
+                    AllowCrop = groupInfo.AllowCrop
+                });
+
+                // Add new TGIN entries, will be filled out with more later
+                tginList?.Insert(tginEnd, new GMTextureGroupInfo()
+                {
+                    Name = pf.DataHandle.DefineString(groupInfo.Name)
+                });
+            }
+
+            // Handle changing properties on other pages
+            for (i--; i >= 0; i--)
+            {
+                var groupInfo = newGroups[newGroupIDs[i]];
+                var group = pf.Textures.TextureGroups[i];
+                if (group.Border != groupInfo.Border || group.AllowCrop != groupInfo.AllowCrop)
+                {
+                    group.Dirty = true;
+                    group.Border = groupInfo.Border;
+                    group.AllowCrop = groupInfo.AllowCrop;
+                }
+
+                if (tginList != null)
+                {
+                    // Find TGIN entry
+                    GMTextureGroupInfo resultInfo = null;
+                    foreach (var info in tginList)
+                    {
+                        if (info.TexturePageIDs.Any(j => group.Pages.Contains(j.ID)))
+                        {
+                            resultInfo = info;
+                            break;
+                        }
+                    }
+
+                    // Update name
+                    resultInfo.Name = pf.DataHandle.DefineString(groupInfo.Name);
+                }
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using DogScepterLib.Core.Chunks;
+﻿using DogScepterLib.Core;
+using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
 using MoreLinq;
 using SkiaSharp;
@@ -74,6 +75,8 @@ namespace DogScepterLib.Project
             // Figure out the groups that need to be regenerated
             List<Group> toRegenerate = TextureGroups.FindAll(g => g.Dirty);
 
+            Project.DataHandle.Logger?.Invoke($"Regenerating textures for {toRegenerate.Count} groups...");
+
             // Do the tough work first
             Parallel.ForEach(toRegenerate, g =>
             {
@@ -86,9 +89,12 @@ namespace DogScepterLib.Project
                 }
             });
 
+            Project.DataHandle.Logger?.Invoke("Handling texture references...");
+
             // Now handle all data file references
             var tpagList = Project.DataHandle.GetChunk<GMChunkTPAG>().List;
             var txtrList = Project.DataHandle.GetChunk<GMChunkTXTR>().List;
+            var tginList = Project.DataHandle.GetChunk<GMChunkTGIN>()?.List;
 
             void handlePage(int dataIndex, (TexturePacker.Page, byte[]) page)
             {
@@ -103,13 +109,16 @@ namespace DogScepterLib.Project
 
             List<int> freePages = new List<int>();
 
-            foreach (var g in toRegenerate)
+            for (int i = 0; i < toRegenerate.Count; i++)
             {
+                Group g = toRegenerate[i];
+
                 int count = g.GeneratedPages.Count;
                 int remaining = count;
                 int groupIndex = TextureGroups.IndexOf(g);
 
-                var pages = g.Pages.SortedMerge(OrderByDirection.Ascending, freePages);
+                var pages = g.Pages.SortedMerge(OrderByDirection.Ascending, freePages).ToList();
+                g.Pages.Clear();
 
                 foreach (int pageInd in pages)
                 {
@@ -124,6 +133,7 @@ namespace DogScepterLib.Project
                             freePages.Remove(pageInd);
 
                         // Work on the pages inline
+                        g.Pages.Add(pageInd);
                         handlePage(pageInd, g.GeneratedPages[count - remaining]);
                         PageToGroup[pageInd] = groupIndex;
                         CachedTextures.Remove(pageInd);
@@ -138,12 +148,24 @@ namespace DogScepterLib.Project
                     int pageInd = txtrList.Count;
                     txtrList.Add(new GMTexturePage() { TextureData = new GMTextureData() });
 
+                    g.Pages.Add(pageInd);
                     handlePage(pageInd, g.GeneratedPages[count - remaining]);
                     PageToGroup[pageInd] = groupIndex;
                     CachedTextures.Remove(pageInd);
                     remaining--;
                 }
+
+                if (tginList != null)
+                {
+                    // Handle updating TGIN page IDs
+                    var tginPageIDs = tginList[i].TexturePageIDs;
+                    tginPageIDs.Clear();
+                    foreach (int id in g.Pages)
+                        tginPageIDs.Add(new GMTextureGroupInfo.ResourceID() { ID = id });
+                }
             }
+
+            Project.DataHandle.Logger?.Invoke("Texture regeneration complete.");
         }
 
         public void FindTextureGroups()
@@ -213,17 +235,6 @@ namespace DogScepterLib.Project
                 }
             }
 
-            // Find any others that haven't been made yet (happens with unreferenced textures/modded games)
-            var tpagList = Project.DataHandle.GetChunk<GMChunkTPAG>().List;
-            if (PageToGroup.Count != tpagList.Count)
-            {
-                for (int i = 0; i < tpagList.Count; i++)
-                {
-                    if (!PageToGroup.ContainsKey(i))
-                        PageToGroup[i] = findGroupWithPage(i);
-                }
-            }
-
             // Now quickly sort texture groups in case this algorithm gets adjusted
             TextureGroups = TextureGroups.OrderBy(x => x.Pages.Min()).ToList();
 
@@ -232,6 +243,17 @@ namespace DogScepterLib.Project
             {
                 foreach (int page in TextureGroups[i].Pages)
                     PageToGroup[page] = i;
+            }
+
+            // Find any others that haven't been made yet (happens with unreferenced textures/modded games)
+            var tpagList = Project.DataHandle.GetChunk<GMChunkTPAG>().List;
+            if (PageToGroup.Count != tpagList.Count)
+            {
+                for (int i = 0; i < tpagList.Count; i++)
+                {
+                    if (!PageToGroup.ContainsKey(tpagList[i].TexturePageID))
+                        PageToGroup[i] = findGroupWithPage(tpagList[i].TexturePageID);
+                }
             }
 
             // Assign all texture entries to groups for further processing

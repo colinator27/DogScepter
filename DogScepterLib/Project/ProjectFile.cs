@@ -34,6 +34,7 @@ namespace DogScepterLib.Project
         public Dictionary<string, object> Info { get; set; } = new Dictionary<string, object>();
 
         public List<string> AudioGroups { get; set; }
+        public List<ProjectJson.TextureGroup> TextureGroups { get; set; }
         public List<AssetRef<AssetPath>> Paths { get; set; } = new List<AssetRef<AssetPath>>();
         public List<AssetRef<AssetSound>> Sounds { get; set; } = new List<AssetRef<AssetSound>>();
         public List<AssetRef<AssetBackground>> Backgrounds { get; set; } = new List<AssetRef<AssetBackground>>();
@@ -85,14 +86,14 @@ namespace DogScepterLib.Project
             File.WriteAllBytes(Path.Combine(DirectoryPath, "project.json"), JsonSerializer.SerializeToUtf8Bytes(JsonFile, JsonOptions));
         }
 
+        // Helper function to save a special JSON file
         public delegate byte[] SerializeJson();
-
         public void SaveExtraJSON(string filename, SerializeJson serialize)
         {
             if (filename == null || filename.Trim() == "")
                 return;
 
-            DataHandle?.Logger?.Invoke($"Saving \"{filename}\"...");
+            DataHandle.Logger?.Invoke($"Saving \"{filename}\"...");
 
             string path = Path.Combine(DirectoryPath, filename);
             Directory.CreateDirectory(Path.GetDirectoryName(path));
@@ -105,6 +106,7 @@ namespace DogScepterLib.Project
             SaveExtraJSON(JsonFile.Info, () => JsonSerializer.SerializeToUtf8Bytes(Info, JsonOptions));
             if (AudioGroups != null)
                 SaveExtraJSON(JsonFile.AudioGroups, () => JsonSerializer.SerializeToUtf8Bytes(AudioGroups, JsonOptions));
+            SaveExtraJSON(JsonFile.TextureGroups, () => JsonSerializer.SerializeToUtf8Bytes(TextureGroups, JsonOptions));
 
             DataHandle.Logger?.Invoke("Saving assets...");
 
@@ -138,6 +140,7 @@ namespace DogScepterLib.Project
             }
         }
 
+        // Helper function to load a special JSON file
         public void LoadExtraJSON(string filename, Action<byte[]> deserialize, Action convert)
         {
             if (filename == null || filename.Trim() == "")
@@ -147,13 +150,13 @@ namespace DogScepterLib.Project
             }
 
             string path = Path.Combine(DirectoryPath, filename);
-            if (!File.Exists(filename))
+            if (!File.Exists(path))
             {
                 convert();
                 return;
             }
 
-            DataHandle?.Logger?.Invoke($"Loading \"{filename}\"...");
+            DataHandle.Logger?.Invoke($"Loading \"{filename}\"...");
 
             deserialize(File.ReadAllBytes(path));
         }
@@ -167,6 +170,9 @@ namespace DogScepterLib.Project
             LoadExtraJSON(JsonFile.AudioGroups,
                 b => AudioGroups = JsonSerializer.Deserialize<List<string>>(b, JsonOptions),
                 () => AudioGroups = ConvertDataToProject.ConvertAudioGroups(this));
+            LoadExtraJSON(JsonFile.TextureGroups,
+                b => TextureGroups = JsonSerializer.Deserialize<List<ProjectJson.TextureGroup>>(b, JsonOptions),
+                () => TextureGroups = ConvertDataToProject.ConvertTextureGroups(this));
 
             DataHandle.Logger?.Invoke("Loading assets...");
 
@@ -373,12 +379,21 @@ namespace DogScepterLib.Project
             public string Path { get; set; }
         }
 
+        public struct TextureGroup
+        {
+            public string Name { get; set; }
+            public int Border { get; set; }
+            public bool AllowCrop { get; set; }
+            public int ID { get; set; } // in ProjectFile.Textures.TextureGroups
+        }
+
         public int Version { get; private set; } = 1;
         public int BaseFileLength { get; set; } = 0;
         public byte[] BaseFileHash { get; set; } = null;
         public string Info { get; set; } // Filename of info JSON
         public string AudioGroups { get; set; } // Filename of audio group JSON
         public string DataFiles { get; set; } = ""; // Folder name of data files
+        public string TextureGroups { get; set; } // Filename of texture group JSON
         public Dictionary<string, List<AssetEntry>> Assets { get; set; }
 
 

@@ -37,6 +37,19 @@ namespace DogScepterTest
                 //    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));
                 //pf.Textures.RegenerateTextures();
 
+                /*
+                pf.Textures.TextureGroups.Clear();
+                var megaGroup = new Textures.Group();
+                var list = pf.DataHandle.GetChunk<GMChunkTXTR>().List;
+                for (int i = 0; i < list.Count; i++)
+                    megaGroup.Pages.Add(i);
+                foreach (var entry in pf.DataHandle.GetChunk<GMChunkTPAG>().List)
+                    if (entry.TexturePageID != -1)
+                        megaGroup.AddNewEntry(pf.Textures, entry);
+                pf.Textures.TextureGroups.Add(megaGroup);
+                pf.Textures.RegenerateTextures();
+                */
+
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)
                 {

@@ -41,6 +41,8 @@ namespace DogScepterLib.Project
             pf.Info = ConvertInfo(pf);
             pf.JsonFile.AudioGroups = "audiogroups.json";
             pf.AudioGroups = ConvertAudioGroups(pf);
+            pf.JsonFile.TextureGroups = "texturegroups.json";
+            pf.TextureGroups = ConvertTextureGroups(pf);
 
             EmptyRefsForNamed(pf.DataHandle.GetChunk<GMChunkPATH>().List, pf.Paths);
             EmptyRefsForNamed(pf.DataHandle.GetChunk<GMChunkSOND>().List, pf.Sounds, (asset) =>
@@ -132,6 +134,53 @@ namespace DogScepterLib.Project
             List<string> res = new List<string>();
             foreach (GMAudioGroup g in groups)
                 res.Add(g.Name.Content);
+            return res;
+        }
+
+        public static List<ProjectJson.TextureGroup> ConvertTextureGroups(ProjectFile pf)
+        {
+            var res = new List<ProjectJson.TextureGroup>();
+            var tgin = pf.DataHandle.GetChunk<GMChunkTGIN>();
+            var list = pf.Textures.TextureGroups;
+
+            if (tgin != null)
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var group = list[i];
+                    GMTextureGroupInfo resultInfo = null;
+                    foreach (var info in tgin.List)
+                    {
+                        if (info.TexturePageIDs.Any(j => group.Pages.Contains(j.ID)))
+                        {
+                            resultInfo = info;
+                            break;
+                        }
+                    }
+                    res.Add(new ProjectJson.TextureGroup()
+                    {
+                        Name = resultInfo?.Name?.Content ?? $"unknown_group_{i}",
+                        Border = group.Border,
+                        AllowCrop = group.AllowCrop,
+                        ID = i
+                    });
+                }
+            } 
+            else
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var group = list[i];
+                    res.Add(new ProjectJson.TextureGroup()
+                    {
+                        Name = $"group{i}",
+                        Border = group.Border,
+                        AllowCrop = group.AllowCrop,
+                        ID = i
+                    });
+                }
+            }
+
             return res;
         }
 
