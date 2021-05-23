@@ -34,7 +34,7 @@ namespace DogScepterLib.Project
         public Dictionary<string, object> Info { get; set; } = new Dictionary<string, object>();
 
         public List<string> AudioGroups { get; set; }
-        public List<ProjectJson.TextureGroup> TextureGroups { get; set; }
+        public ProjectJson.TextureGroupSettings TextureGroupSettings { get; set; }
         public List<AssetRef<AssetPath>> Paths { get; set; } = new List<AssetRef<AssetPath>>();
         public List<AssetRef<AssetSound>> Sounds { get; set; } = new List<AssetRef<AssetSound>>();
         public List<AssetRef<AssetBackground>> Backgrounds { get; set; } = new List<AssetRef<AssetBackground>>();
@@ -106,7 +106,7 @@ namespace DogScepterLib.Project
             SaveExtraJSON(JsonFile.Info, () => JsonSerializer.SerializeToUtf8Bytes(Info, JsonOptions));
             if (AudioGroups != null)
                 SaveExtraJSON(JsonFile.AudioGroups, () => JsonSerializer.SerializeToUtf8Bytes(AudioGroups, JsonOptions));
-            SaveExtraJSON(JsonFile.TextureGroups, () => JsonSerializer.SerializeToUtf8Bytes(TextureGroups, JsonOptions));
+            SaveExtraJSON(JsonFile.TextureGroups, () => JsonSerializer.SerializeToUtf8Bytes(TextureGroupSettings, JsonOptions));
 
             DataHandle.Logger?.Invoke("Saving assets...");
 
@@ -171,8 +171,8 @@ namespace DogScepterLib.Project
                 b => AudioGroups = JsonSerializer.Deserialize<List<string>>(b, JsonOptions),
                 () => AudioGroups = ConvertDataToProject.ConvertAudioGroups(this));
             LoadExtraJSON(JsonFile.TextureGroups,
-                b => TextureGroups = JsonSerializer.Deserialize<List<ProjectJson.TextureGroup>>(b, JsonOptions),
-                () => TextureGroups = ConvertDataToProject.ConvertTextureGroups(this));
+                b => TextureGroupSettings = JsonSerializer.Deserialize<ProjectJson.TextureGroupSettings>(b, JsonOptions),
+                () => TextureGroupSettings = ConvertDataToProject.ConvertTextureGroups(this));
 
             DataHandle.Logger?.Invoke("Loading assets...");
 
@@ -377,6 +377,13 @@ namespace DogScepterLib.Project
         {
             public string Name { get; set; }
             public string Path { get; set; }
+        }
+
+        public struct TextureGroupSettings
+        {
+            public int MaxTextureWidth { get; set; }
+            public int MaxTextureHeight { get; set; }
+            public List<TextureGroup> Groups { get; set; }
         }
 
         public struct TextureGroup

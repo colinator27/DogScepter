@@ -25,6 +25,9 @@ namespace DogScepterLib.Project
 
             public bool Dirty = false;
             public List<(TexturePacker.Page, byte[])> GeneratedPages = new List<(TexturePacker.Page, byte[])>();
+            
+            // Set when regenerating for easy access
+            public string Name;
 
             public Group()
             {
@@ -77,17 +80,45 @@ namespace DogScepterLib.Project
 
             Project.DataHandle.Logger?.Invoke($"Regenerating textures for {toRegenerate.Count} groups...");
 
+            int maxWidth = Project.TextureGroupSettings.MaxTextureWidth,
+                maxHeight = Project.TextureGroupSettings.MaxTextureHeight;
+            if ((maxWidth & (maxWidth - 1)) != 0 ||
+                (maxHeight & (maxHeight - 1)) != 0 ||
+                maxWidth < 4 || maxHeight < 4)
+            {
+                Project.DataHandle.Logger?.Invoke($"Warning: Invalid texture dimensions: {maxWidth} by {maxHeight}. Using defaults.");
+                maxWidth = 2048;
+                maxHeight = 2048;
+            }
+
+            bool failure = false;
+
             // Do the tough work first
             Parallel.ForEach(toRegenerate, g =>
             {
                 g.Dirty = false;
                 g.GeneratedPages.Clear();
                 ResolveDuplicates(g);
-                foreach (var page in TexturePacker.Pack(g, Project.DataHandle))
+                var result = TexturePacker.Pack(g, Project.DataHandle, maxWidth, maxHeight);
+                if (result == null)
                 {
-                    g.GeneratedPages.Add((page, DrawPage(g, page).Encode(SKEncodedImageFormat.Png, 0).ToArray()));
+                    failure = true;
+                }
+                else
+                {
+                    foreach (var page in result)
+                    {
+                        g.GeneratedPages.Add((page, DrawPage(g, page).Encode(SKEncodedImageFormat.Png, 0).ToArray()));
+                    }
+                    Project.DataHandle.Logger?.Invoke($"\"{g.Name}\" finished with {g.GeneratedPages.Count} pages");
                 }
             });
+
+            if (failure)
+            {
+                Project.DataHandle.Logger?.Invoke($"ERROR: Failed to fit entries onto texture pages. The max width/height are likely too small.");
+                throw new Exception("Failed to fit entries onto texture pages");
+            }
 
             Project.DataHandle.Logger?.Invoke("Handling texture references...");
 
@@ -107,7 +138,7 @@ namespace DogScepterLib.Project
                 }
             }
 
-            List<int> freePages = new List<int>();
+            HashSet<int> freePages = new HashSet<int>();
 
             for (int i = 0; i < toRegenerate.Count; i++)
             {
@@ -117,7 +148,8 @@ namespace DogScepterLib.Project
                 int remaining = count;
                 int groupIndex = TextureGroups.IndexOf(g);
 
-                var pages = g.Pages.SortedMerge(OrderByDirection.Ascending, freePages).ToList();
+                var pages = g.Pages.Union(freePages).ToList();
+                pages.Sort();
                 g.Pages.Clear();
 
                 foreach (int pageInd in pages)
@@ -129,8 +161,7 @@ namespace DogScepterLib.Project
                     }
                     else
                     {
-                        if (freePages.Contains(pageInd))
-                            freePages.Remove(pageInd);
+                        freePages.Remove(pageInd);
 
                         // Work on the pages inline
                         g.Pages.Add(pageInd);
@@ -168,8 +199,7 @@ namespace DogScepterLib.Project
             Project.DataHandle.Logger?.Invoke("Texture regeneration complete.");
         }
 
-        // Somewhat slow but thorough algorithm to remove all unreferenced pages.
-        // Only really necessary for massively cutting down memory usage in old mods.
+        // Thorough algorithm to remove all unreferenced texture pages.
         public void PurgeUnreferencedPages()
         {
             HashSet<int> referencedPages = new HashSet<int>();

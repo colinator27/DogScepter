@@ -52,7 +52,10 @@ namespace DogScepterTest
                     pf.LoadAll();
                 }
 
-                ///*
+                foreach (var group in pf.Textures.TextureGroups)
+                    group.Dirty = true;
+
+                /*
                 pf.Textures.TextureGroups.Clear();
                 var megaGroup = new Textures.Group();
                 var list = pf.DataHandle.GetChunk<GMChunkTXTR>().List;
@@ -66,7 +69,7 @@ namespace DogScepterTest
                 pf.TextureGroups.Add(new ProjectJson.TextureGroup() { Name = "main", AllowCrop = true, Border = 2, ID = 0 });
                 pf.Textures.RegenerateTextures();
                 pf.Textures.PurgeUnreferencedPages();
-                //*/
+                */
 
                 Directory.CreateDirectory("output");
                 using (FileStream fs2 = new FileStream("output/data.win", FileMode.Create))

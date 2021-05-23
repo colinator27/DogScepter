@@ -370,9 +370,11 @@ namespace DogScepterLib.Project
                     targetPage.Place(group, entry, extraBorder, pregms2_2_2, out x, out y);
                 }
 
-#if DEBUG
-                Debug.Assert(x != -1 && y != -1, "failed to place texture");
-#endif
+                if (x == -1)
+                {
+                    // Failed to pack!
+                    return null;
+                }
 
                 entry._PackItem = new Page.Item(x, y, targetPage, entry);
             }

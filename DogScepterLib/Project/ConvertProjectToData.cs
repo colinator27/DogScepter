@@ -33,6 +33,7 @@ namespace DogScepterLib.Project
             // TODO sprites need to be converted before objects
             // TODO future note: sprite/font/tileset/etc. IDs need to be updated in TGIN
             pf.Textures.RegenerateTextures();
+            pf.Textures.PurgeUnreferencedPages();
             ConvertObjects(pf);
             CopyDataFiles(pf);
         }
@@ -225,7 +226,7 @@ namespace DogScepterLib.Project
             Dictionary<int, ProjectJson.TextureGroup> newGroups = new Dictionary<int, ProjectJson.TextureGroup>();
 
             int highest = -1;
-            foreach (var group in pf.TextureGroups)
+            foreach (var group in pf.TextureGroupSettings.Groups)
             {
                 int thisId = group.ID;
 
@@ -256,7 +257,8 @@ namespace DogScepterLib.Project
                 { 
                     Dirty = true,
                     Border = groupInfo.Border,
-                    AllowCrop = groupInfo.AllowCrop
+                    AllowCrop = groupInfo.AllowCrop,
+                    Name = groupInfo.Name
                 });
 
                 // Add new TGIN entries, will be filled out with more later
@@ -277,6 +279,7 @@ namespace DogScepterLib.Project
                     group.Border = groupInfo.Border;
                     group.AllowCrop = groupInfo.AllowCrop;
                 }
+                group.Name = groupInfo.Name;
 
                 if (tginList != null)
                 {
