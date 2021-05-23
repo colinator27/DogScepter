@@ -68,6 +68,8 @@ namespace DogScepterLib.Project
                 public int Area;
                 public long Hash;
                 public List<Rect> Children = null;
+                public List<Rect> StoredClips = null;
+                public bool StoredFull;
 
                 public Rect(int x, int y, int width, int height)
                 {
@@ -120,10 +122,23 @@ namespace DogScepterLib.Project
 
                 public List<Rect> ClipHere(int width, int height, out bool full)
                 {
-                    var res = Clip(X, Y, width, height, out full);
-                    if (res == null || res.Count == 0)
+                    if (width == Width && height == Height)
+                    {
+                        full = true;
                         return null;
-                    return res;
+                    }
+                    full = false;
+
+                    List<Rect> result = new List<Rect>();
+
+                    int right = X + width;
+                    int bottom = Y + height;
+                    if (right < Right)
+                        result.Add(new Rect(right, Y, Right - right, Height));
+                    if (bottom < Bottom)
+                        result.Add(new Rect(X, bottom, Width, Bottom - bottom));
+
+                    return result;
                 }
 
                 public Rect FindSpace(int width, int height)
@@ -132,49 +147,46 @@ namespace DogScepterLib.Project
                     if (Children.Count == 0)
                         return null;
 
-                    Rect res = null;
-                    int area = width * height;
-                    foreach (Rect child in Children)
+                    for (int i = 0; i < Children.Count; i++)
                     {
-                        if ((child.Width * child.Height) < area || child.Width < width || child.Height < height)
-                            continue;
-
-                        foreach (Rect otherChild in Children)
+                        Rect child = Children[i];
+                        if (child.Width >= width && child.Height >= height)
                         {
-                            if ((otherChild.Width * otherChild.Height) >= area && otherChild.Width >= width && otherChild.Height >= height)
+                            bool full;
+                            List<Rect> clipping = child.ClipHere(width, height, out full);
+                            child.StoredClips = clipping;
+                            child.StoredFull = full;
+                            if (full && clipping == null)
                             {
-                                bool full;
-                                List<Rect> clipping = otherChild.Clip(otherChild.X, otherChild.Y, width, height, out full);
-                                if (full && clipping == null)
+                                Area = child.Area;
+                                return child;
+                            }
+                            else
+                            {
+                                if (clipping != null && clipping.Count != 0)
                                 {
-                                    Area = child.Area;
-                                    res = otherChild;
-                                }
-                                else
+                                    for (int j = 0; j < clipping.Count; j++)
+                                    {
+                                        Rect clip = clipping[j];
+                                        if (clip != null && Area < clip.Area)
+                                        {
+                                            Area = clip.Area;
+                                            return child;
+                                        }
+                                    }
+                                } else
                                 {
-                                    if (clipping != null && clipping.Count != 0)
+                                    if (Area < child.Area)
                                     {
-                                        foreach (Rect clip in clipping)
-                                        {
-                                            if (clip != null && Area < clip.Area)
-                                            {
-                                                Area = clip.Area;
-                                                res = otherChild;
-                                            }
-                                        }
-                                    } else
-                                    {
-                                        if (Area < child.Area)
-                                        {
-                                            Area = child.Area;
-                                            res = otherChild;
-                                        }
+                                        Area = child.Area;
+                                        return child;
                                     }
                                 }
                             }
                         }
                     }
-                    return res;
+
+                    return null;
                 }
 
                 public void AddChildren(List<Rect> rects)
@@ -191,7 +203,11 @@ namespace DogScepterLib.Project
                     bool full;
 
                     // Search for clips in the base rect
-                    List<Rect> clips = rect.ClipHere(width, height, out full);
+                    List<Rect> clips = rect.StoredClips;
+                    if (clips == null)
+                        rect.ClipHere(width, height, out full);
+                    else
+                        full = rect.StoredFull;
                     x = rect.X; 
                     y = rect.Y;
 

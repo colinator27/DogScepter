@@ -55,7 +55,7 @@ namespace DogScepterLib.Project
         public ProjectFile Project;
         public List<Group> TextureGroups = new List<Group>();
         public Dictionary<int, int> PageToGroup = new Dictionary<int, int>();
-        public Dictionary<int, SKBitmap> CachedTextures = new Dictionary<int, SKBitmap>();
+        public SKBitmap[] CachedTextures = new SKBitmap[8192];
 
         public Textures(ProjectFile project)
         {
@@ -136,7 +136,7 @@ namespace DogScepterLib.Project
                         g.Pages.Add(pageInd);
                         handlePage(pageInd, g.GeneratedPages[count - remaining]);
                         PageToGroup[pageInd] = groupIndex;
-                        CachedTextures.Remove(pageInd);
+                        CachedTextures[pageInd] = null;
 
                         remaining--;
                     }
@@ -151,7 +151,7 @@ namespace DogScepterLib.Project
                     g.Pages.Add(pageInd);
                     handlePage(pageInd, g.GeneratedPages[count - remaining]);
                     PageToGroup[pageInd] = groupIndex;
-                    CachedTextures.Remove(pageInd);
+                    CachedTextures[pageInd] = null;
                     remaining--;
                 }
 
@@ -337,8 +337,8 @@ namespace DogScepterLib.Project
 
         public SKBitmap GetTexture(int ind)
         {
-            if (CachedTextures.TryGetValue(ind, out SKBitmap res))
-                return res;
+            if (CachedTextures[ind] != null)
+                return CachedTextures[ind];
             return CachedTextures[ind] = SKBitmap.Decode(Project.DataHandle.GetChunk<GMChunkTXTR>().List[ind].TextureData.Data);
         }
 
@@ -575,24 +575,13 @@ namespace DogScepterLib.Project
 
         // Compares contents of textures with the same hash key
         // Notably, the widths/heights of every item are the same
-        public unsafe int CompareHashedTextures(GMTextureItem self, List<GMTextureItem> list)
+        public unsafe int CompareHashedTextures(GMTextureItem self, List<GMTextureItem> list, int startAt = 0)
         {
-            SKBitmap texture;
-            int stride;
-            byte[] data;
-            if (self.TexturePageID == -1)
-                texture = self._Bitmap; // Custom bitmap
-            else
-                texture = GetTexture(self.TexturePageID);
-            stride = (texture.RowBytes / 4);
-            data = texture.Bytes;
+            SKBitmap texture = null;
+            int stride = 0;
+            byte[] data = null;
 
-#if DEBUG
-            Debug.Assert(texture.ColorType == SKColorType.Rgba8888 || texture.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
-            Debug.Assert(texture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
-#endif
-
-            for (int i = 0; i < list.Count; i++)
+            for (int i = startAt; i < list.Count; i++)
             {
                 GMTextureItem entry = list[i];
 
@@ -615,6 +604,21 @@ namespace DogScepterLib.Project
                         // These aren't on the same page...
                         continue;
                     }
+                }
+
+                if (texture == null)
+                {
+                    if (self.TexturePageID == -1)
+                        texture = self._Bitmap; // Custom bitmap
+                    else
+                        texture = GetTexture(self.TexturePageID);
+                    stride = (texture.RowBytes / 4);
+                    data = texture.Bytes;
+
+#if DEBUG
+                    Debug.Assert(texture.ColorType == SKColorType.Rgba8888 || texture.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
+                    Debug.Assert(texture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
+#endif
                 }
 
                 // Otherwise, get the raw data
@@ -668,20 +672,13 @@ namespace DogScepterLib.Project
         // After every element has been properly added to HashedItems, including any new ones
         public void ResolveDuplicates(Group group)
         {
-            foreach (var entry in group.Items)
+            foreach (var list in group.HashedItems.Values)
             {
-                long key = GetHashKeyForEntry(entry);
-                List<GMTextureItem> list;
-                if (!group.HashedItems.TryGetValue(key, out list))
+                for (int i = 0; i < list.Count - 1; i++)
                 {
-                    lock (group.HashedItems)
-                    {
-                        group.HashedItems[key] = new List<GMTextureItem>() { entry };
-                    }
-                }
-                else if (list.Count != 1)
-                {
-                    int same = CompareHashedTextures(entry, list);
+                    var entry = list[i];
+
+                    int same = CompareHashedTextures(entry, list, i + 1);
                     if (same != -1)
                     {
                         entry._DuplicateOf = list[same];
