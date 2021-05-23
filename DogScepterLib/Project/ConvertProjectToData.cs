@@ -249,7 +249,7 @@ namespace DogScepterLib.Project
 
             // Add new pages to the end
             int i;
-            for (i = newGroups.Count; i > pf.Textures.TextureGroups.Count; i--)
+            for (i = newGroups.Count - 1; i >= pf.Textures.TextureGroups.Count; i--)
             {
                 var groupInfo = newGroups[newGroupIDs[i]];
                 pf.Textures.TextureGroups.Add(new Textures.Group() 
@@ -267,7 +267,7 @@ namespace DogScepterLib.Project
             }
 
             // Handle changing properties on other pages
-            for (i--; i >= 0; i--)
+            for (; i >= 0; i--)
             {
                 var groupInfo = newGroups[newGroupIDs[i]];
                 var group = pf.Textures.TextureGroups[i];

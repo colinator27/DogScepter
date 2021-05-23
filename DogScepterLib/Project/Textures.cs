@@ -168,6 +168,68 @@ namespace DogScepterLib.Project
             Project.DataHandle.Logger?.Invoke("Texture regeneration complete.");
         }
 
+        // Somewhat slow but thorough algorithm to remove all unreferenced pages.
+        // Only really necessary for massively cutting down memory usage in old mods.
+        public void PurgeUnreferencedPages()
+        {
+            HashSet<int> referencedPages = new HashSet<int>();
+
+            void addPages(params GMTextureItem[] items)
+            {
+                foreach (var item in items)
+                    if (item != null && item.TexturePageID != -1)
+                        referencedPages.Add(item.TexturePageID);
+            }
+
+            foreach (GMSprite spr in Project.DataHandle.GetChunk<GMChunkSPRT>().List)
+                addPages(spr.TextureItems.ToArray());
+            foreach (GMBackground bg in Project.DataHandle.GetChunk<GMChunkBGND>().List)
+                addPages(bg.TextureItem);
+            foreach (GMFont fnt in Project.DataHandle.GetChunk<GMChunkFONT>().List)
+                addPages(fnt.TextureItem);
+
+            var txtrList = Project.DataHandle.GetChunk<GMChunkTXTR>().List;
+            var tpagList = Project.DataHandle.GetChunk<GMChunkTPAG>().List;
+            List<int> forRemoval = new List<int>();
+            for (int i = 0; i < txtrList.Count; i++)
+            {
+                if (!referencedPages.Contains(i))
+                {
+                    // Purge this page; it's unreferenced
+                    forRemoval.Add(i);
+                }
+            }
+
+            for (int i = 0; i < forRemoval.Count; i++)
+            {
+                int currentIndex = forRemoval[i] - i;
+                txtrList.RemoveAt(currentIndex);
+
+                foreach (GMTextureItem item in tpagList)
+                {
+                    if (item.TexturePageID == currentIndex)
+                        item.TexturePageID = -1;
+                    else if (item.TexturePageID > currentIndex)
+                        item.TexturePageID--;
+                }
+            }
+
+            var tginList = Project.DataHandle.GetChunk<GMChunkTGIN>()?.List;
+            if (tginList != null)
+            {
+                for (int i = 0; i < TextureGroups.Count; i++)
+                {
+                    Group g = TextureGroups[i];
+
+                    // Handle updating TGIN page IDs
+                    var tginPageIDs = tginList[i].TexturePageIDs;
+                    tginPageIDs.Clear();
+                    foreach (int id in g.Pages)
+                        tginPageIDs.Add(new GMTextureGroupInfo.ResourceID() { ID = id });
+                }
+            }
+        }
+
         public void FindTextureGroups()
         {
             // Attempts to find a group ID with a page; makes a new group when necessary
@@ -261,7 +323,15 @@ namespace DogScepterLib.Project
             {
                 if (entry.TexturePageID == -1)
                     continue;
-                TextureGroups[PageToGroup[entry.TexturePageID]].Items.Add(entry);
+                if (PageToGroup.TryGetValue(entry.TexturePageID, out int groupId))
+                    TextureGroups[groupId].Items.Add(entry);
+                else
+                {
+                    // This is an unreferenced entry
+                    int group = findGroupWithPage(entry.TexturePageID);
+                    PageToGroup[entry.TexturePageID] = group;
+                    TextureGroups[group].Items.Add(entry);
+                }    
             }
         }
 

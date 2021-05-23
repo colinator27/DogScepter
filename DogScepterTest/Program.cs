@@ -37,7 +37,22 @@ namespace DogScepterTest
                 //    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));
                 //pf.Textures.RegenerateTextures();
 
-                /*
+                bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
+                if (first)
+                {
+                    //ConvertDataToProject.ConvertSound(pf, 0);
+                    //pf.Sounds[0].Asset.Dirty = true;
+                    //pf.AddDirtyAssetsToJSON(pf.Sounds, "sounds");
+                    pf.SaveAll();
+                } else
+                {
+                    //ConvertDataToProject.ConvertSound(pf, 0);
+                    pf.LoadMain();
+                    //pf.PurgeIdenticalAssetsOnDisk(pf.Sounds);
+                    pf.LoadAll();
+                }
+
+                ///*
                 pf.Textures.TextureGroups.Clear();
                 var megaGroup = new Textures.Group();
                 var list = pf.DataHandle.GetChunk<GMChunkTXTR>().List;
@@ -47,23 +62,11 @@ namespace DogScepterTest
                     if (entry.TexturePageID != -1)
                         megaGroup.AddNewEntry(pf.Textures, entry);
                 pf.Textures.TextureGroups.Add(megaGroup);
+                pf.TextureGroups.Clear();
+                pf.TextureGroups.Add(new ProjectJson.TextureGroup() { Name = "main", AllowCrop = true, Border = 2, ID = 0 });
                 pf.Textures.RegenerateTextures();
-                */
-
-                bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
-                if (first)
-                {
-                    ConvertDataToProject.ConvertSound(pf, 0);
-                    pf.Sounds[0].Asset.Dirty = true;
-                    pf.AddDirtyAssetsToJSON(pf.Sounds, "sounds");
-                    pf.SaveAll();
-                } else
-                {
-                    ConvertDataToProject.ConvertSound(pf, 0);
-                    pf.LoadMain();
-                    pf.PurgeIdenticalAssetsOnDisk(pf.Sounds);
-                    pf.LoadAll();
-                }
+                pf.Textures.PurgeUnreferencedPages();
+                //*/
 
                 Directory.CreateDirectory("output");
                 using (FileStream fs2 = new FileStream("output/data.win", FileMode.Create))
