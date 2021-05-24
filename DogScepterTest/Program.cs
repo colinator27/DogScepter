@@ -8,6 +8,7 @@ using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
 using DogScepterLib.Project;
 using DogScepterLib.Project.Bytecode;
+using DogScepterLib.Project.Converters;
 using SkiaSharp;
 
 namespace DogScepterTest
@@ -40,13 +41,13 @@ namespace DogScepterTest
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)
                 {
-                    ConvertDataToProject.ConvertBackground(pf, 0);
+                    pf.GetConverter<BackgroundConverter>().ConvertData(pf, 0);
                     pf.Backgrounds[0].Asset.Dirty = true;
                     pf.AddDirtyAssetsToJSON(pf.Backgrounds, "backgrounds");
                     pf.SaveAll();
                 } else
                 {
-                    ConvertDataToProject.ConvertBackground(pf, 0);
+                    pf.GetConverter<BackgroundConverter>().ConvertData(pf, 0);
                     pf.LoadMain();
                     pf.PurgeIdenticalAssetsOnDisk(pf.Backgrounds);
                     pf.LoadAll();

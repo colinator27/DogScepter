@@ -1,4 +1,5 @@
-﻿using System;
+﻿using PropertyChanged;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Security.Cryptography;
@@ -9,15 +10,13 @@ namespace DogScepterLib.Project
     /// <summary>
     /// A high-level asset inside a project, such as a sprite or room
     /// </summary>
-    public abstract class Asset : INotifyPropertyChanged
+    [AddINotifyPropertyChangedInterface]
+    public abstract class Asset
     {
         public string Name { get; set; }
         public byte[] Hash;
         public int Length;
         public bool Dirty = false;
-
-        // Note: This is handled by Fody.PropertyChanged entirely, so no manual work has to be done
-        public event PropertyChangedEventHandler PropertyChanged;
 
         protected abstract byte[] WriteInternal(ProjectFile pf, string assetPath, bool actuallyWrite);
 

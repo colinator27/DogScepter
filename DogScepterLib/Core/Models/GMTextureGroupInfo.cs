@@ -10,11 +10,11 @@ namespace DogScepterLib.Core.Models
     public class GMTextureGroupInfo : GMSerializable
     {
         public GMString Name;
-        public GMList<ResourceID> TexturePageIDs;
-        public GMList<ResourceID> SpriteIDs;
-        public GMList<ResourceID> SpineSpriteIDs;
-        public GMList<ResourceID> FontIDs;
-        public GMList<ResourceID> TilesetIDs;
+        public GMList<ResourceID> TexturePageIDs = new GMList<ResourceID>();
+        public GMList<ResourceID> SpriteIDs = new GMList<ResourceID>();
+        public GMList<ResourceID> SpineSpriteIDs = new GMList<ResourceID>();
+        public GMList<ResourceID> FontIDs = new GMList<ResourceID>();
+        public GMList<ResourceID> TilesetIDs = new GMList<ResourceID>();
 
         public void Serialize(GMDataWriter writer)
         {

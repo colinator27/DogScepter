@@ -2,6 +2,8 @@
 using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
 using DogScepterLib.Project.Assets;
+using DogScepterLib.Project.Converters;
+using PropertyChanged;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,14 +13,13 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks.Dataflow;
+using static DogScepterLib.Core.Chunks.GMChunkOPTN;
 
 namespace DogScepterLib.Project
 {
-    public class ProjectFile : INotifyPropertyChanged
+    [AddINotifyPropertyChangedInterface]
+    public class ProjectFile
     {
-        // Note: This is handled by Fody.PropertyChanged entirely, so no manual work has to be done
-        public event PropertyChangedEventHandler PropertyChanged;
-
         public enum WarningType
         {
             DataFileMismatch,
@@ -31,10 +32,12 @@ namespace DogScepterLib.Project
         public Warning WarningHandler;
 
         public ProjectJson JsonFile;
-        public Dictionary<string, object> Info { get; set; } = new Dictionary<string, object>();
 
+        public Dictionary<string, object> Info { get; set; } = new Dictionary<string, object>();
+        public ProjectJson.OptionsSettings Options { get; set; }
         public List<string> AudioGroups { get; set; }
         public ProjectJson.TextureGroupSettings TextureGroupSettings { get; set; }
+
         public List<AssetRef<AssetPath>> Paths { get; set; } = new List<AssetRef<AssetPath>>();
         public List<AssetRef<AssetSound>> Sounds { get; set; } = new List<AssetRef<AssetSound>>();
         public List<AssetRef<AssetBackground>> Backgrounds { get; set; } = new List<AssetRef<AssetBackground>>();
@@ -61,6 +64,35 @@ namespace DogScepterLib.Project
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
+        public List<IConverter> Converters = new List<IConverter>()
+        {
+            new InfoConverter(),
+            new OptionsConverter(),
+            new AudioGroupConverter(),
+            new TextureGroupConverter(),
+            new PathConverter(),
+            new SoundConverter(),
+            new BackgroundConverter(),
+
+            // TODO sprites need to be converted before objects
+            // TODO future note: sprite/font/background/tileset/etc. IDs need to be updated in TGIN
+            // TODO another note: sprites will need a separate texture page boolean
+            //   will need to be detected in conversion from data to project, however
+            //   (i.e., a sprite is on more than one page, on every one by itself)
+            new ObjectConverter(),
+        };
+
+        public T GetConverter<T>() where T : IConverter, new()
+        {
+            foreach (var converter in Converters)
+                if (converter is T t)
+                    return t;
+
+            T newConverter = new T();
+            Converters.Add(newConverter);
+            return newConverter;
+        }
+
         public ProjectFile(GMData dataHandle, string directoryPath, Warning warningHandler = null)
         {
             DataHandle = dataHandle;
@@ -74,8 +106,9 @@ namespace DogScepterLib.Project
             DataHandle.Logger?.Invoke($"Setting up textures...");
             Textures = new Textures(this);
 
-            DataHandle.Logger?.Invoke($"Performing fast conversion...");
-            ConvertDataToProject.FastConvert(this);
+            DataHandle.Logger?.Invoke($"Performing base conversion...");
+            foreach (var converter in Converters)
+                converter.ConvertData(this);
         }
 
         public void SaveMain()
@@ -104,6 +137,7 @@ namespace DogScepterLib.Project
         {
             SaveMain();
             SaveExtraJSON(JsonFile.Info, () => JsonSerializer.SerializeToUtf8Bytes(Info, JsonOptions));
+            SaveExtraJSON(JsonFile.Options, () => JsonSerializer.SerializeToUtf8Bytes(Options, JsonOptions));
             if (AudioGroups != null)
                 SaveExtraJSON(JsonFile.AudioGroups, () => JsonSerializer.SerializeToUtf8Bytes(AudioGroups, JsonOptions));
             SaveExtraJSON(JsonFile.TextureGroups, () => JsonSerializer.SerializeToUtf8Bytes(TextureGroupSettings, JsonOptions));
@@ -141,20 +175,14 @@ namespace DogScepterLib.Project
         }
 
         // Helper function to load a special JSON file
-        public void LoadExtraJSON(string filename, Action<byte[]> deserialize, Action convert)
+        public void LoadExtraJSON(string filename, Action<byte[]> deserialize)
         {
             if (filename == null || filename.Trim() == "")
-            {
-                convert();
                 return;
-            }
 
             string path = Path.Combine(DirectoryPath, filename);
             if (!File.Exists(path))
-            {
-                convert();
                 return;
-            }
 
             DataHandle.Logger?.Invoke($"Loading \"{filename}\"...");
 
@@ -165,14 +193,13 @@ namespace DogScepterLib.Project
         {
             LoadMain();
             LoadExtraJSON(JsonFile.Info,
-                b => Info = JsonSerializer.Deserialize<Dictionary<string, object>>(b, JsonOptions),
-                () => Info = ConvertDataToProject.ConvertInfo(this));
+                b => Info = JsonSerializer.Deserialize<Dictionary<string, object>>(b, JsonOptions));
+            LoadExtraJSON(JsonFile.Options,
+                b => Options = JsonSerializer.Deserialize<ProjectJson.OptionsSettings>(b, JsonOptions));
             LoadExtraJSON(JsonFile.AudioGroups,
-                b => AudioGroups = JsonSerializer.Deserialize<List<string>>(b, JsonOptions),
-                () => AudioGroups = ConvertDataToProject.ConvertAudioGroups(this));
+                b => AudioGroups = JsonSerializer.Deserialize<List<string>>(b, JsonOptions));
             LoadExtraJSON(JsonFile.TextureGroups,
-                b => TextureGroupSettings = JsonSerializer.Deserialize<ProjectJson.TextureGroupSettings>(b, JsonOptions),
-                () => TextureGroupSettings = ConvertDataToProject.ConvertTextureGroups(this));
+                b => TextureGroupSettings = JsonSerializer.Deserialize<ProjectJson.TextureGroupSettings>(b, JsonOptions));
 
             DataHandle.Logger?.Invoke("Loading assets...");
 
@@ -189,7 +216,19 @@ namespace DogScepterLib.Project
         {
             DataHandle.Logger?.Invoke("Converting ProjectFile back to data...");
 
-            ConvertProjectToData.Convert(this);
+            if (!Directory.Exists(DataHandle.Directory))
+                throw new Exception($"Missing output directory \"{DataHandle.Directory}\"");
+
+            DataHandle.BuildStringCache();
+
+            foreach (var converter in Converters)
+                converter.ConvertProject(this);
+
+            Textures.PurgeUnreferencedItems();
+            Textures.RegenerateTextures();
+            Textures.PurgeUnreferencedPages();
+
+            ConverterUtils.CopyDataFiles(this);
         }
 
         /// <summary>
@@ -396,10 +435,31 @@ namespace DogScepterLib.Project
             public int ID { get; set; } // in ProjectFile.Textures.TextureGroups
         }
 
+        public struct OptionsSettings
+        {
+            public OptionsFlags Flags { get; set; }
+            public int Scale { get; set; }
+            public uint WindowColor { get; set; }
+            public uint ColorDepth { get; set; }
+            public uint Resolution { get; set; }
+            public uint Frequency { get; set; }
+            public uint VertexSync { get; set; }
+            public uint Priority { get; set; }
+            public uint LoadAlpha { get; set; }
+            public List<Constant> Constants { get; set; }
+
+            public struct Constant
+            {
+                public string Name { get; set; }
+                public string Value { get; set; }
+            }
+        }
+
         public int Version { get; private set; } = 1;
         public int BaseFileLength { get; set; } = 0;
         public byte[] BaseFileHash { get; set; } = null;
         public string Info { get; set; } // Filename of info JSON
+        public string Options { get; set; } // Filename of options JSON
         public string AudioGroups { get; set; } // Filename of audio group JSON
         public string DataFiles { get; set; } = ""; // Folder name of data files
         public string TextureGroups { get; set; } // Filename of texture group JSON
