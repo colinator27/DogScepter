@@ -280,6 +280,38 @@ namespace DogScepterLib.Project
             pf.Sounds[index].Asset = projectAsset;
         }
 
+        public static void ConvertBackground(ProjectFile pf, int index)
+        {
+            GMBackground asset = (GMBackground)pf.Backgrounds[index].DataAsset;
+
+            AssetBackground projectAsset = new AssetBackground()
+            {
+                Name = asset.Name.Content,
+                Transparent = asset.Transparent,
+                Smooth = asset.Smooth,
+                Preload = asset.Preload,
+                TextureItem = asset.TextureItem,
+                TextureGroup = 
+                    pf.Textures.TextureGroups[pf.Textures.PageToGroup[asset.TextureItem.TexturePageID]].Name
+            };
+
+            if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
+            {
+                projectAsset.GMS2Tiles = new AssetBackground.TileInfo()
+                {
+                    Width = asset.TileWidth,
+                    Height = asset.TileHeight,
+                    BorderX = asset.TileOutputBorderX,
+                    BorderY = asset.TileOutputBorderY,
+                    Columns = asset.TileColumns,
+                    FrameLength = asset.TileFrameLength,
+                    Tiles = asset.Tiles
+                };
+            }
+
+            pf.Backgrounds[index].Asset = projectAsset;
+        }
+
         public static void ConvertObject(ProjectFile pf, int index)
         {
             // TODO replace both of these to use the AssetRef list instead once the respective assets are loaded literally at all

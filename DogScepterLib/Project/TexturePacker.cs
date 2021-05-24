@@ -174,7 +174,8 @@ namespace DogScepterLib.Project
                                             return child;
                                         }
                                     }
-                                } else
+                                } 
+                                else
                                 {
                                     if (Area < child.Area)
                                     {
@@ -187,15 +188,6 @@ namespace DogScepterLib.Project
                     }
 
                     return null;
-                }
-
-                public void AddChildren(List<Rect> rects)
-                {
-                    foreach (Rect rect in rects)
-                    {
-                        if (!Children.Any((r) => r.Hash == rect.Hash))
-                            Children.Add(rect);
-                    }
                 }
 
                 public void Place(Rect rect, int width, int height, out int x, out int y)
@@ -219,15 +211,16 @@ namespace DogScepterLib.Project
                         {
                             if (Children == null)
                                 Children = new List<Rect>(64);
-                            AddChildren(clips);
+                            Children.AddRange(clips);
                         }
-                    } else if (clips != null && clips.Count != 0)
+                    } 
+                    else if (clips != null && clips.Count != 0)
                     {
                         if (rect != this)
                             Children.Remove(rect);
                         if (Children == null)
                             Children = new List<Rect>(64);
-                        AddChildren(clips);
+                        Children.AddRange(clips);
                     }
 
                     // Search for more clips in the (potentially newly-made) children
@@ -240,13 +233,14 @@ namespace DogScepterLib.Project
                             Children.RemoveAt(i--);
                             if (clips != null && clips.Count != 0)
                                 newChildren.AddRange(clips);
-                        } else if (clips != null && clips.Count != 0)
+                        } 
+                        else if (clips != null && clips.Count != 0)
                         {
                             Children.RemoveAt(i--);
                             newChildren.AddRange(clips);
                         }
                     }
-                    AddChildren(newChildren);
+                    Children.AddRange(newChildren);
 
                     // Get rid of rects completely contained in another rect
                     int count = Children.Count;
@@ -254,19 +248,13 @@ namespace DogScepterLib.Project
                     for (int i = 0; i < count; i++)
                     {
                         Rect first = childArray[i];
-                        if (first != null)
+                        for (int j = i + 1; j < count; j++)
                         {
-                            for (int j = i + 1; j < count; j++)
-                            {
-                                Rect second = childArray[j];
-                                if (second != null)
-                                {
-                                    if (second.X >= first.X && second.Y >= first.Y && second.Right <= first.Right && second.Bottom <= first.Bottom)
-                                        Children[j] = null;
-                                    if (first.X >= second.X && first.Y >= second.Y && first.Right <= second.Right && first.Bottom <= second.Bottom)
-                                        Children[i] = null;
-                                }
-                            }
+                            Rect second = childArray[j];
+                            if (second.X >= first.X && second.Y >= first.Y && second.Right <= first.Right && second.Bottom <= first.Bottom)
+                                Children[j] = null;
+                            if (first.X >= second.X && first.Y >= second.Y && first.Right <= second.Right && first.Bottom <= second.Bottom)
+                                Children[i] = null;
                         }
                     }
                     Children.RemoveAll(r => r == null);
@@ -295,7 +283,8 @@ namespace DogScepterLib.Project
                         height = (height + (gap * 2) + 3) & -4;
                         addY = true;
                     }
-                } else
+                } 
+                else
                 {
                     // After 2.2.2
                     if (width != Width)
@@ -391,13 +380,15 @@ namespace DogScepterLib.Project
                         // Successful, so halve the size
                         w /= 2;
                         h /= 2;
-                    } else
+                    } 
+                    else
                     {
                         // Unsuccessful, try each direction, then stop
                         if (page.AttemptResize(w / 2, h, group, extraBorder, pregms2_2_2))
                         {
                             w /= 2;
-                        } else if (page.AttemptResize(w, h / 2, group, extraBorder, pregms2_2_2))
+                        } 
+                        else if (page.AttemptResize(w, h / 2, group, extraBorder, pregms2_2_2))
                         {
                             h /= 2;
                         }

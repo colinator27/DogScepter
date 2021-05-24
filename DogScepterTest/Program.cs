@@ -40,20 +40,20 @@ namespace DogScepterTest
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)
                 {
-                    //ConvertDataToProject.ConvertSound(pf, 0);
-                    //pf.Sounds[0].Asset.Dirty = true;
-                    //pf.AddDirtyAssetsToJSON(pf.Sounds, "sounds");
+                    ConvertDataToProject.ConvertBackground(pf, 0);
+                    pf.Backgrounds[0].Asset.Dirty = true;
+                    pf.AddDirtyAssetsToJSON(pf.Backgrounds, "backgrounds");
                     pf.SaveAll();
                 } else
                 {
-                    //ConvertDataToProject.ConvertSound(pf, 0);
+                    ConvertDataToProject.ConvertBackground(pf, 0);
                     pf.LoadMain();
-                    //pf.PurgeIdenticalAssetsOnDisk(pf.Sounds);
+                    pf.PurgeIdenticalAssetsOnDisk(pf.Backgrounds);
                     pf.LoadAll();
                 }
 
-                foreach (var group in pf.Textures.TextureGroups)
-                    group.Dirty = true;
+                //foreach (var group in pf.Textures.TextureGroups)
+                //    group.Dirty = true;
 
                 /*
                 pf.Textures.TextureGroups.Clear();

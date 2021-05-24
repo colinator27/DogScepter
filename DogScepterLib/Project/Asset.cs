@@ -48,9 +48,9 @@ namespace DogScepterLib.Project
         /// <summary>
         /// Computes an asset's hash by writing it to memory, and then discarding of it
         /// </summary>
-        public void ComputeHash()
+        public void ComputeHash(ProjectFile pf)
         {
-            byte[] buff = WriteInternal(null, null, false);
+            byte[] buff = WriteInternal(pf, null, false);
             if (buff == null)
                 return;
             ComputeHash(this, buff);

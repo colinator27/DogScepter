@@ -30,8 +30,13 @@ namespace DogScepterLib.Project
             ConvertTextureGroups(pf);
             ConvertPaths(pf);
             ConvertSounds(pf);
+            ConvertBackgrounds(pf);
             // TODO sprites need to be converted before objects
             // TODO future note: sprite/font/tileset/etc. IDs need to be updated in TGIN
+            // TODO another note: sprites will need a separate texture page boolean
+            //   will need to be detected in ConvertDataToProject, however
+            //   (i.e., a sprite is on more than one page, on every one by itself)
+            pf.Textures.PurgeUnreferencedItems();
             pf.Textures.RegenerateTextures();
             pf.Textures.PurgeUnreferencedPages();
             ConvertObjects(pf);
@@ -459,6 +464,75 @@ namespace DogScepterLib.Project
             {
                 dataAssets.Add(finalMap[assetRef]);
             }
+        }
+
+        private static void ConvertBackgrounds(ProjectFile pf)
+        {
+            var dataAssets = pf.DataHandle.GetChunk<GMChunkBGND>().List;
+
+            // Assemble dictionary of group names to actual Group classes
+            Dictionary<string, Textures.Group> groupNames = new Dictionary<string, Textures.Group>();
+            foreach (var g in pf.Textures.TextureGroups)
+                groupNames[g.Name] = g;
+
+            List<GMBackground> newList = new List<GMBackground>();
+            for (int i = 0; i < pf.Backgrounds.Count; i++)
+            {
+                AssetBackground projectAsset = pf.Backgrounds[i].Asset;
+                if (projectAsset == null)
+                {
+                    // This asset was never converted, so handle references and re-add it
+                    GMBackground b = (GMBackground)pf.Backgrounds[i].DataAsset;
+                    b.Name = pf.DataHandle.DefineString(b.Name.Content);
+                    newList.Add(b);
+                    continue;
+                }
+
+                // Add texture item to proper texture group
+                if (groupNames.TryGetValue(projectAsset.TextureGroup, out var group))
+                {
+                    group.AddNewEntry(pf.Textures, projectAsset.TextureItem);
+                } 
+                else
+                {
+                    // Make a new texture group for this
+                    var g = new Textures.Group()
+                    {
+                        Dirty = true,
+                        Border = 0,
+                        AllowCrop = false,
+                        Name = $"__DS_AUTO_GEN_{projectAsset.Name}__{pf.Textures.TextureGroups.Count}"
+                    };
+                    g.AddNewEntry(pf.Textures, projectAsset.TextureItem);
+                    pf.Textures.TextureGroups.Add(g);
+                }
+
+                GMBackground dataAsset = new GMBackground()
+                {
+                    Name = pf.DataHandle.DefineString(projectAsset.Name),
+                    Transparent = projectAsset.Transparent,
+                    Smooth = projectAsset.Smooth,
+                    Preload = projectAsset.Preload,
+                    TextureItem = projectAsset.TextureItem
+                };
+
+                if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
+                {
+                    dataAsset.TileWidth = projectAsset.GMS2Tiles.Width;
+                    dataAsset.TileHeight = projectAsset.GMS2Tiles.Height;
+                    dataAsset.TileOutputBorderX = projectAsset.GMS2Tiles.BorderX;
+                    dataAsset.TileOutputBorderY = projectAsset.GMS2Tiles.BorderY;
+                    dataAsset.TileColumns = projectAsset.GMS2Tiles.Columns;
+                    dataAsset.TileFrameLength = projectAsset.GMS2Tiles.FrameLength;
+                    dataAsset.Tiles = projectAsset.GMS2Tiles.Tiles;
+                }
+
+                newList.Add(dataAsset);
+            }
+
+            dataAssets.Clear();
+            foreach (var obj in newList)
+                dataAssets.Add(obj);
         }
 
         private static void ConvertObjects(ProjectFile pf)

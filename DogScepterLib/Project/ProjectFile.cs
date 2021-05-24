@@ -312,6 +312,8 @@ namespace DogScepterLib.Project
                     }
 
                     T asset = list[assetIndices[entry.Name]].Asset;
+                    if (asset.Hash == null)
+                        asset.ComputeHash(this);
                     T assetOnDisk = (T)loadMethod.Invoke(null, new object[] { path });
                     if (asset.CompareHash(assetOnDisk))
                     {
@@ -388,7 +390,7 @@ namespace DogScepterLib.Project
 
         public struct TextureGroup
         {
-            public string Name { get; set; }
+            public string Name { get; set; } // note/todo: when changed, this needs to be updated in actual relevant group class
             public int Border { get; set; }
             public bool AllowCrop { get; set; }
             public int ID { get; set; } // in ProjectFile.Textures.TextureGroups

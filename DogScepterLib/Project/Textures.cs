@@ -26,7 +26,7 @@ namespace DogScepterLib.Project
             public bool Dirty = false;
             public List<(TexturePacker.Page, byte[])> GeneratedPages = new List<(TexturePacker.Page, byte[])>();
             
-            // Set when regenerating for easy access
+            // Set for easy access
             public string Name;
 
             public Group()
@@ -106,11 +106,16 @@ namespace DogScepterLib.Project
                 }
                 else
                 {
-                    foreach (var page in result)
+                    // Parallel in case there are few groups being generated, to save time
+                    Parallel.ForEach(result, page =>
                     {
-                        g.GeneratedPages.Add((page, DrawPage(g, page).Encode(SKEncodedImageFormat.Png, 0).ToArray()));
-                    }
-                    Project.DataHandle.Logger?.Invoke($"\"{g.Name}\" finished with {g.GeneratedPages.Count} pages");
+                        byte[] res = DrawPage(g, page).Encode(SKEncodedImageFormat.Png, 0).ToArray();
+                        lock (g)
+                        {
+                            g.GeneratedPages.Add((page, res));
+                        }
+                    });
+                    Project.DataHandle.Logger?.Invoke($"Finished \"{g.Name}\" -> {g.GeneratedPages.Count} page" + (g.GeneratedPages.Count != 1 ? "s" : ""));
                 }
             });
 
@@ -199,16 +204,58 @@ namespace DogScepterLib.Project
             Project.DataHandle.Logger?.Invoke("Texture regeneration complete.");
         }
 
+        // Thorough algorithm to remove all unreferenced texture items.
+        public void PurgeUnreferencedItems()
+        {
+            Project.DataHandle.Logger?.Invoke("Purging unreferenced texture items...");
+
+            List<GMTextureItem> referencedItems = new List<GMTextureItem>(2048);
+
+            foreach (GMSprite spr in Project.DataHandle.GetChunk<GMChunkSPRT>().List)
+                referencedItems.AddRange(spr.TextureItems);
+            foreach (GMBackground bg in Project.DataHandle.GetChunk<GMChunkBGND>().List)
+                referencedItems.Add(bg.TextureItem);
+            foreach (GMFont fnt in Project.DataHandle.GetChunk<GMChunkFONT>().List)
+                referencedItems.Add(fnt.TextureItem);
+
+            var tpagList = Project.DataHandle.GetChunk<GMChunkTPAG>().List;
+
+            // Find and remove unreferenced items
+            List<GMTextureItem> unreferenced = tpagList.Except(referencedItems).ToList();
+            if (unreferenced.Count != 0)
+            {
+                for (int i = tpagList.Count - 1; i >= 0; i--)
+                {
+                    var item = tpagList[i];
+                    int ind = unreferenced.IndexOf(item);
+                    if (ind != -1)
+                    {
+                        unreferenced.RemoveAt(ind);
+                        tpagList.RemoveAt(i);
+                        if (item.TexturePageID != -1)
+                            Project.Textures.TextureGroups[Project.Textures.PageToGroup[item.TexturePageID]]
+                                .Items.Remove(item);
+                        if (unreferenced.Count == 0)
+                            break;
+                    }
+                }
+            }
+        }
+
         // Thorough algorithm to remove all unreferenced texture pages.
         public void PurgeUnreferencedPages()
         {
+            Project.DataHandle.Logger?.Invoke("Purging unreferenced texture pages...");
+
             HashSet<int> referencedPages = new HashSet<int>();
 
             void addPages(params GMTextureItem[] items)
             {
                 foreach (var item in items)
+                {
                     if (item != null && item.TexturePageID != -1)
                         referencedPages.Add(item.TexturePageID);
+                }
             }
 
             foreach (GMSprite spr in Project.DataHandle.GetChunk<GMChunkSPRT>().List)
@@ -218,8 +265,8 @@ namespace DogScepterLib.Project
             foreach (GMFont fnt in Project.DataHandle.GetChunk<GMChunkFONT>().List)
                 addPages(fnt.TextureItem);
 
-            var txtrList = Project.DataHandle.GetChunk<GMChunkTXTR>().List;
             var tpagList = Project.DataHandle.GetChunk<GMChunkTPAG>().List;
+            var txtrList = Project.DataHandle.GetChunk<GMChunkTXTR>().List;
             List<int> forRemoval = new List<int>();
             for (int i = 0; i < txtrList.Count; i++)
             {
@@ -367,16 +414,19 @@ namespace DogScepterLib.Project
 
         public SKBitmap GetTexture(int ind)
         {
-            if (CachedTextures[ind] != null)
-                return CachedTextures[ind];
-            return CachedTextures[ind] = SKBitmap.Decode(Project.DataHandle.GetChunk<GMChunkTXTR>().List[ind].TextureData.Data);
+            lock (CachedTextures)
+            {
+                if (CachedTextures[ind] != null)
+                    return CachedTextures[ind];
+                return CachedTextures[ind] = SKBitmap.Decode(Project.DataHandle.GetChunk<GMChunkTXTR>().List[ind].TextureData.Data);
+            }       
         }
 
-        public SKBitmap GetTextureEntryBitmap(GMTextureItem entry)
+        public SKBitmap GetTextureEntryBitmap(GMTextureItem entry, bool forceCopy = false)
         {
             if (entry.TargetX == 0 && entry.TargetY == 0 &&
                 entry.SourceWidth == entry.BoundWidth &&
-                entry.SourceHeight == entry.BoundHeight)
+                entry.SourceHeight == entry.BoundHeight && !forceCopy)
             {
                 // This can be done without copying
                 return GetTextureEntryBitmapFast(entry);
