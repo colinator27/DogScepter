@@ -40,6 +40,9 @@ namespace DogScepterLib.Project
 
             public void AddNewEntry(Textures textures, GMTextureItem entry)
             {
+                if (Items.Contains(entry))
+                    return;
+
                 Dirty = true;
 
                 Items.Add(entry);
