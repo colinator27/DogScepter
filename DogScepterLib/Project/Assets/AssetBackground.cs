@@ -66,14 +66,12 @@ namespace DogScepterLib.Project.Assets
         {
             byte[] buff = JsonSerializer.SerializeToUtf8Bytes(this, ProjectFile.JsonOptions);
             byte[] imgBuff;
-            byte[] pngBuff;
             SKBitmap imgBitmap;
             if (TextureItem.TexturePageID == -1)
                 imgBitmap = TextureItem._Bitmap;
             else
                 imgBitmap = pf.Textures.GetTextureEntryBitmap(TextureItem, true);
             imgBuff = imgBitmap.Bytes;
-            pngBuff = imgBitmap.Encode(SKEncodedImageFormat.Png, 0).ToArray();
 
             if (actuallyWrite)
             {
@@ -81,6 +79,7 @@ namespace DogScepterLib.Project.Assets
                 Directory.CreateDirectory(dir);
                 using (FileStream fs = new FileStream(assetPath, FileMode.Create))
                     fs.Write(buff, 0, buff.Length);
+                byte[] pngBuff = imgBitmap.Encode(SKEncodedImageFormat.Png, 0).ToArray();
                 using (FileStream fs = new FileStream(Path.Combine(dir, Name + ".png"), FileMode.Create))
                     fs.Write(pngBuff, 0, pngBuff.Length);
             }

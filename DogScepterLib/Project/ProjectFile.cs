@@ -38,9 +38,10 @@ namespace DogScepterLib.Project
         public List<string> AudioGroups { get; set; }
         public ProjectJson.TextureGroupSettings TextureGroupSettings { get; set; }
 
-        public List<AssetRef<AssetPath>> Paths { get; set; } = new List<AssetRef<AssetPath>>();
         public List<AssetRef<AssetSound>> Sounds { get; set; } = new List<AssetRef<AssetSound>>();
+        public List<AssetRef<AssetSprite>> Sprites { get; set; } = new List<AssetRef<AssetSprite>>();
         public List<AssetRef<AssetBackground>> Backgrounds { get; set; } = new List<AssetRef<AssetBackground>>();
+        public List<AssetRef<AssetPath>> Paths { get; set; } = new List<AssetRef<AssetPath>>();
         public List<AssetRef<AssetObject>> Objects { get; set; } = new List<AssetRef<AssetObject>>();
 
         public Dictionary<int, GMChunkAUDO> _CachedAudioChunks;
@@ -55,7 +56,7 @@ namespace DogScepterLib.Project
             {
             }
         }
-        public static JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+        public static JsonSerializerOptions JsonOptions = new()
         {
             WriteIndented = true,
             AllowTrailingCommas = true,
@@ -64,15 +65,16 @@ namespace DogScepterLib.Project
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
 
-        public List<IConverter> Converters = new List<IConverter>()
+        public List<IConverter> Converters = new()
         {
             new InfoConverter(),
             new OptionsConverter(),
             new AudioGroupConverter(),
             new TextureGroupConverter(),
-            new PathConverter(),
             new SoundConverter(),
+            new SpriteConverter(),
             new BackgroundConverter(),
+            new PathConverter(),
 
             // TODO sprites need to be converted before objects
             // TODO future note: sprite/font/background/tileset/etc. IDs need to be updated in TGIN
@@ -144,9 +146,10 @@ namespace DogScepterLib.Project
 
             DataHandle.Logger?.Invoke("Saving assets...");
 
-            SaveAssets(Paths);
             SaveAssets(Sounds);
+            SaveAssets(Sprites);
             SaveAssets(Backgrounds);
+            SaveAssets(Paths);
             SaveAssets(Objects);
         }
 
@@ -203,9 +206,10 @@ namespace DogScepterLib.Project
 
             DataHandle.Logger?.Invoke("Loading assets...");
 
-            LoadAssets(Paths);
             LoadAssets(Sounds);
+            LoadAssets(Sprites);
             LoadAssets(Backgrounds);
+            LoadAssets(Paths);
             LoadAssets(Objects);
         }
 

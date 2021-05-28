@@ -7,9 +7,9 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker sprite.
     /// </summary>
-    public class GMSprite : GMSerializable
+    public class GMSprite : GMNamedSerializable
     {
-        public GMString Name;
+        public GMString Name { get; set; }
         public int Width;
         public int Height;
         public int MarginLeft;
