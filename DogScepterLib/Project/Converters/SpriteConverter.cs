@@ -20,10 +20,7 @@ namespace DogScepterLib.Project.Converters
                 Name = asset.Name.Content,
                 Transparent = asset.Transparent,
                 Smooth = asset.Smooth,
-                Preload = asset.Preload,
-                TextureItem = asset.TextureItem,
-                TextureGroup =
-                    pf.Textures.TextureGroups[pf.Textures.PageToGroup[asset.TextureItem.TexturePageID]].Name
+                Preload = asset.Preload
             };
 
             if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
@@ -51,53 +48,29 @@ namespace DogScepterLib.Project.Converters
             List<GMSprite> newList = new List<GMSprite>();
             for (int i = 0; i < pf.Sprites.Count; i++)
             {
-                AssetBackground projectAsset = pf.Backgrounds[i].Asset;
+                AssetSprite projectAsset = pf.Sprites[i].Asset;
                 if (projectAsset == null)
                 {
                     // This asset was never converted, so handle references and re-add it
-                    GMBackground b = (GMBackground)pf.Backgrounds[i].DataAsset;
-                    b.Name = pf.DataHandle.DefineString(b.Name.Content);
-                    newList.Add(b);
+                    GMSprite s = (GMSprite)pf.Sprites[i].DataAsset;
+                    s.Name = pf.DataHandle.DefineString(s.Name.Content);
+                    newList.Add(s);
                     continue;
                 }
 
-                // Add texture item to proper texture group
-                if (groupNames.TryGetValue(projectAsset.TextureGroup, out var group))
-                {
-                    group.AddNewEntry(pf.Textures, projectAsset.TextureItem);
-                }
-                else
-                {
-                    // Make a new texture group for this
-                    var g = new Textures.Group()
-                    {
-                        Dirty = true,
-                        Border = 0,
-                        AllowCrop = false,
-                        Name = $"__DS_AUTO_GEN_{projectAsset.Name}__{pf.Textures.TextureGroups.Count}"
-                    };
-                    g.AddNewEntry(pf.Textures, projectAsset.TextureItem);
-                    pf.Textures.TextureGroups.Add(g);
-                }
+                // Add texture item to proper texture group, TODO
 
-                GMBackground dataAsset = new GMBackground()
+                GMSprite dataAsset = new GMSprite()
                 {
                     Name = pf.DataHandle.DefineString(projectAsset.Name),
                     Transparent = projectAsset.Transparent,
                     Smooth = projectAsset.Smooth,
-                    Preload = projectAsset.Preload,
-                    TextureItem = projectAsset.TextureItem
+                    Preload = projectAsset.Preload
                 };
 
                 if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
                 {
-                    dataAsset.TileWidth = projectAsset.GMS2Tiles.Width;
-                    dataAsset.TileHeight = projectAsset.GMS2Tiles.Height;
-                    dataAsset.TileOutputBorderX = projectAsset.GMS2Tiles.BorderX;
-                    dataAsset.TileOutputBorderY = projectAsset.GMS2Tiles.BorderY;
-                    dataAsset.TileColumns = projectAsset.GMS2Tiles.Columns;
-                    dataAsset.TileFrameLength = projectAsset.GMS2Tiles.FrameLength;
-                    dataAsset.Tiles = projectAsset.GMS2Tiles.Tiles;
+                    // todo
                 }
 
                 newList.Add(dataAsset);

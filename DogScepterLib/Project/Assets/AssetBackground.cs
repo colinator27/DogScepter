@@ -37,6 +37,7 @@ namespace DogScepterLib.Project.Assets
                     throw new Exception("Expected BGRA8888 or RGBA8888 color format in PNG.");
                 byte[] imgBuff = imgBitmap.Bytes;
                 res.TextureItem = new GMTextureItem(imgBitmap);
+                res.TextureItem._HasExtraBorder = true;
 
                 // Compute hash manually here
                 using (SHA1Managed sha1 = new SHA1Managed())

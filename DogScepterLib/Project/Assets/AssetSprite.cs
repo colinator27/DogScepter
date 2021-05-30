@@ -15,59 +15,48 @@ namespace DogScepterLib.Project.Assets
     {
         public int Width { get; set; }
         public int Height { get; set; }
-        public int MarginLeft { get; set; }
-        public int MarginRight { get; set; }
-        public int MarginBottom { get; set; }
-        public int MarginTop { get; set; }
         public bool Transparent { get; set; }
         public bool Smooth { get; set; }
         public bool Preload { get; set; }
-        public uint BBoxMode { get; set; }
-        public GMSprite.SepMaskType SepMasks { get; set; }
         public int OriginX { get; set; }
         public int OriginY { get; set; }
+        public string TextureGroup { get; set; } = "";
+        public CollisionMaskInfo CollisionMask { get; set; }
         public SpriteSpecialInfo SpecialInfo { get; set; }
 
-        public string TextureGroup { get; set; } = "";
 
-        public List<GMTextureItem> TextureItems;
+        public List<GMTextureItem> TextureItems = new List<GMTextureItem>();
 
         public new static Asset Load(string assetPath)
         {
             byte[] buff = File.ReadAllBytes(assetPath);
-            var res = JsonSerializer.Deserialize<AssetBackground>(buff, ProjectFile.JsonOptions);
+            var res = JsonSerializer.Deserialize<AssetSprite>(buff, ProjectFile.JsonOptions);
 
-            string pngPath = Path.Combine(Path.GetDirectoryName(assetPath), res.Name + ".png");
-            if (File.Exists(pngPath))
+            using (SHA1Managed sha1 = new SHA1Managed())
             {
-                // Load PNG file, make new texture item for it
-                byte[] pngBuff = File.ReadAllBytes(pngPath);
-                SKBitmap imgBitmap = SKBitmap.Decode(pngBuff);
-                if (imgBitmap.ColorType != SKColorType.Bgra8888 &&
-                    imgBitmap.ColorType != SKColorType.Rgba8888)
-                    throw new Exception("Expected BGRA8888 or RGBA8888 color format in PNG.");
-                byte[] imgBuff = imgBitmap.Bytes;
-                res.TextureItem = new GMTextureItem(imgBitmap);
+                res.Length = buff.Length;
 
-                // Compute hash manually here
-                using (SHA1Managed sha1 = new SHA1Managed())
+                int ind = 0;
+                string basePath = Path.Combine(Path.GetDirectoryName(assetPath), res.Name);
+                string pngPath = basePath + "_" + ind.ToString() + ".png";
+                while (File.Exists(pngPath))
                 {
-                    sha1.TransformBlock(buff, 0, buff.Length, null, 0);
-                    sha1.TransformFinalBlock(imgBuff, 0, imgBuff.Length);
-                    res.Length = buff.Length + imgBuff.Length;
-                    res.Hash = sha1.Hash;
+                    byte[] pngBuff = File.ReadAllBytes(pngPath);
+                    SKBitmap imgBitmap = SKBitmap.Decode(pngBuff);
+                    if (imgBitmap.ColorType != SKColorType.Bgra8888 &&
+                        imgBitmap.ColorType != SKColorType.Rgba8888)
+                        throw new Exception("Expected BGRA8888 or RGBA8888 color format in PNG.");
+                    byte[] imgBuff = imgBitmap.Bytes;
+                    res.TextureItems.Add(new GMTextureItem(imgBitmap));
+
+                    sha1.TransformBlock(imgBuff, 0, imgBuff.Length, null, 0);
+                    res.Length += imgBuff.Length;
+
+                    pngPath = basePath + "_" + (++ind).ToString() + ".png";
                 }
-            }
-            else
-            {
-                // Compute hash manually here, but without image.
-                // This isn't intended but we won't error out just yet
-                using (SHA1Managed sha1 = new SHA1Managed())
-                {
-                    sha1.TransformFinalBlock(buff, 0, buff.Length);
-                    res.Length = buff.Length;
-                    res.Hash = sha1.Hash;
-                }
+
+                sha1.TransformFinalBlock(buff, 0, buff.Length);
+                res.Hash = sha1.Hash;
             }
 
             return res;
@@ -129,9 +118,7 @@ namespace DogScepterLib.Project.Assets
                         Length += SpecialInfo.InternalBuffer.Length;
                         sha1.TransformBlock(SpecialInfo.InternalBuffer, 0, SpecialInfo.InternalBuffer.Length, null, 0);
                     }
-                }    
-
-                // TODO: Handle sequence
+                }
 
                 sha1.TransformFinalBlock(buff, 0, buff.Length);
                 Hash = sha1.Hash;
@@ -146,6 +133,36 @@ namespace DogScepterLib.Project.Assets
                 Directory.Delete(dir, true);
         }
 
+        public class CollisionMaskInfo
+        {
+            public enum MaskMode : int
+            {
+                Automatic = 0,
+                FullImage = 1,
+                Manual = 2,
+
+                Raw = -1
+            }
+
+            public enum MaskType
+            {
+                Rectangle,
+                RectangleWithRotation,
+                Ellipse,
+                Diamond,
+                Precise,
+                PrecisePerFrame
+            }
+
+            public MaskMode Mode;
+            public MaskType Type = MaskType.Rectangle;
+            public byte? AlphaTolerance;
+            public int? Left;
+            public int? Right;
+            public int? Top;
+            public int? Bottom;
+        }
+
         public class SpriteSpecialInfo
         {
             public GMSprite.SpriteType SpriteType { get; set; }
@@ -155,7 +172,7 @@ namespace DogScepterLib.Project.Assets
             public float GMS2PlaybackSpeed { get; set; }
             public GMSprite.AnimSpeedType GMS2PlaybackSpeedType { get; set; }
 
-            public string Sequence { get; set; } = null; // filename of sequence asset in this asset's folder
+            public string SequenceName { get; set; } = null; // Name of GMS2.3 autogenerated sequence
             public NineSliceInfo NineSlice { get; set; } = null;
 
             public class NineSliceInfo

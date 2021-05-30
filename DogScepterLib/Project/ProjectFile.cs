@@ -472,15 +472,17 @@ namespace DogScepterLib.Project
 
         public readonly static Dictionary<Type, string> AssetTypeName = new Dictionary<Type, string>()
         {
-            { typeof(AssetPath), "Paths" },
             { typeof(AssetSound), "Sounds" },
+            { typeof(AssetSprite), "Sprites" },
             { typeof(AssetBackground), "Backgrounds" },
             { typeof(AssetObject), "Objects" },
+            { typeof(AssetPath), "Paths" },
         };
         public readonly static HashSet<Type> AssetUsesFolder = new HashSet<Type>()
         {
             typeof(AssetSound),
             typeof(AssetBackground),
+            typeof(AssetSprite),
             typeof(AssetObject), // Code entries not implemented yet, will be eventually
         };
 

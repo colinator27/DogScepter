@@ -244,7 +244,7 @@ namespace DogScepterLib.Core.Models
         private void ParseMaskData(GMDataReader reader)
         {
             int MaskCount = reader.ReadInt32();
-            int len = (Width + 7) / 8 * Height;
+            int len = ((Width + 7) / 8) * Height;
 
             CollisionMasks = new List<byte[]>();
             int total = 0;

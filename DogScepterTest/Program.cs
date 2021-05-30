@@ -19,7 +19,7 @@ namespace DogScepterTest
         {
             Stopwatch s = new Stopwatch();
             s.Start();
-            using (FileStream fs = new FileStream(@"input/data.win", FileMode.Open))
+            using (FileStream fs = new FileStream(@"input_test/collision.win", FileMode.Open))
             {
                 GMDataReader reader = new GMDataReader(fs, fs.Name);
                 foreach (GMWarning w in reader.Warnings)
@@ -32,6 +32,8 @@ namespace DogScepterTest
                     {
                         Console.WriteLine($"Project warn: {type} {info ?? ""}");
                     });
+
+                CollisionMasks.GetInfoForSprite(pf, reader.Data.GetChunk<GMChunkSPRT>().List[0]);// 89]);
 
                 //SKBitmap testImage = SKBitmap.Decode(File.ReadAllBytes("testsprite.png"));
                 //foreach (var group in pf.Textures.TextureGroups)
