@@ -56,6 +56,8 @@ namespace DogScepterLib.Project.Assets
                     pngPath = basePath + "_" + (++ind).ToString() + ".png";
                 }
 
+                // TODO!! Need to load raw collision masks
+
                 sha1.TransformFinalBlock(buff, 0, buff.Length);
                 res.Hash = sha1.Hash;
             }
@@ -121,6 +123,8 @@ namespace DogScepterLib.Project.Assets
                     }
                 }
 
+                // TODO!! Need to save raw collision masks
+
                 sha1.TransformFinalBlock(buff, 0, buff.Length);
                 Hash = sha1.Hash;
             }
@@ -142,7 +146,9 @@ namespace DogScepterLib.Project.Assets
                 FullImage = 1,
                 Manual = 2,
 
-                Raw = -1
+                RawAutomatic = -1,
+                RawFullImage = -2,
+                RawManual = -3,
             }
 
             public enum MaskType
@@ -155,13 +161,15 @@ namespace DogScepterLib.Project.Assets
                 PrecisePerFrame
             }
 
-            public MaskMode Mode;
-            public MaskType Type = MaskType.Rectangle;
-            public byte? AlphaTolerance;
-            public int? Left;
-            public int? Right;
-            public int? Top;
-            public int? Bottom;
+            public MaskMode Mode { get; set; }
+            public MaskType Type { get; set; } = MaskType.Rectangle;
+            public byte? AlphaTolerance { get; set; }
+            public int? Left { get; set; }
+            public int? Right { get; set; }
+            public int? Top { get; set; }
+            public int? Bottom { get; set; }
+
+            public List<byte[]> RawMasks;
         }
 
         public class SpriteSpecialInfo

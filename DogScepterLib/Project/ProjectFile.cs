@@ -12,6 +12,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using static DogScepterLib.Core.Chunks.GMChunkOPTN;
 
@@ -84,6 +85,15 @@ namespace DogScepterLib.Project
             new ObjectConverter(),
         };
 
+        public readonly static Dictionary<Type, Type> AssetTypeConverter = new Dictionary<Type, Type>()
+        {
+            { typeof(AssetSound), typeof(SoundConverter) },
+            { typeof(AssetSprite), typeof(SpriteConverter) },
+            { typeof(AssetBackground), typeof(BackgroundConverter) },
+            { typeof(AssetObject), typeof(ObjectConverter) },
+            { typeof(AssetPath), typeof(PathConverter) },
+        };
+
         public T GetConverter<T>() where T : IConverter, new()
         {
             foreach (var converter in Converters)
@@ -93,6 +103,15 @@ namespace DogScepterLib.Project
             T newConverter = new T();
             Converters.Add(newConverter);
             return newConverter;
+        }
+
+        public IConverter GetConverter(Type t)
+        {
+            foreach (var converter in Converters)
+                if (converter.GetType() == t)
+                    return converter;
+
+            throw new ArgumentException("Converter does not exist");
         }
 
         public ProjectFile(GMData dataHandle, string directoryPath, Warning warningHandler = null)
@@ -341,7 +360,10 @@ namespace DogScepterLib.Project
             var loadMethod = typeof(T).GetMethod("Load");
 
             // Now scan through and delete relevant files on disk
-            List<ProjectJson.AssetEntry> entries = JsonFile.Assets[ProjectJson.AssetTypeName[typeof(T)]];
+            List<ProjectJson.AssetEntry> entries;
+            if (!JsonFile.Assets.TryGetValue(ProjectJson.AssetTypeName[typeof(T)], out entries))
+                return; // This asset type doesn't exist in this JSON...
+
             for (int i = entries.Count - 1; i >= 0; i--)
             {
                 ProjectJson.AssetEntry entry = entries[i];
@@ -354,7 +376,14 @@ namespace DogScepterLib.Project
                         continue;
                     }
 
-                    T asset = list[assetIndices[entry.Name]].Asset;
+                    int assetIndex = assetIndices[entry.Name];
+                    T asset = list[assetIndex].Asset;
+                    if (asset == null)
+                    {
+                        // Need to convert now
+                        (GetConverter(AssetTypeConverter[typeof(T)]) as AssetConverter<T>).ConvertData(this, assetIndex);
+                        asset = list[assetIndex].Asset;
+                    }
                     if (asset.Hash == null)
                         asset.ComputeHash(this);
                     T assetOnDisk = (T)loadMethod.Invoke(null, new object[] { path });

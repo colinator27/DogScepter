@@ -56,6 +56,13 @@ namespace DogScepterLib.Project
                 else
                     HashedItems[key] = new List<GMTextureItem>() { entry };
             }
+
+            public void RemoveEntry(Textures textures, GMTextureItem entry)
+            {
+                Items.Remove(entry);
+                if (HashedItems.TryGetValue(textures.GetHashKeyForEntry(entry), out List<GMTextureItem> list))
+                    list.Remove(entry);
+            }
         }
 
         public ProjectFile Project;
@@ -237,7 +244,7 @@ namespace DogScepterLib.Project
                         tpagList.RemoveAt(i);
                         if (item.TexturePageID != -1)
                             Project.Textures.TextureGroups[Project.Textures.PageToGroup[item.TexturePageID]]
-                                .Items.Remove(item);
+                                .RemoveEntry(this, item);
                         if (unreferenced.Count == 0)
                             break;
                     }

@@ -16,6 +16,19 @@ namespace DogScepterLib.Project
 {
     public static class CollisionMasks
     {
+        public class Rect
+        {
+            public int Left, Top, Right, Bottom;
+
+            public Rect(int left, int top, int right, int bottom)
+            {
+                Left = left;
+                Top = top;
+                Right = right;
+                Bottom = bottom;
+            }
+        }
+
         private static byte GetHighestAlphaAt(List<(byte[], int)> items, int x, int y)
         {
             byte highest = 0;
@@ -28,6 +41,33 @@ namespace DogScepterLib.Project
             }
 
             return highest;
+        }
+
+        private static List<SKBitmap> GetBitmaps(ProjectFile pf, int width, int height, IList<GMTextureItem> items)
+        {
+            List<SKBitmap> bitmaps = new List<SKBitmap>(items.Count);
+
+            // Make copies of all the entries for reference
+            foreach (var item in items)
+            {
+                if (item == null)
+                    continue;
+
+                SKBitmap toAdd;
+
+                if (item.TexturePageID != -1)
+                    toAdd = pf.Textures.GetTextureEntryBitmap(item, true);
+                else
+                    toAdd = item._Bitmap;
+
+                bitmaps.Add(toAdd);
+
+                // Check to ensure every frame has the same dimensions
+                if (toAdd.Width != width || toAdd.Height != height)
+                    throw new Exception("Collision mask error: Sprite frame dimensions do not match.");
+            }
+
+            return bitmaps;
         }
 
         public static AssetSprite.CollisionMaskInfo GetInfoForSprite(ProjectFile pf, GMSprite spr, out List<SKBitmap> bitmaps, bool suggestPrecise = false)
@@ -50,26 +90,8 @@ namespace DogScepterLib.Project
             if (spr.CollisionMasks.Count == 0)
                 return info;
 
-            // Make copies of all the entries for reference
-            foreach (var item in spr.TextureItems)
-            {
-                if (item == null)
-                    return info; // bail
-                if (item.TexturePageID != -1)
-                    bitmaps.Add(pf.Textures.GetTextureEntryBitmap(item, true));
-                else
-                    bitmaps.Add(item._Bitmap); // Probably not ever needed, but just in case
-            }
-
-#if DEBUG
-            // Check that all frames are the same size
-            foreach (var item in bitmaps)
-            {
-                if (item.Width != spr.Width || item.Height != spr.Height)
-                    throw new Exception("nonmatching sprite bitmap dimensions??");
-            }
-#endif
-
+            // Get bitmaps from frames
+            bitmaps = GetBitmaps(pf, spr.Width, spr.Height, spr.TextureItems);
             List<(byte[], int)> bitmapData = new List<(byte[], int)>(bitmaps.Count);
             foreach (var item in bitmaps)
                 bitmapData.Add((item.Bytes, item.RowBytes));
@@ -137,14 +159,6 @@ namespace DogScepterLib.Project
                     break;
                 case GMSprite.SepMaskType.Precise:
                     {
-                        if (info.Mode != MaskMode.FullImage)
-                        {
-                            info.Left = spr.MarginLeft;
-                            info.Right = spr.MarginRight;
-                            info.Top = spr.MarginTop;
-                            info.Bottom = spr.MarginBottom;
-                        }
-
                         int stride = ((spr.Width + 7) / 8) * 8;
 
                         bool foundNonzero = false;
@@ -266,6 +280,15 @@ namespace DogScepterLib.Project
                                 info.Type = MaskType.Ellipse;
                         }
 
+                        if (info.Mode == MaskMode.Manual || 
+                            (info.Mode == MaskMode.Automatic && info.Type != MaskType.Precise && info.Type != MaskType.PrecisePerFrame))
+                        {
+                            info.Left = spr.MarginLeft;
+                            info.Right = spr.MarginRight;
+                            info.Top = spr.MarginTop;
+                            info.Bottom = spr.MarginBottom;
+                        }
+
                         if (info.Mode == MaskMode.Automatic || info.Type == MaskType.Precise ||
                             (info.Mode == MaskMode.Manual && info.Type == MaskType.PrecisePerFrame))
                         {
@@ -285,7 +308,7 @@ namespace DogScepterLib.Project
             return info;
         }
 
-        public static unsafe SKRectI GetBBoxForBitmap(SKBitmap bmp, AssetSprite spr)
+        public static unsafe Rect GetBBoxForBitmap(SKBitmap bmp, AssetSprite spr)
         {
             var info = spr.CollisionMask;
 
@@ -319,7 +342,7 @@ namespace DogScepterLib.Project
                             ptr += stride - bmp.Width;
                         }
 
-                        return new SKRectI(
+                        return new Rect(
                             Math.Max(0, left),
                             Math.Max(0, top),
                             Math.Min(spr.Width - 1, right),
@@ -327,10 +350,10 @@ namespace DogScepterLib.Project
                     }
 
                 case MaskMode.FullImage:
-                    return new SKRectI(0, 0, spr.Width - 1, spr.Height - 1);
+                    return new Rect(0, 0, spr.Width - 1, spr.Height - 1);
 
                 case MaskMode.Manual:
-                    return new SKRectI(
+                    return new Rect(
                         Math.Clamp((int)info.Left, 0, spr.Width - 1),
                         Math.Clamp((int)info.Top, 0, spr.Height - 1),
                         Math.Clamp((int)info.Right, 0, spr.Width - 1),
@@ -340,47 +363,103 @@ namespace DogScepterLib.Project
             throw new ArgumentException("invalid sprite mask mode");
         }
 
-        public static unsafe FastBitArray GetMaskForBitmap(SKBitmap bmp, AssetSprite spr, FastBitArray existingMask = null)
+        public static unsafe FastBitArray GetMaskForBitmap(SKBitmap bmp, AssetSprite spr, ref Rect maskbbox, FastBitArray existingMask = null)
         {
             int stride = ((spr.Width + 7) / 8) * 8;
             FastBitArray res = existingMask ?? new FastBitArray(stride * spr.Height);
 
-            SKRectI bbox = GetBBoxForBitmap(bmp, spr);
+            Rect bbox = GetBBoxForBitmap(bmp, spr);
 
             var info = spr.CollisionMask;
             int sprLeft, sprTop, sprRight, sprBottom;
+
+            // Word of note: There's a lot of copies of nearly the same code here. This is to reduce the number of conditions.
 
             int strideFactor = bbox.Top * stride;
             switch (info.Type)
             {
                 case MaskType.Rectangle:
                 case MaskType.RectangleWithRotation:
-                    for (int y = bbox.Top; y <= bbox.Bottom; y++)
+                    if (maskbbox != null)
                     {
-                        for (int x = bbox.Left; x <= bbox.Right; x++)
+                        for (int y = bbox.Top; y <= bbox.Bottom; y++)
                         {
-                            res.SetTrueReverse(x + strideFactor);
-                        }
+                            for (int x = bbox.Left; x <= bbox.Right; x++)
+                            {
+                                res.SetTrueReverse(x + strideFactor);
+                                if (x < maskbbox.Left)
+                                    maskbbox.Left = x;
+                                if (y < maskbbox.Top)
+                                    maskbbox.Top = y;
+                                if (x > maskbbox.Right)
+                                    maskbbox.Right = x;
+                                if (y > maskbbox.Bottom)
+                                    maskbbox.Bottom = y;
+                            }
 
-                        strideFactor += stride;
+                            strideFactor += stride;
+                        }
+                    }
+                    else
+                    {
+                        for (int y = bbox.Top; y <= bbox.Bottom; y++)
+                        {
+                            for (int x = bbox.Left; x <= bbox.Right; x++)
+                            {
+                                res.SetTrueReverse(x + strideFactor);
+                            }
+
+                            strideFactor += stride;
+                        }
                     }
                     break;
                 case MaskType.Precise:
                 case MaskType.PrecisePerFrame:
                     int tolerance = info.AlphaTolerance ?? 0;
-                    fixed (byte* ptr = &bmp.Bytes[0])
+                    if (maskbbox != null)
                     {
-                        int bmpStride = bmp.RowBytes;
-
-                        for (int y = bbox.Top; y <= bbox.Bottom; y++)
+                        fixed (byte* ptr = &bmp.Bytes[0])
                         {
-                            for (int x = bbox.Left; x <= bbox.Right; x++)
-                            {
-                                if (*(ptr + (x * 4) + (y * bmpStride) + 3) > tolerance)
-                                    res.SetTrueReverse(x + strideFactor);
-                            }
+                            int bmpStride = bmp.RowBytes;
 
-                            strideFactor += stride;
+                            for (int y = bbox.Top; y <= bbox.Bottom; y++)
+                            {
+                                for (int x = bbox.Left; x <= bbox.Right; x++)
+                                {
+                                    if (*(ptr + (x * 4) + (y * bmpStride) + 3) > tolerance)
+                                    {
+                                        res.SetTrueReverse(x + strideFactor);
+                                        if (x < maskbbox.Left)
+                                            maskbbox.Left = x;
+                                        if (y < maskbbox.Top)
+                                            maskbbox.Top = y;
+                                        if (x > maskbbox.Right)
+                                            maskbbox.Right = x;
+                                        if (y > maskbbox.Bottom)
+                                            maskbbox.Bottom = y;
+                                    }
+                                }
+
+                                strideFactor += stride;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        fixed (byte* ptr = &bmp.Bytes[0])
+                        {
+                            int bmpStride = bmp.RowBytes;
+
+                            for (int y = bbox.Top; y <= bbox.Bottom; y++)
+                            {
+                                for (int x = bbox.Left; x <= bbox.Right; x++)
+                                {
+                                    if (*(ptr + (x * 4) + (y * bmpStride) + 3) > tolerance)
+                                        res.SetTrueReverse(x + strideFactor);
+                                }
+
+                                strideFactor += stride;
+                            }
                         }
                     }
                     break;
@@ -409,17 +488,45 @@ namespace DogScepterLib.Project
                         if (radiusX <= 0 || radiusY <= 0)
                             break;
 
-                        for (int y = bbox.Top; y <= bbox.Bottom; y++)
+                        if (maskbbox != null)
                         {
-                            for (int x = bbox.Left; x <= bbox.Right; x++)
+                            for (int y = bbox.Top; y <= bbox.Bottom; y++)
                             {
-                                float normalX = (x - centerX) / radiusX;
-                                float normalY = (y - centerY) / radiusY;
-                                if (Math.Abs(normalX) + Math.Abs(normalY) <= 1f)
-                                    res.SetTrueReverse(x + strideFactor);
-                            }
+                                for (int x = bbox.Left; x <= bbox.Right; x++)
+                                {
+                                    float normalX = (x - centerX) / radiusX;
+                                    float normalY = (y - centerY) / radiusY;
+                                    if (Math.Abs(normalX) + Math.Abs(normalY) <= 1f)
+                                    {
+                                        res.SetTrueReverse(x + strideFactor);
+                                        if (x < maskbbox.Left)
+                                            maskbbox.Left = x;
+                                        if (y < maskbbox.Top)
+                                            maskbbox.Top = y;
+                                        if (x > maskbbox.Right)
+                                            maskbbox.Right = x;
+                                        if (y > maskbbox.Bottom)
+                                            maskbbox.Bottom = y;
+                                    }
+                                }
 
-                            strideFactor += stride;
+                                strideFactor += stride;
+                            }
+                        }
+                        else
+                        {
+                            for (int y = bbox.Top; y <= bbox.Bottom; y++)
+                            {
+                                for (int x = bbox.Left; x <= bbox.Right; x++)
+                                {
+                                    float normalX = (x - centerX) / radiusX;
+                                    float normalY = (y - centerY) / radiusY;
+                                    if (Math.Abs(normalX) + Math.Abs(normalY) <= 1f)
+                                        res.SetTrueReverse(x + strideFactor);
+                                }
+
+                                strideFactor += stride;
+                            }
                         }
                         break;
                     }
@@ -448,17 +555,45 @@ namespace DogScepterLib.Project
                         if (radiusX <= 0 || radiusY <= 0)
                             break;
 
-                        for (int y = bbox.Top; y <= bbox.Bottom; y++)
+                        if (maskbbox != null)
                         {
-                            for (int x = bbox.Left; x <= bbox.Right; x++)
+                            for (int y = bbox.Top; y <= bbox.Bottom; y++)
                             {
-                                float normalX = (x - centerX) / radiusX;
-                                float normalY = (y - centerY) / radiusY;
-                                if (Math.Pow(normalX, 2.0d) + Math.Pow(normalY, 2.0d) <= 1.0d)
-                                    res.SetTrueReverse(x + strideFactor);
-                            }
+                                for (int x = bbox.Left; x <= bbox.Right; x++)
+                                {
+                                    float normalX = (x - centerX) / radiusX;
+                                    float normalY = (y - centerY) / radiusY;
+                                    if (Math.Pow(normalX, 2.0d) + Math.Pow(normalY, 2.0d) <= 1.0d)
+                                    {
+                                        res.SetTrueReverse(x + strideFactor);
+                                        if (x < maskbbox.Left)
+                                            maskbbox.Left = x;
+                                        if (y < maskbbox.Top)
+                                            maskbbox.Top = y;
+                                        if (x > maskbbox.Right)
+                                            maskbbox.Right = x;
+                                        if (y > maskbbox.Bottom)
+                                            maskbbox.Bottom = y;
+                                    }
+                                }
 
-                            strideFactor += stride;
+                                strideFactor += stride;
+                            }
+                        }
+                        else
+                        {
+                            for (int y = bbox.Top; y <= bbox.Bottom; y++)
+                            {
+                                for (int x = bbox.Left; x <= bbox.Right; x++)
+                                {
+                                    float normalX = (x - centerX) / radiusX;
+                                    float normalY = (y - centerY) / radiusY;
+                                    if (Math.Pow(normalX, 2.0d) + Math.Pow(normalY, 2.0d) <= 1.0d)
+                                        res.SetTrueReverse(x + strideFactor);
+                                }
+
+                                strideFactor += stride;
+                            }
                         }
                         break;
                     }
@@ -467,25 +602,54 @@ namespace DogScepterLib.Project
             return res;
         }
 
-        public static List<byte[]> GetMasksForSprite(AssetSprite spr, List<SKBitmap> bitmaps)
+        public static List<byte[]> GetMasksForSprite(ProjectFile pf, AssetSprite spr, out Rect maskbbox, List<SKBitmap> bitmaps = null)
         {
+            if (bitmaps == null)
+                bitmaps = GetBitmaps(pf, spr.Width, spr.Height, spr.TextureItems);
+
             if (bitmaps.Count == 0)
+            {
+                maskbbox = new Rect(0, 0, 0, 0);
                 return new List<byte[]>();
+            }
+
+            var info = spr.CollisionMask;
+
+            if (info.Left == null || info.Top == null || info.Right == null || info.Bottom == null)
+                maskbbox = new Rect(spr.Width - 1, spr.Height - 1, 0, 0);
+            else
+                maskbbox = null;
 
             if (spr.CollisionMask.Type == MaskType.PrecisePerFrame)
             {
                 // Get masks for individual frames
                 List<byte[]> res = new List<byte[]>(bitmaps.Count);
                 for (int i = 0; i < bitmaps.Count; i++)
-                    res.Add(GetMaskForBitmap(bitmaps[i], spr).ToByteArray());
+                    res.Add(GetMaskForBitmap(bitmaps[i], spr, ref maskbbox).ToByteArray());
+
+                if (maskbbox != null)
+                {
+                    maskbbox.Left = Math.Max(0, maskbbox.Left);
+                    maskbbox.Top = Math.Max(0, maskbbox.Top);
+                    maskbbox.Right = Math.Min(spr.Width - 1, maskbbox.Right);
+                    maskbbox.Bottom = Math.Min(spr.Height - 1, maskbbox.Bottom);
+                }
                 return res;
             }
             else
             {
                 // Get the mask for the first frame, then add following frames
-                FastBitArray mask = GetMaskForBitmap(bitmaps[0], spr);
+                FastBitArray mask = GetMaskForBitmap(bitmaps[0], spr, ref maskbbox);
                 for (int i = 1; i < bitmaps.Count; i++)
-                    GetMaskForBitmap(bitmaps[i], spr, mask);
+                    GetMaskForBitmap(bitmaps[i], spr, ref maskbbox, mask);
+
+                if (maskbbox != null)
+                {
+                    maskbbox.Left = Math.Max(0, maskbbox.Left);
+                    maskbbox.Top = Math.Max(0, maskbbox.Top);
+                    maskbbox.Right = Math.Min(spr.Width - 1, maskbbox.Right);
+                    maskbbox.Bottom = Math.Min(spr.Height - 1, maskbbox.Bottom);
+                }
                 return new List<byte[]> { mask.ToByteArray() };
             }
         }

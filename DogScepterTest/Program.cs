@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using DogScepterLib.Core;
 using DogScepterLib.Core.Chunks;
@@ -41,16 +42,17 @@ namespace DogScepterTest
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)
                 {
-                    //pf.GetConverter<SpriteConverter>().ConvertData(pf, 0);
-                    //pf.Sprites[0].Asset.Dirty = true;
-                    //pf.AddDirtyAssetsToJSON(pf.Sprites, "sprites");
+                    pf.GetConverter<SpriteConverter>().ConvertData(pf, 1);
+                    pf.Sprites[1].Asset.Dirty = true;
+                    pf.AddDirtyAssetsToJSON(pf.Sprites, "sprites");
                     pf.SaveAll();
                 } else
                 {
-                    for (int i = 0; i < pf.Sprites.Count; i++)
-                        pf.GetConverter<SpriteConverter>().ConvertData(pf, i);
+                    //var cvt = pf.GetConverter<SpriteConverter>();
+                    //Parallel.ForEach(Enumerable.Range(0, pf.Sprites.Count), (i) => cvt.ConvertData(pf, i));
                     pf.LoadMain();
-                    pf.PurgeIdenticalAssetsOnDisk(pf.Backgrounds);
+                    //Parallel.ForEach(pf.Sprites, (s) => CollisionMasks.GetMasksForSprite(pf, s.Asset, out _));
+                    pf.PurgeIdenticalAssetsOnDisk(pf.Sprites);
                     pf.LoadAll();
                 }
 

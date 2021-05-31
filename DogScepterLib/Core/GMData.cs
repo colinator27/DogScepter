@@ -126,28 +126,31 @@ namespace DogScepterLib.Core
         {
             var list = ((GMChunkSTRG)Chunks["STRG"]).List;
 
-            if (StringCache != null)
+            lock (list)
             {
-                if (StringCache.TryGetValue(content, out int stringIndex))
-                    return list[stringIndex];
-
-                for (int i = StringCache.Count; i < list.Count; i++)
-                    if (list[i].Content == content)
-                        return list[i];
-            }
-            else
-            {
-                foreach (GMString str in list)
+                if (StringCache != null)
                 {
-                    if (str.Content == content)
-                        return str;
-                }
-            }
+                    if (StringCache.TryGetValue(content, out int stringIndex))
+                        return list[stringIndex];
 
-            GMString res = new GMString();
-            res.Content = content;
-            list.Add(res);
-            return res;
+                    for (int i = StringCache.Count; i < list.Count; i++)
+                        if (list[i].Content == content)
+                            return list[i];
+                }
+                else
+                {
+                    foreach (GMString str in list)
+                    {
+                        if (str.Content == content)
+                            return str;
+                    }
+                }
+
+                GMString res = new GMString();
+                res.Content = content;
+                list.Add(res);
+                return res;
+            }
         }
 
         public T GetChunk<T>() where T : GMChunk
