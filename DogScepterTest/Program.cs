@@ -19,7 +19,7 @@ namespace DogScepterTest
         {
             Stopwatch s = new Stopwatch();
             s.Start();
-            using (FileStream fs = new FileStream(@"input_test/collision.win", FileMode.Open))
+            using (FileStream fs = new FileStream(@"input/data.win", FileMode.Open))
             {
                 GMDataReader reader = new GMDataReader(fs, fs.Name);
                 foreach (GMWarning w in reader.Warnings)
@@ -33,8 +33,6 @@ namespace DogScepterTest
                         Console.WriteLine($"Project warn: {type} {info ?? ""}");
                     });
 
-                CollisionMasks.GetInfoForSprite(pf, reader.Data.GetChunk<GMChunkSPRT>().List[0]);// 89]);
-
                 //SKBitmap testImage = SKBitmap.Decode(File.ReadAllBytes("testsprite.png"));
                 //foreach (var group in pf.Textures.TextureGroups)
                 //    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));
@@ -43,13 +41,14 @@ namespace DogScepterTest
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)
                 {
-                    pf.GetConverter<BackgroundConverter>().ConvertData(pf, 0);
-                    pf.Backgrounds[0].Asset.Dirty = true;
-                    pf.AddDirtyAssetsToJSON(pf.Backgrounds, "backgrounds");
+                    //pf.GetConverter<SpriteConverter>().ConvertData(pf, 0);
+                    //pf.Sprites[0].Asset.Dirty = true;
+                    //pf.AddDirtyAssetsToJSON(pf.Sprites, "sprites");
                     pf.SaveAll();
                 } else
                 {
-                    pf.GetConverter<BackgroundConverter>().ConvertData(pf, 0);
+                    for (int i = 0; i < pf.Sprites.Count; i++)
+                        pf.GetConverter<SpriteConverter>().ConvertData(pf, i);
                     pf.LoadMain();
                     pf.PurgeIdenticalAssetsOnDisk(pf.Backgrounds);
                     pf.LoadAll();

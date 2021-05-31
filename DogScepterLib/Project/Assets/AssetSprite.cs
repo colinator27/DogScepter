@@ -21,6 +21,7 @@ namespace DogScepterLib.Project.Assets
         public int OriginX { get; set; }
         public int OriginY { get; set; }
         public string TextureGroup { get; set; } = "";
+        public bool SeparateTextureGroup { get; set; } = false;
         public CollisionMaskInfo CollisionMask { get; set; }
         public SpriteSpecialInfo SpecialInfo { get; set; }
 
