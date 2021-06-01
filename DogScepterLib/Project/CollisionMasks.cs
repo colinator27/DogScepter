@@ -687,5 +687,66 @@ namespace DogScepterLib.Project
 
             return true;
         }
+
+        public static unsafe SKBitmap GetImageFromMask(int width, int height, byte[] mask)
+        {
+            SKBitmap bmp = new SKBitmap(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+
+            uint* ptrInt = (uint*)bmp.GetPixels().ToPointer();
+            int bmpStride = bmp.RowBytes / 4;
+
+            int stride = ((width + 7) / 8) * 8;
+
+            FastBitArray arr = new FastBitArray(mask);
+            int strideFactor = 0;
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (arr.GetReverse(x + strideFactor))
+                    {
+                        *(ptrInt + x + (y * bmpStride)) = 0xFFFFFFFFu;
+                    }
+                    else
+                    {
+                        *(ptrInt + x + (y * bmpStride)) = 0xFF000000u;
+                    }
+                }
+
+                strideFactor += stride;
+            }
+
+            return bmp;
+        }
+
+        public static unsafe byte[] GetMaskFromImage(SKBitmap bmp)
+        {
+            int stride = ((bmp.Width + 7) / 8) * 8;
+            FastBitArray arr = new FastBitArray(stride * bmp.Height);
+            int strideFactor = 0;
+
+            int bmpStride = bmp.RowBytes / 4;
+
+            fixed (byte* ptr = &bmp.Bytes[0])
+            {
+                uint* ptrInt = (uint*)ptr;
+
+                for (int y = 0; y < bmp.Height; y++)
+                {
+                    for (int x = 0; x < bmp.Width; x++)
+                    {
+                        if (*(ptrInt + x + (y * bmpStride)) == 0xFFFFFFFFu)
+                        {
+                            arr.SetTrueReverse(x + strideFactor);
+                        }
+                    }
+
+                    strideFactor += stride;
+                }
+            }
+
+            return arr.ToByteArray();
+        }
     }
 }

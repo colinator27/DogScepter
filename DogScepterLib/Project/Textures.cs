@@ -252,6 +252,39 @@ namespace DogScepterLib.Project
             }
         }
 
+        // Removes empty texture groups as well as resets information in TGIN
+        public void RefreshTextureGroups()
+        {
+            Project.DataHandle.Logger?.Invoke("Refreshing texture groups...");
+
+            // Remove empty texture groups
+            for (int i = TextureGroups.Count - 1; i >= 0; i--)
+            {
+                if (TextureGroups[i].Items.Count == 0)
+                    TextureGroups.RemoveAt(i);
+            }
+
+            // Refresh TGIN
+            var tginList = Project.DataHandle.GetChunk<GMChunkTGIN>()?.List;
+            if (tginList != null)
+            {
+                tginList.Clear();
+
+                foreach (var g in TextureGroups)
+                {
+                    tginList.Add(new GMTextureGroupInfo()
+                    {
+                        Name = Project.DataHandle.DefineString(g.Name),
+                        FontIDs = new(),
+                        SpineSpriteIDs = new(),
+                        SpriteIDs = new(),
+                        TexturePageIDs = new(),
+                        TilesetIDs = new()
+                    });
+                }
+            }
+        }
+
         // Thorough algorithm to remove all unreferenced texture pages.
         public void PurgeUnreferencedPages()
         {
@@ -292,12 +325,27 @@ namespace DogScepterLib.Project
                 int currentIndex = forRemoval[i] - i;
                 txtrList.RemoveAt(currentIndex);
 
+                // Update texture page IDs in texture items
                 foreach (GMTextureItem item in tpagList)
                 {
                     if (item.TexturePageID == currentIndex)
                         item.TexturePageID = -1;
                     else if (item.TexturePageID > currentIndex)
                         item.TexturePageID--;
+                }
+
+                // Update texture page IDs in texture groups
+                foreach (var g in TextureGroups)
+                {
+                    List<int> pageList = g.Pages.ToList();
+                    for (int j = pageList.Count - 1; j >= 0; j--)
+                    {
+                        if (pageList[j] == currentIndex)
+                            pageList.RemoveAt(j);
+                        else if (pageList[j] > currentIndex)
+                            pageList[j]--;
+                    }
+                    g.Pages = new HashSet<int>(pageList);
                 }
             }
 
@@ -916,6 +964,11 @@ namespace DogScepterLib.Project
             }
 
             return bmp;
+        }
+
+        public void PostProcessTGIN()
+        {
+            // TODO: needs to iterate through all assets and their groups to add them to their TGIN entries
         }
     }
 }

@@ -39,11 +39,11 @@ namespace DogScepterLib.Project
         public List<string> AudioGroups { get; set; }
         public ProjectJson.TextureGroupSettings TextureGroupSettings { get; set; }
 
-        public List<AssetRef<AssetSound>> Sounds { get; set; } = new List<AssetRef<AssetSound>>();
-        public List<AssetRef<AssetSprite>> Sprites { get; set; } = new List<AssetRef<AssetSprite>>();
-        public List<AssetRef<AssetBackground>> Backgrounds { get; set; } = new List<AssetRef<AssetBackground>>();
-        public List<AssetRef<AssetPath>> Paths { get; set; } = new List<AssetRef<AssetPath>>();
-        public List<AssetRef<AssetObject>> Objects { get; set; } = new List<AssetRef<AssetObject>>();
+        public AssetRefList<AssetSound> Sounds { get; set; } = new();
+        public AssetRefList<AssetSprite> Sprites { get; set; } = new();
+        public AssetRefList<AssetBackground> Backgrounds { get; set; } = new();
+        public AssetRefList<AssetPath> Paths { get; set; } = new();
+        public AssetRefList<AssetObject> Objects { get; set; } = new();
 
         public Dictionary<int, GMChunkAUDO> _CachedAudioChunks;
         public Textures Textures;
@@ -248,8 +248,10 @@ namespace DogScepterLib.Project
                 converter.ConvertProject(this);
 
             Textures.PurgeUnreferencedItems();
+            Textures.RefreshTextureGroups();
             Textures.RegenerateTextures();
             Textures.PurgeUnreferencedPages();
+            Textures.PostProcessTGIN();
 
             ConverterUtils.CopyDataFiles(this);
         }
@@ -398,50 +400,6 @@ namespace DogScepterLib.Project
 
             // Save the main JSON file to reflect the removed assets
             SaveMain();
-        }
-    }
-
-    public class AssetRef<T> where T : Asset
-    {
-        public string Name { get; set; }
-        public T Asset { get; set; } = null;
-        public int DataIndex { get; set; } = -1;
-        public GMSerializable DataAsset { get; set; } = null;
-        public CachedRefData CachedData { get; set; } = null;
-
-        public AssetRef(string name)
-        {
-            Name = name;
-        }
-
-        public AssetRef(string name, T asset, int dataIndex = -1)
-        {
-            Name = name;
-            Asset = asset;
-            DataIndex = dataIndex;
-        }
-
-        public AssetRef(string name, int dataIndex, GMSerializable dataAsset = null)
-        {
-            Name = name;
-            DataIndex = dataIndex;
-            DataAsset = dataAsset;
-        }
-    }
-
-    public interface CachedRefData
-    {
-    }
-
-    public class CachedSoundRefData : CachedRefData
-    {
-        public byte[] SoundBuffer { get; set; }
-        public string AudioGroupName { get; set; }
-
-        public CachedSoundRefData(byte[] soundBuffer, string audioGroupName)
-        {
-            SoundBuffer = soundBuffer;
-            AudioGroupName = audioGroupName;
         }
     }
 

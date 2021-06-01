@@ -14,8 +14,7 @@ namespace DogScepterLib.Project.Converters
     {
         public override void ConvertData(ProjectFile pf, int index)
         {
-            // TODO replace both of these to use the AssetRef list instead once the respective assets are loaded literally at all
-            var dataSprites = ((GMChunkSPRT)pf.DataHandle.Chunks["SPRT"]).List;
+            // TODO use asset refs eventually
             var dataCode = ((GMChunkCODE)pf.DataHandle.Chunks["CODE"])?.List;
 
             GMObject asset = (GMObject)pf.Objects[index].DataAsset;
@@ -23,14 +22,14 @@ namespace DogScepterLib.Project.Converters
             AssetObject projectAsset = new AssetObject()
             {
                 Name = asset.Name.Content,
-                Sprite = asset.SpriteID >= 0 ? dataSprites[asset.SpriteID].Name.Content : null,
+                Sprite = asset.SpriteID >= 0 ? pf.Sprites[asset.SpriteID].Name : null,
                 Visible = asset.Visible,
                 Solid = asset.Solid,
                 Depth = asset.Depth,
                 Persistent = asset.Persistent,
                 ParentObject = asset.ParentObjectID >= 0 ? pf.Objects[asset.ParentObjectID].Name
                                     : (asset.ParentObjectID == -100 ? "<undefined>" : null),
-                MaskSprite = asset.MaskSpriteID >= 0 ? dataSprites[asset.MaskSpriteID].Name.Content : null,
+                MaskSprite = asset.MaskSpriteID >= 0 ? pf.Sprites[asset.MaskSpriteID].Name : null,
                 Physics = asset.Physics,
                 PhysicsSensor = asset.PhysicsSensor,
                 PhysicsShape = asset.PhysicsShape,
@@ -195,23 +194,9 @@ namespace DogScepterLib.Project.Converters
         {
             var dataAssets = pf.DataHandle.GetChunk<GMChunkOBJT>().List;
 
-            // TODO use refs once added
-            GMList<GMSprite> dataSprites = ((GMChunkSPRT)pf.DataHandle.Chunks["SPRT"]).List;
+            // TODO: use asset refs whenever code is implemented
             GMList<GMCode> dataCode = ((GMChunkCODE)pf.DataHandle.Chunks["CODE"]).List;
 
-            int getSprite(string name)
-            {
-                if (name == null)
-                    return -1;
-                try
-                {
-                    return dataSprites.Select((elem, index) => new { elem, index }).First(p => p.elem.Name.Content == name).index;
-                }
-                catch (InvalidOperationException)
-                {
-                    return -1;
-                }
-            }
             int getCode(string name)
             {
                 try
@@ -229,14 +214,7 @@ namespace DogScepterLib.Project.Converters
                     return -1;
                 if (name == "<undefined>")
                     return -100;
-                try
-                {
-                    return pf.Objects.Select((elem, index) => new { elem, index }).First(p => p.elem.Name == name).index;
-                }
-                catch (InvalidOperationException)
-                {
-                    return -1;
-                }
+                return pf.Objects.FindIndex(name);
             }
 
             List<GMObject> newList = new List<GMObject>();
@@ -245,34 +223,22 @@ namespace DogScepterLib.Project.Converters
                 AssetObject projectAsset = pf.Objects[i].Asset;
                 if (projectAsset == null)
                 {
-                    // This asset was never converted, so handle references and re-add it
-                    GMObject o = (GMObject)pf.Objects[i].DataAsset;
-                    o.Name = pf.DataHandle.DefineString(o.Name.Content);
-                    foreach (var evList in o.Events)
-                    {
-                        foreach (var ev in evList)
-                        {
-                            foreach (var ac in ev.Actions)
-                            {
-                                if (ac.ActionName != null)
-                                    ac.ActionName = pf.DataHandle.DefineString(ac.ActionName.Content);
-                            }
-                        }
-                    }
-                    newList.Add(o);
+                    // This asset was never converted
+                    // No need to update IDs since they won't change
+                    newList.Add((GMObject)pf.Objects[i].DataAsset);
                     continue;
                 }
 
                 GMObject dataAsset = new GMObject()
                 {
                     Name = pf.DataHandle.DefineString(projectAsset.Name),
-                    SpriteID = getSprite(projectAsset.Sprite),
+                    SpriteID = pf.Sprites.FindIndex(projectAsset.Sprite),
                     Visible = projectAsset.Visible,
                     Solid = projectAsset.Solid,
                     Depth = projectAsset.Depth,
                     Persistent = projectAsset.Persistent,
                     ParentObjectID = getObject(projectAsset.ParentObject),
-                    MaskSpriteID = getSprite(projectAsset.MaskSprite),
+                    MaskSpriteID = pf.Sprites.FindIndex(projectAsset.MaskSprite),
                     Physics = projectAsset.Physics,
                     PhysicsSensor = projectAsset.PhysicsSensor,
                     PhysicsShape = projectAsset.PhysicsShape,

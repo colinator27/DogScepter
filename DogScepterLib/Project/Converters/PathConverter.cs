@@ -46,10 +46,8 @@ namespace DogScepterLib.Project.Converters
                 AssetPath assetPath = pf.Paths[i].Asset;
                 if (assetPath == null)
                 {
-                    // This asset was never converted, so handle references and re-add it
-                    GMPath p = (GMPath)pf.Paths[i].DataAsset;
-                    p.Name = pf.DataHandle.DefineString(p.Name.Content);
-                    dataAssets.Add(p);
+                    // This asset was never converted
+                    dataAssets.Add((GMPath)pf.Paths[i].DataAsset);
                     continue;
                 }
 

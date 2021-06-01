@@ -14,6 +14,18 @@ namespace DogScepterLib.Project.Converters
 {
     public class SoundConverter : AssetConverter<AssetSound>
     {
+        public class CachedSoundRefData : CachedRefData
+        {
+            public byte[] SoundBuffer { get; set; }
+            public string AudioGroupName { get; set; }
+
+            public CachedSoundRefData(byte[] soundBuffer, string audioGroupName)
+            {
+                SoundBuffer = soundBuffer;
+                AudioGroupName = audioGroupName;
+            }
+        }
+
         public override void ConvertData(ProjectFile pf, int index)
         {
             GMSound asset = (GMSound)pf.Sounds[index].DataAsset;
@@ -145,10 +157,6 @@ namespace DogScepterLib.Project.Converters
                 {
                     // This asset was never converted, so handle references and re-add it
                     GMSound s = (GMSound)sortedSounds[i].DataAsset;
-                    s.Name = pf.DataHandle.DefineString(s.Name.Content);
-                    s.File = pf.DataHandle.DefineString(s.File.Content);
-                    if (s.Type != null)
-                        s.Type = pf.DataHandle.DefineString(s.Type.Content);
 
                     // Get the group name from the cache
                     var cachedData = (CachedSoundRefData)sortedSounds[i].CachedData;

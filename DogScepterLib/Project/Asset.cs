@@ -1,4 +1,5 @@
-﻿using PropertyChanged;
+﻿using DogScepterLib.Core;
+using PropertyChanged;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -76,5 +77,45 @@ namespace DogScepterLib.Project
                 }
             }
         }
+    }
+
+    public class AssetRefList<T> : List<AssetRef<T>> where T : Asset
+    {
+        public int FindIndex(string name)
+        {
+            return FindIndex(a => a.Name == name);
+        }
+    }
+
+    public class AssetRef<T> where T : Asset
+    {
+        public string Name { get; set; }
+        public T Asset { get; set; } = null;
+        public int DataIndex { get; set; } = -1;
+        public GMSerializable DataAsset { get; set; } = null;
+        public CachedRefData CachedData { get; set; } = null;
+
+        public AssetRef(string name)
+        {
+            Name = name;
+        }
+
+        public AssetRef(string name, T asset, int dataIndex = -1)
+        {
+            Name = name;
+            Asset = asset;
+            DataIndex = dataIndex;
+        }
+
+        public AssetRef(string name, int dataIndex, GMSerializable dataAsset = null)
+        {
+            Name = name;
+            DataIndex = dataIndex;
+            DataAsset = dataAsset;
+        }
+    }
+
+    public interface CachedRefData
+    {
     }
 }

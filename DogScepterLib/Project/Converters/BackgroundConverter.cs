@@ -63,15 +63,14 @@ namespace DogScepterLib.Project.Converters
                 AssetBackground projectAsset = pf.Backgrounds[i].Asset;
                 if (projectAsset == null)
                 {
-                    // This asset was never converted, so handle references and re-add it
-                    GMBackground b = (GMBackground)pf.Backgrounds[i].DataAsset;
-                    b.Name = pf.DataHandle.DefineString(b.Name.Content);
-                    newList.Add(b);
+                    // This asset was never converted
+                    newList.Add((GMBackground)pf.Backgrounds[i].DataAsset);
                     continue;
                 }
 
                 // Add texture item to proper texture group
-                if (groupNames.TryGetValue(projectAsset.TextureGroup, out var group))
+                if (projectAsset.TextureGroup != null && 
+                    groupNames.TryGetValue(projectAsset.TextureGroup, out var group))
                 {
                     group.AddNewEntry(pf.Textures, projectAsset.TextureItem);
                 }

@@ -42,8 +42,8 @@ namespace DogScepterTest
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)
                 {
-                    pf.GetConverter<SpriteConverter>().ConvertData(pf, 1);
-                    pf.Sprites[1].Asset.Dirty = true;
+                    pf.GetConverter<SpriteConverter>().ConvertData(pf, 0);
+                    pf.Sprites[0].Asset.Dirty = true;
                     pf.AddDirtyAssetsToJSON(pf.Sprites, "sprites");
                     pf.SaveAll();
                 } else
