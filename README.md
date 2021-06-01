@@ -31,6 +31,7 @@
     	- Sounds
     	- Objects
     	- Backgrounds
+    	- Sprites
 - [ ] Command line interface
      - Simple CLI to allow actual work to be done with the above project system before everything else is done, including the UI itself. 
 
