@@ -1,6 +1,7 @@
 ﻿using DogScepterLib.Core;
 using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
+using DogScepterLib.Project.Converters;
 using MoreLinq;
 using SkiaSharp;
 using System;
@@ -28,6 +29,8 @@ namespace DogScepterLib.Project
             
             // Set for easy access
             public string Name;
+
+            public bool FillTGIN = true; // whether this gets filled out with assets in TGIN chunk
 
             public Group()
             {
@@ -140,7 +143,6 @@ namespace DogScepterLib.Project
             // Now handle all data file references
             var tpagList = Project.DataHandle.GetChunk<GMChunkTPAG>().List;
             var txtrList = Project.DataHandle.GetChunk<GMChunkTXTR>().List;
-            var tginList = Project.DataHandle.GetChunk<GMChunkTGIN>()?.List;
 
             void handlePage(int dataIndex, (TexturePacker.Page, byte[]) page)
             {
@@ -200,15 +202,6 @@ namespace DogScepterLib.Project
                     CachedTextures[pageInd] = null;
                     remaining--;
                 }
-
-                if (tginList != null)
-                {
-                    // Handle updating TGIN page IDs
-                    var tginPageIDs = tginList[i].TexturePageIDs;
-                    tginPageIDs.Clear();
-                    foreach (int id in g.Pages)
-                        tginPageIDs.Add(new GMTextureGroupInfo.ResourceID() { ID = id });
-                }
             }
 
             Project.DataHandle.Logger?.Invoke("Texture regeneration complete.");
@@ -252,7 +245,7 @@ namespace DogScepterLib.Project
             }
         }
 
-        // Removes empty texture groups as well as resets information in TGIN
+        // Removes empty texture groups
         public void RefreshTextureGroups()
         {
             Project.DataHandle.Logger?.Invoke("Refreshing texture groups...");
@@ -262,26 +255,6 @@ namespace DogScepterLib.Project
             {
                 if (TextureGroups[i].Items.Count == 0)
                     TextureGroups.RemoveAt(i);
-            }
-
-            // Refresh TGIN
-            var tginList = Project.DataHandle.GetChunk<GMChunkTGIN>()?.List;
-            if (tginList != null)
-            {
-                tginList.Clear();
-
-                foreach (var g in TextureGroups)
-                {
-                    tginList.Add(new GMTextureGroupInfo()
-                    {
-                        Name = Project.DataHandle.DefineString(g.Name),
-                        FontIDs = new(),
-                        SpineSpriteIDs = new(),
-                        SpriteIDs = new(),
-                        TexturePageIDs = new(),
-                        TilesetIDs = new()
-                    });
-                }
             }
         }
 
@@ -346,21 +319,6 @@ namespace DogScepterLib.Project
                             pageList[j]--;
                     }
                     g.Pages = new HashSet<int>(pageList);
-                }
-            }
-
-            var tginList = Project.DataHandle.GetChunk<GMChunkTGIN>()?.List;
-            if (tginList != null)
-            {
-                for (int i = 0; i < TextureGroups.Count; i++)
-                {
-                    Group g = TextureGroups[i];
-
-                    // Handle updating TGIN page IDs
-                    var tginPageIDs = tginList[i].TexturePageIDs;
-                    tginPageIDs.Clear();
-                    foreach (int id in g.Pages)
-                        tginPageIDs.Add(new GMTextureGroupInfo.ResourceID() { ID = id });
                 }
             }
         }
@@ -965,10 +923,65 @@ namespace DogScepterLib.Project
 
             return bmp;
         }
-
-        public void PostProcessTGIN()
+        
+        // Clears and re-initializes all the entries in the TGIN chunk
+        public void RefreshTGIN()
         {
-            // TODO: needs to iterate through all assets and their groups to add them to their TGIN entries
+            var tginList = Project.DataHandle.GetChunk<GMChunkTGIN>()?.List;
+            if (tginList != null)
+            {
+                Project.DataHandle.Logger?.Invoke("Refreshing texture group info...");
+
+                tginList.Clear();
+
+                // Update PageToGroup
+                for (int i = 0; i < TextureGroups.Count; i++)
+                {
+                    foreach (int page in TextureGroups[i].Pages)
+                        PageToGroup[page] = i;
+                }
+
+                var spriteConverter = Project.GetConverter<SpriteConverter>();
+                var bgConverter = Project.GetConverter<BackgroundConverter>();
+
+                foreach (var g in TextureGroups)
+                {
+                    var info = new GMTextureGroupInfo()
+                    {
+                        Name = Project.DataHandle.DefineString(g.Name),
+                        FontIDs = new(),
+                        SpineSpriteIDs = new(),
+                        SpriteIDs = new(),
+                        TexturePageIDs = new(),
+                        TilesetIDs = new()
+                    };
+                    tginList.Add(info);
+
+                    foreach (int id in g.Pages)
+                        info.TexturePageIDs.Add(new GMTextureGroupInfo.ResourceID() { ID = id });
+                }
+
+                for (int i = 0; i < Project.Sprites.Count; i++)
+                {
+                    var data = spriteConverter.GetFirstPageAndSpine(Project, i);
+                    if (PageToGroup.TryGetValue(data.Item1, out int ind))
+                    {
+                        tginList[ind].SpriteIDs.Add(new() { ID = i });
+                        if (data.Item2)
+                            tginList[ind].SpineSpriteIDs.Add(new() { ID = i });
+                    }
+                }
+
+                for (int i = 0; i < Project.Backgrounds.Count; i++)
+                {
+                    if (PageToGroup.TryGetValue(bgConverter.GetFirstPage(Project, i), out int ind))
+                    {
+                        tginList[ind].TilesetIDs.Add(new() { ID = i });
+                    }
+                }
+
+                // TODO!! Font IDs
+            }
         }
     }
 }

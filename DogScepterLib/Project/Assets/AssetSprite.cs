@@ -59,7 +59,7 @@ namespace DogScepterLib.Project.Assets
                 }
 
                 // Load special info buffer
-                if (res.SpecialInfo.Buffer != null)
+                if (res.SpecialInfo?.Buffer != null)
                 {
                     string path = Path.Combine(dir, res.SpecialInfo.Buffer);
                     if (File.Exists(path))

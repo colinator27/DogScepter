@@ -36,7 +36,7 @@ namespace DogScepterLib.Project
 
         public Dictionary<string, object> Info { get; set; } = new Dictionary<string, object>();
         public ProjectJson.OptionsSettings Options { get; set; }
-        public List<string> AudioGroups { get; set; }
+        public ProjectJson.AudioGroupSettings AudioGroupSettings { get; set; }
         public ProjectJson.TextureGroupSettings TextureGroupSettings { get; set; }
 
         public AssetRefList<AssetSound> Sounds { get; set; } = new();
@@ -76,12 +76,6 @@ namespace DogScepterLib.Project
             new SpriteConverter(),
             new BackgroundConverter(),
             new PathConverter(),
-
-            // TODO sprites need to be converted before objects
-            // TODO future note: sprite/font/background/tileset/etc. IDs need to be updated in TGIN
-            // TODO another note: sprites will need a separate texture page boolean
-            //   will need to be detected in conversion from data to project, however
-            //   (i.e., a sprite is on more than one page, on every one by itself)
             new ObjectConverter(),
         };
 
@@ -120,10 +114,16 @@ namespace DogScepterLib.Project
             DirectoryPath = directoryPath;
             WarningHandler = warningHandler;
 
-            JsonFile = new ProjectJson();
-
             DataHandle.Logger?.Invoke($"Initializing ProjectFile at {directoryPath}");
 
+            JsonFile = new ProjectJson();
+
+            ConvertFromData();
+        }
+
+        // Sets up textures and converts data to the project format
+        public void ConvertFromData()
+        {
             DataHandle.Logger?.Invoke($"Setting up textures...");
             Textures = new Textures(this);
 
@@ -159,8 +159,8 @@ namespace DogScepterLib.Project
             SaveMain();
             SaveExtraJSON(JsonFile.Info, () => JsonSerializer.SerializeToUtf8Bytes(Info, JsonOptions));
             SaveExtraJSON(JsonFile.Options, () => JsonSerializer.SerializeToUtf8Bytes(Options, JsonOptions));
-            if (AudioGroups != null)
-                SaveExtraJSON(JsonFile.AudioGroups, () => JsonSerializer.SerializeToUtf8Bytes(AudioGroups, JsonOptions));
+            if (AudioGroupSettings != null)
+                SaveExtraJSON(JsonFile.AudioGroups, () => JsonSerializer.SerializeToUtf8Bytes(AudioGroupSettings, JsonOptions));
             SaveExtraJSON(JsonFile.TextureGroups, () => JsonSerializer.SerializeToUtf8Bytes(TextureGroupSettings, JsonOptions));
 
             DataHandle.Logger?.Invoke("Saving assets...");
@@ -219,7 +219,7 @@ namespace DogScepterLib.Project
             LoadExtraJSON(JsonFile.Options,
                 b => Options = JsonSerializer.Deserialize<ProjectJson.OptionsSettings>(b, JsonOptions));
             LoadExtraJSON(JsonFile.AudioGroups,
-                b => AudioGroups = JsonSerializer.Deserialize<List<string>>(b, JsonOptions));
+                b => AudioGroupSettings = JsonSerializer.Deserialize<ProjectJson.AudioGroupSettings>(b, JsonOptions));
             LoadExtraJSON(JsonFile.TextureGroups,
                 b => TextureGroupSettings = JsonSerializer.Deserialize<ProjectJson.TextureGroupSettings>(b, JsonOptions));
 
@@ -251,7 +251,7 @@ namespace DogScepterLib.Project
             Textures.RefreshTextureGroups();
             Textures.RegenerateTextures();
             Textures.PurgeUnreferencedPages();
-            Textures.PostProcessTGIN();
+            Textures.RefreshTGIN();
 
             ConverterUtils.CopyDataFiles(this);
         }
@@ -411,18 +411,29 @@ namespace DogScepterLib.Project
             public string Path { get; set; }
         }
 
+        public class AudioGroupSettings
+        {
+            public List<string> AudioGroups { get; set; } // If null, don't mess with these
+            public List<string> NewAudioGroups { get; set; }
+        }
+
         public struct TextureGroupSettings
         {
             public int MaxTextureWidth { get; set; }
             public int MaxTextureHeight { get; set; }
-            public List<TextureGroup> Groups { get; set; }
+            public List<TextureGroupByID> Groups { get; set; } // If null, don't mess with these
+            public List<TextureGroup> NewGroups { get; set; }
         }
 
-        public struct TextureGroup
+        public class TextureGroup
         {
             public string Name { get; set; } // note/todo: when changed, this needs to be updated in actual relevant group class
             public int Border { get; set; }
             public bool AllowCrop { get; set; }
+        }
+
+        public class TextureGroupByID : TextureGroup
+        {
             public int ID { get; set; } // in ProjectFile.Textures.TextureGroups
         }
 

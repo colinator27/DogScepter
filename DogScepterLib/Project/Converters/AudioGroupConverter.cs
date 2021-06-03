@@ -19,7 +19,7 @@ namespace DogScepterLib.Project.Converters
             if (agrp == null)
             {
                 // format ID <= 13
-                pf.AudioGroups = null;
+                pf.AudioGroupSettings = null;
                 return;
             }
             var groups = agrp.List;
@@ -37,24 +37,61 @@ namespace DogScepterLib.Project.Converters
             }
 
             // Actually make the list
-            pf.AudioGroups = new List<string>();
+            pf.AudioGroupSettings = new()
+            {
+                AudioGroups = new List<string>(),
+                NewAudioGroups = new List<string>()
+            };
             foreach (GMAudioGroup g in groups)
-                pf.AudioGroups.Add(g.Name.Content);
+                pf.AudioGroupSettings.AudioGroups.Add(g.Name.Content);
         }
 
         public void ConvertProject(ProjectFile pf)
         {
             GMChunkAGRP groups = pf.DataHandle.GetChunk<GMChunkAGRP>();
-            if (groups == null || pf.AudioGroups == null)
+            if (groups == null || pf.AudioGroupSettings == null)
                 return;
 
-            groups.List.Clear();
-            int ind = 0;
-            foreach (string g in pf.AudioGroups)
+            if (pf.AudioGroupSettings.AudioGroups != null)
             {
-                if (groups.AudioData != null && ind != 0 && !groups.AudioData.ContainsKey(ind))
+                groups.List.Clear();
+                int ind = 0;
+                foreach (string g in pf.AudioGroupSettings.AudioGroups)
                 {
-                    // Well now we have to make a new group file
+                    if (groups.AudioData != null && ind != 0 && !groups.AudioData.ContainsKey(ind))
+                    {
+                        // Well now we have to make a new group file
+                        GMData data = new GMData()
+                        {
+                            Length = 1024 * 1024 // just a random default
+                        };
+                        data.FORM = new GMChunkFORM()
+                        {
+                            ChunkNames = new List<string>() { "AUDO" },
+                            Chunks = new Dictionary<string, GMChunk>()
+                        {
+                            { "AUDO", new GMChunkAUDO() { List = new GMPointerList<GMAudio>() } }
+                        }
+                        };
+                        groups.AudioData[ind] = data;
+                    }
+
+                    groups.List.Add(new GMAudioGroup()
+                    {
+                        Name = pf.DataHandle.DefineString(g)
+                    });
+
+                    ind++;
+                }
+            }
+
+            if (pf.AudioGroupSettings.NewAudioGroups != null && groups.AudioData != null)
+            {
+                int ind = groups.List.Count;
+
+                foreach (string g in pf.AudioGroupSettings.NewAudioGroups)
+                {
+                    // Have to make a new group here for certain
                     GMData data = new GMData()
                     {
                         Length = 1024 * 1024 // just a random default
@@ -68,14 +105,14 @@ namespace DogScepterLib.Project.Converters
                         }
                     };
                     groups.AudioData[ind] = data;
+
+                    groups.List.Add(new GMAudioGroup()
+                    {
+                        Name = pf.DataHandle.DefineString(g)
+                    });
+
+                    ind++;
                 }
-
-                groups.List.Add(new GMAudioGroup()
-                {
-                    Name = pf.DataHandle.DefineString(g)
-                });
-
-                ind++;
             }
         }
     }

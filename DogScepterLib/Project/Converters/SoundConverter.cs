@@ -109,12 +109,12 @@ namespace DogScepterLib.Project.Converters
                 else
                     buff = pf._CachedAudioChunks[sound.GroupID].List[sound.AudioID].Data;
 
-                if (pf.AudioGroups == null)
+                if (pf.AudioGroupSettings == null)
                     return new CachedSoundRefData(buff, "");
 
                 return new CachedSoundRefData(buff,
-                                                (sound.GroupID >= 0 && sound.GroupID < pf.AudioGroups.Count)
-                                                    ? pf.AudioGroups[sound.GroupID] : "");
+                                                (sound.GroupID >= 0 && sound.GroupID < pf.AudioGroupSettings.AudioGroups.Count)
+                                                    ? pf.AudioGroupSettings.AudioGroups[sound.GroupID] : "");
             });
         }
 

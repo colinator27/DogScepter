@@ -13,6 +13,32 @@ namespace DogScepterLib.Project.Converters
 {
     public class SpriteConverter : AssetConverter<AssetSprite>
     {
+        public (int, bool) GetFirstPageAndSpine(ProjectFile pf, int index)
+        {
+            var assetRef = pf.Sprites[index];
+            IEnumerable<GMTextureItem> list;
+            bool spine;
+            if (assetRef.Asset != null)
+            {
+                list = assetRef.Asset.TextureItems;
+                spine = assetRef.Asset.SpecialInfo?.SpriteType == GMSprite.SpriteType.Spine;
+            }
+            else
+            {
+                var asset = (assetRef.DataAsset as GMSprite);
+                list = asset.TextureItems;
+                spine = asset.S_SpriteType == GMSprite.SpriteType.Spine;
+            }
+
+            if (list.Any())
+            {
+                foreach (var item in list)
+                    if (item != null)
+                        return (item.TexturePageID, spine);
+            }
+            return (-1, spine);
+        }
+
         public override void ConvertData(ProjectFile pf, int index)
         {
             GMSprite asset = (GMSprite)pf.Sprites[index].DataAsset;
@@ -197,7 +223,8 @@ namespace DogScepterLib.Project.Converters
                                 Dirty = true,
                                 Border = 0,
                                 AllowCrop = false,
-                                Name = $"__DS_AUTO_GEN_{projectAsset.Name}__{pf.Textures.TextureGroups.Count}"
+                                Name = $"__DS_AUTO_GEN_{projectAsset.Name}__{pf.Textures.TextureGroups.Count}",
+                                FillTGIN = false // Apparently
                             };
                             g.AddNewEntry(pf.Textures, item);
                             pf.Textures.TextureGroups.Add(g);
@@ -211,7 +238,8 @@ namespace DogScepterLib.Project.Converters
                             Dirty = true,
                             Border = 0,
                             AllowCrop = false,
-                            Name = $"__DS_AUTO_GEN_{projectAsset.Name}__{pf.Textures.TextureGroups.Count}"
+                            Name = $"__DS_AUTO_GEN_{projectAsset.Name}__{pf.Textures.TextureGroups.Count}",
+                            FillTGIN = false // Apparently
                         };
                         foreach (var item in projectAsset.TextureItems)
                             if (item != null)

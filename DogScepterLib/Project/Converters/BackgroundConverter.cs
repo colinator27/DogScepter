@@ -11,6 +11,20 @@ namespace DogScepterLib.Project.Converters
 {
     public class BackgroundConverter : AssetConverter<AssetBackground>
     {
+        public int GetFirstPage(ProjectFile pf, int index)
+        {
+            var assetRef = pf.Backgrounds[index];
+            GMTextureItem item;
+            if (assetRef.Asset != null)
+                item = assetRef.Asset.TextureItem;
+            else
+                item = (assetRef.DataAsset as GMBackground).TextureItem;
+
+            if (item != null)
+                return item.TexturePageID;
+            return -1;
+        }
+
         public override void ConvertData(ProjectFile pf, int index)
         {
             GMBackground asset = (GMBackground)pf.Backgrounds[index].DataAsset;

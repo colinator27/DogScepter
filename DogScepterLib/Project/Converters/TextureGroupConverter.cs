@@ -17,8 +17,9 @@ namespace DogScepterLib.Project.Converters
                 MaxTextureWidth = 2048,
                 MaxTextureHeight = 2048
             };
-            var settingsList = new List<ProjectJson.TextureGroup>();
+            var settingsList = new List<ProjectJson.TextureGroupByID>();
             settings.Groups = settingsList;
+            settings.NewGroups = new List<ProjectJson.TextureGroup>();
             var tgin = pf.DataHandle.GetChunk<GMChunkTGIN>();
             var list = pf.Textures.TextureGroups;
 
@@ -36,7 +37,7 @@ namespace DogScepterLib.Project.Converters
                             break;
                         }
                     }
-                    var newEntry = new ProjectJson.TextureGroup()
+                    var newEntry = new ProjectJson.TextureGroupByID()
                     {
                         Name = resultInfo?.Name?.Content ?? $"unknown_group_{i}",
                         Border = group.Border,
@@ -52,7 +53,7 @@ namespace DogScepterLib.Project.Converters
                 for (int i = 0; i < list.Count; i++)
                 {
                     var group = list[i];
-                    var newEntry = new ProjectJson.TextureGroup()
+                    var newEntry = new ProjectJson.TextureGroupByID()
                     {
                         Name = $"group{i}",
                         Border = group.Border,
@@ -69,81 +70,72 @@ namespace DogScepterLib.Project.Converters
 
         public void ConvertProject(ProjectFile pf)
         {
-            // Sort the texture pages by their ID
-            List<int> newGroupIDs = new List<int>();
-            Dictionary<int, ProjectJson.TextureGroup> newGroups = new Dictionary<int, ProjectJson.TextureGroup>();
-
-            int highest = -1;
-            foreach (var group in pf.TextureGroupSettings.Groups)
+            if (pf.TextureGroupSettings.Groups != null)
             {
-                int thisId = group.ID;
+                // Sort the texture pages by their ID
+                List<int> newGroupIDs = new List<int>();
+                Dictionary<int, ProjectJson.TextureGroup> newGroups = new();
 
-                if (newGroupIDs.Contains(thisId))
+                int highest = -1;
+                foreach (var group in pf.TextureGroupSettings.Groups)
                 {
-                    // Duplicate ID? Go one above the highest instead
-                    pf.DataHandle.Logger?.Invoke($"Warning: overlapping texture group ID {thisId}; changing it automatically.");
-                    thisId = highest + 1;
-                }
-                newGroupIDs.Add(thisId);
+                    int thisId = group.ID;
 
-                if (thisId > highest)
-                    highest = thisId;
-
-                newGroups[thisId] = group;
-            }
-            newGroupIDs.Sort();
-
-            var tginList = pf.DataHandle.GetChunk<GMChunkTGIN>()?.List;
-            int tginEnd = tginList?.Count ?? 0;
-
-            // Add new pages to the end
-            int i;
-            for (i = newGroups.Count - 1; i >= pf.Textures.TextureGroups.Count; i--)
-            {
-                var groupInfo = newGroups[newGroupIDs[i]];
-                pf.Textures.TextureGroups.Add(new Textures.Group()
-                {
-                    Dirty = true,
-                    Border = groupInfo.Border,
-                    AllowCrop = groupInfo.AllowCrop,
-                    Name = groupInfo.Name
-                });
-
-                // Add new TGIN entries, will be filled out with more later
-                tginList?.Insert(tginEnd, new GMTextureGroupInfo()
-                {
-                    Name = pf.DataHandle.DefineString(groupInfo.Name)
-                });
-            }
-
-            // Handle changing properties on other pages
-            for (; i >= 0; i--)
-            {
-                var groupInfo = newGroups[newGroupIDs[i]];
-                var group = pf.Textures.TextureGroups[i];
-                if (group.Border != groupInfo.Border || group.AllowCrop != groupInfo.AllowCrop)
-                {
-                    group.Dirty = true;
-                    group.Border = groupInfo.Border;
-                    group.AllowCrop = groupInfo.AllowCrop;
-                }
-                group.Name = groupInfo.Name;
-
-                if (tginList != null)
-                {
-                    // Find TGIN entry
-                    GMTextureGroupInfo resultInfo = null;
-                    foreach (var info in tginList)
+                    if (newGroupIDs.Contains(thisId))
                     {
-                        if (info.TexturePageIDs.Any(j => group.Pages.Contains(j.ID)))
-                        {
-                            resultInfo = info;
-                            break;
-                        }
+                        // Duplicate ID? Go one above the highest instead
+                        pf.DataHandle.Logger?.Invoke($"Warning: overlapping texture group ID {thisId}; changing it automatically.");
+                        thisId = highest + 1;
                     }
+                    newGroupIDs.Add(thisId);
 
-                    // Update name
-                    resultInfo.Name = pf.DataHandle.DefineString(groupInfo.Name);
+                    if (thisId > highest)
+                        highest = thisId;
+
+                    newGroups[thisId] = group;
+                }
+                newGroupIDs.Sort();
+
+                // Add new pages to the end
+                int i;
+                for (i = newGroups.Count - 1; i >= pf.Textures.TextureGroups.Count; i--)
+                {
+                    var groupInfo = newGroups[newGroupIDs[i]];
+                    pf.Textures.TextureGroups.Add(new Textures.Group()
+                    {
+                        Dirty = true,
+                        Border = groupInfo.Border,
+                        AllowCrop = groupInfo.AllowCrop,
+                        Name = groupInfo.Name
+                    });
+                }
+
+                // Handle changing properties on other pages
+                for (; i >= 0; i--)
+                {
+                    var groupInfo = newGroups[newGroupIDs[i]];
+                    var group = pf.Textures.TextureGroups[i];
+                    if (group.Border != groupInfo.Border || group.AllowCrop != groupInfo.AllowCrop)
+                    {
+                        group.Dirty = true;
+                        group.Border = groupInfo.Border;
+                        group.AllowCrop = groupInfo.AllowCrop;
+                    }
+                    group.Name = groupInfo.Name;
+                }
+            }
+
+            if (pf.TextureGroupSettings.NewGroups != null)
+            { 
+                foreach (var group in pf.TextureGroupSettings.NewGroups)
+                {
+                    pf.Textures.TextureGroups.Add(new Textures.Group()
+                    {
+                        Dirty = true,
+                        Border = group.Border,
+                        AllowCrop = group.AllowCrop,
+                        Name = group.Name
+                    });
                 }
             }
         }
