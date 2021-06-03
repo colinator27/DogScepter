@@ -438,7 +438,7 @@ namespace DogScepterLib.Project
             }       
         }
 
-        public SKBitmap GetTextureEntryBitmap(GMTextureItem entry, bool forceCopy = false)
+        public SKBitmap GetTextureEntryBitmap(GMTextureItem entry, bool forceCopy = false, int? suggestWidth = null, int? suggestHeight = null)
         {
             if (entry.TargetX == 0 && entry.TargetY == 0 &&
                 entry.SourceWidth == entry.BoundWidth &&
@@ -449,7 +449,7 @@ namespace DogScepterLib.Project
             }
 
             SKBitmap texture = GetTexture(entry.TexturePageID);
-            SKBitmap res = new SKBitmap(entry.BoundWidth, entry.BoundHeight, texture.ColorType, texture.AlphaType);
+            SKBitmap res = new SKBitmap(suggestWidth ?? entry.BoundWidth, suggestHeight ?? entry.BoundHeight, texture.ColorType, texture.AlphaType);
             using (SKCanvas canvas = new SKCanvas(res))
             {
                 canvas.Clear();

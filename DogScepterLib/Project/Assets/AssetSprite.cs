@@ -132,7 +132,7 @@ namespace DogScepterLib.Project.Assets
                     if (item.TexturePageID == -1)
                         imgBitmap = item._Bitmap;
                     else
-                        imgBitmap = pf.Textures.GetTextureEntryBitmap(item, true);
+                        imgBitmap = pf.Textures.GetTextureEntryBitmap(item, true, Width, Height);
                     imgBuff = imgBitmap.Bytes;
 
                     if (actuallyWrite)

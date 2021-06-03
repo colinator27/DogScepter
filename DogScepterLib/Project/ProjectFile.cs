@@ -366,6 +366,8 @@ namespace DogScepterLib.Project
             if (!JsonFile.Assets.TryGetValue(ProjectJson.AssetTypeName[typeof(T)], out entries))
                 return; // This asset type doesn't exist in this JSON...
 
+            AssetConverter<T> cvt = null;
+
             for (int i = entries.Count - 1; i >= 0; i--)
             {
                 ProjectJson.AssetEntry entry = entries[i];
@@ -383,7 +385,9 @@ namespace DogScepterLib.Project
                     if (asset == null)
                     {
                         // Need to convert now
-                        (GetConverter(AssetTypeConverter[typeof(T)]) as AssetConverter<T>).ConvertData(this, assetIndex);
+                        if (cvt == null)
+                            cvt = (GetConverter(AssetTypeConverter[typeof(T)]) as AssetConverter<T>);
+                        cvt.ConvertData(this, assetIndex);
                         asset = list[assetIndex].Asset;
                     }
                     if (asset.Hash == null)

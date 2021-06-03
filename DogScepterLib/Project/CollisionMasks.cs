@@ -56,7 +56,7 @@ namespace DogScepterLib.Project
                 SKBitmap toAdd;
 
                 if (item.TexturePageID != -1)
-                    toAdd = pf.Textures.GetTextureEntryBitmap(item, true);
+                    toAdd = pf.Textures.GetTextureEntryBitmap(item, true, width, height);
                 else
                     toAdd = item._Bitmap;
 
@@ -315,6 +315,7 @@ namespace DogScepterLib.Project
             switch (info.Mode)
             {
                 case MaskMode.Automatic:
+                case MaskMode.RawAutomatic:
                     {
                         int left = spr.Width - 1, top = spr.Height - 1, right = 0, bottom = 0;
 
@@ -350,9 +351,11 @@ namespace DogScepterLib.Project
                     }
 
                 case MaskMode.FullImage:
+                case MaskMode.RawFullImage:
                     return new Rect(0, 0, spr.Width - 1, spr.Height - 1);
 
                 case MaskMode.Manual:
+                case MaskMode.RawManual:
                     return new Rect(
                         Math.Clamp((int)info.Left, 0, spr.Width - 1),
                         Math.Clamp((int)info.Top, 0, spr.Height - 1),
