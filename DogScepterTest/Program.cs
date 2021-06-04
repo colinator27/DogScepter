@@ -10,7 +10,6 @@ using DogScepterLib.Core.Models;
 using DogScepterLib.Project;
 using DogScepterLib.Project.Bytecode;
 using DogScepterLib.Project.Converters;
-using SkiaSharp;
 
 namespace DogScepterTest
 {
@@ -20,7 +19,7 @@ namespace DogScepterTest
         {
             Stopwatch s = new Stopwatch();
             s.Start();
-            using (FileStream fs = new FileStream(@"input_test/data.win", FileMode.Open))
+            using (FileStream fs = new FileStream(@"input/data.win", FileMode.Open))
             {
                 GMDataReader reader = new GMDataReader(fs, fs.Name);
                 foreach (GMWarning w in reader.Warnings)
@@ -42,18 +41,17 @@ namespace DogScepterTest
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)
                 {
-                    for (int i = 0; i < pf.Sprites.Count; i++)
-                    {
-                        pf.GetConverter<SpriteConverter>().ConvertData(pf, i);
-                        pf.Sprites[i].Asset.Dirty = true;
-                        pf.Sprites[i].Asset.TextureGroup = pf.Textures.TextureGroups[0].Name;
-                    }
-                    pf.AddDirtyAssetsToJSON(pf.Sprites, "sprites");
+                    //for (int i = 0; i < pf.Sprites.Count; i++)
+                    //{
+                    //    pf.GetConverter<SpriteConverter>().ConvertData(pf, i);
+                    //    pf.Sprites[i].Asset.Dirty = true;
+                    //}
+                    //pf.AddDirtyAssetsToJSON(pf.Sprites, "sprites");
                     pf.SaveAll();
                 } else
                 {
-                    foreach (var key in pf.Textures.PageToGroup.Keys)
-                        pf.Textures.PageToGroup[key] = 0;
+                    foreach (var g in pf.Textures.TextureGroups)
+                        g.Dirty = true;
                     //var cvt = pf.GetConverter<SpriteConverter>();
                     //Parallel.ForEach(Enumerable.Range(0, pf.Sprites.Count), (i) => cvt.ConvertData(pf, i));
                     pf.LoadMain();

@@ -1,5 +1,5 @@
 ﻿using DogScepterLib.Core.Models;
-using SkiaSharp;
+using System.Drawing;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,6 +8,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
+using DogScepterLib.Project.Util;
 
 namespace DogScepterLib.Project.Assets
 {
@@ -30,16 +32,14 @@ namespace DogScepterLib.Project.Assets
             if (File.Exists(pngPath))
             {
                 // Load PNG file, make new texture item for it
-                byte[] pngBuff = File.ReadAllBytes(pngPath);
-                SKBitmap imgBitmap = SKBitmap.Decode(pngBuff);
-                if (imgBitmap.ColorType != SKColorType.Bgra8888 &&
-                    imgBitmap.ColorType != SKColorType.Rgba8888)
-                    throw new Exception("Expected BGRA8888 or RGBA8888 color format in PNG.");
-                byte[] imgBuff = imgBitmap.Bytes;
+                Bitmap imgBitmap;
+                using (var temp = new Bitmap(pngPath))
+                    imgBitmap = temp.FullCopy();
                 res.TextureItem = new GMTextureItem(imgBitmap);
                 res.TextureItem._HasExtraBorder = true;
 
                 // Compute hash manually here
+                byte[] imgBuff = imgBitmap.GetReadOnlyByteArray();
                 using (SHA1Managed sha1 = new SHA1Managed())
                 {
                     sha1.TransformBlock(buff, 0, buff.Length, null, 0);
@@ -67,12 +67,12 @@ namespace DogScepterLib.Project.Assets
         {
             byte[] buff = JsonSerializer.SerializeToUtf8Bytes(this, ProjectFile.JsonOptions);
             byte[] imgBuff;
-            SKBitmap imgBitmap;
+            Bitmap imgBitmap;
             if (TextureItem.TexturePageID == -1)
                 imgBitmap = TextureItem._Bitmap;
             else
                 imgBitmap = pf.Textures.GetTextureEntryBitmap(TextureItem, true);
-            imgBuff = imgBitmap.Bytes;
+            imgBuff = imgBitmap.GetReadOnlyByteArray();
 
             if (actuallyWrite)
             {
@@ -80,9 +80,8 @@ namespace DogScepterLib.Project.Assets
                 Directory.CreateDirectory(dir);
                 using (FileStream fs = new FileStream(assetPath, FileMode.Create))
                     fs.Write(buff, 0, buff.Length);
-                byte[] pngBuff = imgBitmap.Encode(SKEncodedImageFormat.Png, 0).ToArray();
                 using (FileStream fs = new FileStream(Path.Combine(dir, Name + ".png"), FileMode.Create))
-                    fs.Write(pngBuff, 0, pngBuff.Length);
+                    imgBitmap.Save(fs, System.Drawing.Imaging.ImageFormat.Png);
             }
 
             // Compute hash manually here

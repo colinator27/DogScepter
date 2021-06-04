@@ -2,7 +2,7 @@
 using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
 using DogScepterLib.Project.Assets;
-using SkiaSharp;
+using System.Drawing;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -76,7 +76,7 @@ namespace DogScepterLib.Project.Converters
             }
 
             // Determine collision mask info
-            List<SKBitmap> bitmaps;
+            List<Bitmap> bitmaps;
             projectAsset.CollisionMask = CollisionMasks.GetInfoForSprite(pf, asset, out bitmaps);
             List<byte[]> regenerated = CollisionMasks.GetMasksForSprite(pf, projectAsset, out _, bitmaps);
             if (!CollisionMasks.CompareMasks(asset.CollisionMasks, regenerated))
@@ -104,6 +104,56 @@ namespace DogScepterLib.Project.Converters
                 }
             }
 
+            // Fix incorrect sizes resulting from mods:
+            //  - If a texture entry's source width/height are greater than bound width/height, scale the bound width/height
+            //  - Check for largest bound width/height, max them with sprite width/height, store in sprite width/height and all bound width/heights
+            bool resized = false;
+            int largestWidth = projectAsset.Width, largestHeight = projectAsset.Height;
+            foreach (var item in projectAsset.TextureItems)
+            {
+                if (item == null)
+                    continue;
+
+                if (item.SourceWidth > item.BoundWidth)
+                    item.BoundWidth = item.SourceWidth;
+                if (item.SourceHeight > item.BoundHeight)
+                    item.BoundHeight = item.SourceHeight;
+
+                largestWidth = Math.Max(largestWidth, item.BoundWidth);
+                largestHeight = Math.Max(largestHeight, item.BoundHeight);
+            }
+
+            if (largestWidth > projectAsset.Width)
+            {
+                resized = true;
+                projectAsset.Width = largestWidth;
+            }
+            if (largestHeight > projectAsset.Height)
+            {
+                resized = true;
+                projectAsset.Height = largestHeight;
+            }
+
+            if (resized)
+            {
+                foreach (var item in projectAsset.TextureItems)
+                {
+                    if (item == null)
+                        continue;
+
+                    item.BoundWidth = (ushort)projectAsset.Width;
+                    item.BoundHeight = (ushort)projectAsset.Height;
+                }
+
+                if ((int)projectAsset.CollisionMask.Mode < 0)
+                {
+                    // Can't use the raw data; it's a different size
+                    projectAsset.CollisionMask.Mode = (AssetSprite.CollisionMaskInfo.MaskMode)(-(1 + (int)projectAsset.CollisionMask.Mode));
+                    projectAsset.CollisionMask.RawMasks = null;
+                }
+            }
+
+            // Now just handle special data
             if (asset.SpecialOrGMS2)
             {
                 projectAsset.SpecialInfo = new AssetSprite.SpriteSpecialInfo()

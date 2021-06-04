@@ -1,8 +1,9 @@
 ﻿using DogScepterLib.Project;
-using SkiaSharp;
+using DogScepterLib.Project.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.Text;
 
 namespace DogScepterLib.Core.Models
@@ -42,26 +43,22 @@ namespace DogScepterLib.Core.Models
         public bool _EmptyBorder = false;
         public GMTextureItem _DuplicateOf = null;
         public TexturePacker.Page.Item _PackItem = null;
-        public SKBitmap _Bitmap = null;
+        public Bitmap _Bitmap = null;
+        public Bitmap _BitmapBeforeCrop = null;
 
         public GMTextureItem()
         {
         }
 
         // Creates a new texture entry from a bitmap
-        public GMTextureItem(SKBitmap bitmap)
+        public GMTextureItem(Bitmap bitmap)
         {
             ReplaceWith(bitmap);
         }
 
-        public void ReplaceWith(SKBitmap bitmap)
+        public void ReplaceWith(Bitmap bitmap)
         {
             _Bitmap = bitmap;
-
-#if DEBUG
-            Debug.Assert(bitmap.ColorType == SKColorType.Rgba8888 || bitmap.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
-            Debug.Assert(bitmap.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
-#endif
 
             BoundWidth = (ushort)bitmap.Width;
             BoundHeight = (ushort)bitmap.Height;
@@ -85,10 +82,14 @@ namespace DogScepterLib.Core.Models
 
         public unsafe void Crop()
         {
-            int left = BoundWidth, top = BoundHeight, right = 0, bottom = 0; 
-            
-            int stride = (_Bitmap.RowBytes / 4);
-            int* ptr = (int*)_Bitmap.GetPixels().ToPointer();
+            _BitmapBeforeCrop = _Bitmap;
+
+            int left = BoundWidth, top = BoundHeight, right = 0, bottom = 0;
+
+            var data = _Bitmap.BasicLockBits();
+
+            int stride = (data.Stride / 4);
+            int* ptr = (int*)data.Scan0;
             int* basePtr = ptr;
 
             for (int y = 0; y < BoundHeight; y++)
@@ -111,6 +112,8 @@ namespace DogScepterLib.Core.Models
                 ptr += stride - BoundWidth;
             }
 
+            _Bitmap.UnlockBits(data);
+
             if (left == BoundWidth && top == BoundHeight)
             {
                 // This is fully transparent, just grab one pixel
@@ -127,7 +130,7 @@ namespace DogScepterLib.Core.Models
                 TargetHeight = SourceHeight;
                 TargetX = (ushort)left;
                 TargetY = (ushort)top;
-                _Bitmap.ExtractSubset(_Bitmap, new SKRectI(left, top, right, bottom));
+                _Bitmap = _Bitmap.Clone(new Rectangle(left, top, right - left, bottom - top), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
             }
         }
 

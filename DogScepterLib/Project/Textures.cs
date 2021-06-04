@@ -3,13 +3,17 @@ using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
 using DogScepterLib.Project.Converters;
 using MoreLinq;
-using SkiaSharp;
+using System.Drawing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Drawing.Imaging;
+using System.Drawing.Drawing2D;
+using DogScepterLib.Project.Util;
+using System.IO;
 
 namespace DogScepterLib.Project
 {
@@ -71,7 +75,7 @@ namespace DogScepterLib.Project
         public ProjectFile Project;
         public List<Group> TextureGroups = new List<Group>();
         public Dictionary<int, int> PageToGroup = new Dictionary<int, int>();
-        public SKBitmap[] CachedTextures = new SKBitmap[8192];
+        public Bitmap[] CachedTextures = new Bitmap[8192];
 
         public Textures(ProjectFile project)
         {
@@ -122,7 +126,12 @@ namespace DogScepterLib.Project
                     // Parallel in case there are few groups being generated, to save time
                     Parallel.ForEach(result, page =>
                     {
-                        byte[] res = DrawPage(g, page).Encode(SKEncodedImageFormat.Png, 0).ToArray();
+                        byte[] res;
+                        using (var ms = new MemoryStream())
+                        {
+                            DrawPage(g, page).Save(ms, ImageFormat.Png);
+                            res = ms.ToArray();
+                        }
                         lock (g)
                         {
                             g.GeneratedPages.Add((page, res));
@@ -428,49 +437,57 @@ namespace DogScepterLib.Project
             }
         }
 
-        public SKBitmap GetTexture(int ind)
+        public Bitmap GetTexture(int ind)
         {
             lock (CachedTextures)
             {
                 if (CachedTextures[ind] != null)
                     return CachedTextures[ind];
-                return CachedTextures[ind] = SKBitmap.Decode(Project.DataHandle.GetChunk<GMChunkTXTR>().List[ind].TextureData.Data);
+                using (MemoryStream ms = new MemoryStream(Project.DataHandle.GetChunk<GMChunkTXTR>().List[ind].TextureData.Data))
+                {
+                    return CachedTextures[ind] = new Bitmap(ms);
+                }
             }       
         }
 
-        public SKBitmap GetTextureEntryBitmap(GMTextureItem entry, bool forceCopy = false, int? suggestWidth = null, int? suggestHeight = null)
+        public Bitmap GetTextureEntryBitmap(GMTextureItem entry, bool forceCopy = false, int? suggestWidth = null, int? suggestHeight = null)
         {
             if (entry.TargetX == 0 && entry.TargetY == 0 &&
                 entry.SourceWidth == entry.BoundWidth &&
-                entry.SourceHeight == entry.BoundHeight && !forceCopy)
+                entry.SourceHeight == entry.BoundHeight &&
+                suggestWidth == null)
             {
+                if (forceCopy)
+                    return new Bitmap(GetTextureEntryBitmapFast(entry));
+
                 // This can be done without copying
                 return GetTextureEntryBitmapFast(entry);
             }
 
-            SKBitmap texture = GetTexture(entry.TexturePageID);
-            SKBitmap res = new SKBitmap(suggestWidth ?? entry.BoundWidth, suggestHeight ?? entry.BoundHeight, texture.ColorType, texture.AlphaType);
-            using (SKCanvas canvas = new SKCanvas(res))
+            Bitmap texture = GetTexture(entry.TexturePageID);
+            Bitmap res = new Bitmap(suggestWidth ?? entry.BoundWidth, suggestHeight ?? entry.BoundHeight, PixelFormat.Format32bppArgb);
+            using (Graphics g = Graphics.FromImage(res))
             {
-                canvas.Clear();
-                canvas.DrawBitmap(texture, new SKRectI(entry.SourceX, entry.SourceY,
-                                                       entry.SourceX + entry.SourceWidth, entry.SourceY + entry.SourceHeight),
-                                           new SKRectI(entry.TargetX, entry.TargetY,
-                                                       entry.TargetX + entry.TargetWidth, entry.TargetY + entry.TargetHeight));
+                g.SmoothingMode = SmoothingMode.None;
+                g.PixelOffsetMode = PixelOffsetMode.None;
+                g.CompositingQuality = CompositingQuality.HighSpeed;
+                g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                g.CompositingMode = CompositingMode.SourceCopy;
+                g.DrawImage(texture, new Rectangle(entry.TargetX, entry.TargetY, entry.TargetWidth, entry.TargetHeight),
+                                                   entry.SourceX, entry.SourceY, entry.SourceWidth, entry.SourceHeight, GraphicsUnit.Pixel);
             }
 
             return res;
         }
 
         // Quickly gets a view into a subset of the bitmap, rather than copying and making room for potential padding
-        public SKBitmap GetTextureEntryBitmapFast(GMTextureItem entry)
+        public Bitmap GetTextureEntryBitmapFast(GMTextureItem entry)
         {
-            SKBitmap texture = GetTexture(entry.TexturePageID);
-            SKBitmap res = new SKBitmap();
-            if (texture.ExtractSubset(res, new SKRectI(entry.SourceX, entry.SourceY,
-                                                       entry.SourceX + entry.SourceWidth, entry.SourceY + entry.SourceHeight)))
-                return res;
-            return null;
+            Bitmap toClone = GetTexture(entry.TexturePageID);
+            lock (toClone)
+            {
+                return toClone.Clone(new Rectangle(entry.SourceX, entry.SourceY, entry.SourceWidth, entry.SourceHeight), PixelFormat.Format32bppArgb);
+            }
         }
 
         public void DetermineGroupBorders()
@@ -521,16 +538,11 @@ namespace DogScepterLib.Project
                 {
                     foreach (GMTextureItem entry in group.Items)
                     {
-                        SKBitmap texture = GetTexture(entry.TexturePageID);
+                        Bitmap texture = GetTexture(entry.TexturePageID);
+                        var data = texture.BasicLockBits();
 
-#if DEBUG
-                        Debug.Assert(texture.ColorType == SKColorType.Rgba8888 || texture.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
-                        Debug.Assert(texture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
-#endif
-
-                        int stride = (texture.RowBytes / 4);
-                        int* ptr = (int*)texture.GetPixels().ToPointer()
-                                            + entry.SourceX + (entry.SourceY * stride);
+                        int stride = (data.Stride / 4);
+                        int* ptr = (int*)data.Scan0 + entry.SourceX + (entry.SourceY * stride);
                         int* basePtr = ptr;
 
                         // Horizontal check
@@ -597,6 +609,8 @@ namespace DogScepterLib.Project
 
                         entry._TileHorizontally = tileHoriz;
                         entry._TileVertically = tileVert;
+
+                        texture.UnlockBits(data);
                     }
                 }
             }
@@ -607,17 +621,13 @@ namespace DogScepterLib.Project
             if (entry.TexturePageID == -1)
             {
                 // This is hand-crafted, and has a custom bitmap at the moment
-                SKBitmap texture = entry._Bitmap;
-
-#if DEBUG
-                Debug.Assert(texture.ColorType == SKColorType.Rgba8888 || texture.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
-                Debug.Assert(texture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
-#endif
+                Bitmap texture = entry._Bitmap;
+                var data = texture.BasicLockBits();
 
                 long key = (long)((entry.SourceWidth * 65535) + entry.SourceHeight) << 32;
 
-                int stride = (texture.RowBytes / 4);
-                int* ptr = (int*)texture.GetPixels().ToPointer();
+                int* ptr = (int*)data.Scan0;
+                int stride = (data.Stride / 4);
                 int w = entry.SourceWidth - 1, h = ((entry.SourceHeight - 1) * stride);
 
                 key |= ((long)(*((byte*)ptr + 3)) << 24) |
@@ -625,23 +635,19 @@ namespace DogScepterLib.Project
                        ((long)(*((byte*)(ptr + h) + 3)) << 8) |
                        (*((byte*)(ptr + w + h) + 3));
 
+                texture.UnlockBits(data);
                 return key;
             }
             else
             {
                 // This is normal
-                SKBitmap texture = GetTexture(entry.TexturePageID);
-
-#if DEBUG
-                Debug.Assert(texture.ColorType == SKColorType.Rgba8888 || texture.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
-                Debug.Assert(texture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
-#endif
+                Bitmap texture = GetTexture(entry.TexturePageID);
+                var data = texture.BasicLockBits();
 
                 long key = (long)((entry.SourceWidth * 65535) + entry.SourceHeight) << 32;
 
-                int stride = (texture.RowBytes / 4);
-                int* ptr = (int*)texture.GetPixels().ToPointer()
-                                    + entry.SourceX + (entry.SourceY * stride);
+                int stride = (data.Stride / 4);
+                int* ptr = (int*)data.Scan0 + entry.SourceX + (entry.SourceY * stride);
                 int w = entry.SourceWidth - 1, h = ((entry.SourceHeight - 1) * stride);
 
                 key |= ((long)(*((byte*)ptr + 3)) << 24) |
@@ -649,6 +655,7 @@ namespace DogScepterLib.Project
                        ((long)(*((byte*)(ptr + h) + 3)) << 8) |
                        (*((byte*)(ptr + w + h) + 3));
 
+                texture.UnlockBits(data);
                 return key;
             }
         }
@@ -673,9 +680,9 @@ namespace DogScepterLib.Project
         // Notably, the widths/heights of every item are the same
         public unsafe int CompareHashedTextures(GMTextureItem self, List<GMTextureItem> list, int startAt = 0)
         {
-            SKBitmap texture = null;
+            Bitmap texture = null;
             int stride = 0;
-            byte[] data = null;
+            BitmapData data = null;
 
             for (int i = startAt; i < list.Count; i++)
             {
@@ -708,60 +715,57 @@ namespace DogScepterLib.Project
                         texture = self._Bitmap; // Custom bitmap
                     else
                         texture = GetTexture(self.TexturePageID);
-                    stride = (texture.RowBytes / 4);
-                    data = texture.Bytes;
-
-#if DEBUG
-                    Debug.Assert(texture.ColorType == SKColorType.Rgba8888 || texture.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
-                    Debug.Assert(texture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
-#endif
+                    data = texture.BasicLockBits();
+                    stride = (data.Stride / 4);
                 }
 
                 // Otherwise, get the raw data
-                SKBitmap entryTexture;
+                Bitmap entryTexture;
                 int entryStride;
-                byte[] entryData;
+                BitmapData entryData;
                 if (entry.TexturePageID == -1)
                     entryTexture = entry._Bitmap; // Custom bitmap
                 else
                     entryTexture = GetTexture(entry.TexturePageID);
-                entryStride = (entryTexture.RowBytes / 4);
-                entryData = entryTexture.Bytes;
+                entryData = entryTexture.BasicLockBits();
+                entryStride = (entryData.Stride / 4);
 
-#if DEBUG
-                Debug.Assert(entryTexture.ColorType == SKColorType.Rgba8888 || entryTexture.ColorType == SKColorType.Bgra8888, "expected 32-bit rgba/bgra");
-                Debug.Assert(entryTexture.RowBytes % 4 == 0, "expected bytes per row to be divisible by 4");
-#endif
-
-                fixed (byte* ptr = &data[0])
+                lock (texture)
                 {
-                    fixed (byte* entryPtr = &entryData[0])
+                    lock (entryTexture)
                     {
-                        int* ptrInt = (int*)ptr + (self.SourceX + (self.SourceY * stride));
-                        int* entryPtrInt = (int*)entryPtr + (entry.SourceX + (entry.SourceY * entryStride));
+                        int* ptr = (int*)data.Scan0 + (self.SourceX + (self.SourceY * stride));
+                        int* entryPtr = (int*)entryData.Scan0 + (entry.SourceX + (entry.SourceY * entryStride));
 
                         bool checking = true;
                         for (int y = 0; y < self.SourceHeight && checking; y++)
                         {
                             for (int x = 0; x < self.SourceWidth; x++)
                             {
-                                if (*ptrInt != *entryPtrInt)
+                                if (*ptr != *entryPtr)
                                 {
                                     checking = false;
                                     break;
                                 }
-                                ptrInt++;
-                                entryPtrInt++;
+                                ptr++;
+                                entryPtr++;
                             }
                             int offsetToNext = stride - self.SourceWidth;
-                            ptrInt += offsetToNext;
-                            entryPtrInt += offsetToNext;
+                            ptr += offsetToNext;
+                            entryPtr += offsetToNext;
                         }
+
+                        entryTexture.UnlockBits(data);
                         if (checking)
+                        {
+                            texture.UnlockBits(data);
                             return i;
+                        }
                     }
                 }
             }
+
+            texture?.UnlockBits(data);
             return -1;
         }
 
@@ -793,16 +797,20 @@ namespace DogScepterLib.Project
             }
         }
 
-        public SKBitmap DrawPage(Group group, TexturePacker.Page page)
+        public Bitmap DrawPage(Group group, TexturePacker.Page page)
         {
             // This is pretty much a complete guess here
             bool alwaysCropBorder = !Project.DataHandle.VersionInfo.IsNumberAtLeast(2);
 
-            SKBitmap bmp = new SKBitmap(page.Width, page.Height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+            Bitmap bmp = new Bitmap(page.Width, page.Height, PixelFormat.Format32bppArgb);
 
-            using (SKCanvas canvas = new SKCanvas(bmp))
+            using (Graphics g = Graphics.FromImage(bmp))
             {
-                canvas.Clear();
+                g.SmoothingMode = SmoothingMode.None;
+                g.PixelOffsetMode = PixelOffsetMode.None;
+                g.CompositingQuality = CompositingQuality.HighSpeed;
+                g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                g.CompositingMode = CompositingMode.SourceCopy;
                 foreach (var item in page.Items)
                 {
                     GMTextureItem entry = item.TextureItem;
@@ -814,7 +822,7 @@ namespace DogScepterLib.Project
                         continue;
                     }
 
-                    SKBitmap entryBitmap;
+                    Bitmap entryBitmap;
                     if (entry.TexturePageID == -1)
                         entryBitmap = entry._Bitmap; // Custom bitmap
                     else
@@ -823,7 +831,7 @@ namespace DogScepterLib.Project
                     entry.SourceX = (ushort)item.X;
                     entry.SourceY = (ushort)item.Y;
 
-                    canvas.DrawBitmap(entryBitmap, item.X, item.Y);
+                    g.DrawImage(entryBitmap, item.X, item.Y);
 
                     if (!entry._EmptyBorder)
                     { 
@@ -833,87 +841,75 @@ namespace DogScepterLib.Project
                             if (entry._TileHorizontally)
                             {
                                 // left
-                                canvas.DrawBitmap(entryBitmap, new SKRectI(entryBitmap.Width - border, 0,
-                                                                            entryBitmap.Width, entryBitmap.Height),
-                                                                new SKRectI(item.X - border, item.Y, item.X, item.Y + entryBitmap.Height));
+                                g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y, border, entryBitmap.Height),
+                                                                       entryBitmap.Width - border, 0, border, entryBitmap.Height, GraphicsUnit.Pixel);
                                 // right
-                                canvas.DrawBitmap(entryBitmap, new SKRectI(0, 0, border, entryBitmap.Height),
-                                                                new SKRectI(item.X + entryBitmap.Width, item.Y,
-                                                                            item.X + entryBitmap.Width + border, item.Y + entryBitmap.Height));
+                                g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y, border, entryBitmap.Height),
+                                                                       0, 0, border, entryBitmap.Height, GraphicsUnit.Pixel);
                                 // top left
-                                canvas.DrawBitmap(entryBitmap, new SKRectI(entryBitmap.Width - border, entryBitmap.Height - border, 
-                                                                            entryBitmap.Width, entryBitmap.Height),
-                                                                new SKRectI(item.X - border, item.Y - border, item.X, item.Y));
+                                g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y - border, border, border),
+                                                                       entryBitmap.Width - border, entryBitmap.Height - border,
+                                                                       border, border, GraphicsUnit.Pixel);
                                 // top right
-                                canvas.DrawBitmap(entryBitmap, new SKRectI(0, entryBitmap.Height - border, border, entryBitmap.Height),
-                                                                new SKRectI(item.X + entryBitmap.Width, item.Y - border,
-                                                                            item.X + entryBitmap.Width + border, item.Y));
+                                g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y - border, border, border),
+                                                                       0, entryBitmap.Height - border, border, border, GraphicsUnit.Pixel);
                                 // bottom left
-                                canvas.DrawBitmap(entryBitmap, new SKRectI(entryBitmap.Width - border, 0, entryBitmap.Width, border),
-                                                                new SKRectI(item.X - border, item.Y + entryBitmap.Height,
-                                                                            item.X, item.Y + entryBitmap.Height + border));
+                                g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y + entryBitmap.Height, border, border),
+                                                                       entryBitmap.Width - border, 0, border, border, GraphicsUnit.Pixel);
                                 // bottom right
-                                canvas.DrawBitmap(entryBitmap, new SKRectI(0, 0, border, border),
-                                                                new SKRectI(item.X + entryBitmap.Width, item.Y + entryBitmap.Height,
-                                                                            item.X + entryBitmap.Width + border, item.Y + entryBitmap.Height + border));
+                                g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y + entryBitmap.Height, border, border),
+                                                                       0, 0, border, border, GraphicsUnit.Pixel);
                             }
                             else if (!entry._TileVertically)
                             {
                                 if (alwaysCropBorder || entry.TargetX == 0)
                                 {
                                     // left
-                                    canvas.DrawBitmap(entryBitmap, new SKRectI(0, 0, 1, entryBitmap.Height),
-                                                                    new SKRectI(item.X - border, item.Y, item.X, item.Y + entryBitmap.Height));
+                                    g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y, border, entryBitmap.Height),
+                                                                           0, 0, 1, entryBitmap.Height, GraphicsUnit.Pixel);
                                     // top left
-                                    canvas.DrawBitmap(entryBitmap, new SKRectI(0, 0, 1, 1),
-                                                                    new SKRectI(item.X - border, item.Y - border, item.X, item.Y));
+                                    g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y - border, border, border),
+                                                                           0, 0, 1, 1, GraphicsUnit.Pixel);
                                     // bottom left
-                                    canvas.DrawBitmap(entryBitmap, new SKRectI(0, entryBitmap.Height - 1, 1, entryBitmap.Height),
-                                                                    new SKRectI(item.X - border, item.Y + entryBitmap.Height,
-                                                                                item.X, item.Y + entryBitmap.Height + border));
+                                    g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y + entryBitmap.Height, border, border),
+                                                                           0, entryBitmap.Height - 1, 1, 1, GraphicsUnit.Pixel);
                                 }
                                 if (alwaysCropBorder || entry.TargetX + entry.TargetWidth == entry.BoundWidth)
                                 {
                                     // right
-                                    canvas.DrawBitmap(entryBitmap, new SKRectI(entryBitmap.Width - 1, 0, entryBitmap.Width, entryBitmap.Height),
-                                                                    new SKRectI(item.X + entryBitmap.Width, item.Y,
-                                                                                item.X + entryBitmap.Width + border, item.Y + entryBitmap.Height));
+                                    g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y, border, entryBitmap.Height),
+                                                                           entryBitmap.Width - 1, 0, 1, entryBitmap.Height, GraphicsUnit.Pixel);
                                     // top right
-                                    canvas.DrawBitmap(entryBitmap, new SKRectI(entryBitmap.Width - 1, 0, entryBitmap.Width, 1),
-                                                                    new SKRectI(item.X + entryBitmap.Width, item.Y - border,
-                                                                                item.X + entryBitmap.Width + border, item.Y));
+                                    g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y - border, border, border),
+                                                                           entryBitmap.Width - 1, 0, 1, 1, GraphicsUnit.Pixel);
                                     // bottom right
-                                    canvas.DrawBitmap(entryBitmap, new SKRectI(entryBitmap.Width - 1, entryBitmap.Height - 1,
-                                                                                entryBitmap.Width, entryBitmap.Height),
-                                                                    new SKRectI(item.X + entryBitmap.Width, item.Y + entryBitmap.Height,
-                                                                                item.X + entryBitmap.Width + border, item.Y + entryBitmap.Height + border));
+                                    g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y + entryBitmap.Height, border, border),
+                                                                           entryBitmap.Width - 1, entryBitmap.Height - 1, 1, 1, GraphicsUnit.Pixel);
                                 }
                             }
 
                             if (entry._TileVertically)
                             {
                                 // top
-                                canvas.DrawBitmap(entryBitmap, new SKRectI(0, entryBitmap.Height - border, entryBitmap.Width, entryBitmap.Height),
-                                                                new SKRectI(item.X, item.Y - border, item.X + entryBitmap.Width, item.Y));
+                                g.DrawImage(entryBitmap, new Rectangle(item.X, item.Y - border, entryBitmap.Width, border),
+                                                                       0, entryBitmap.Height - border, entryBitmap.Width, border, GraphicsUnit.Pixel);
                                 // bottom
-                                canvas.DrawBitmap(entryBitmap, new SKRectI(0, 0, entryBitmap.Width, border),
-                                                                new SKRectI(item.X, item.Y + entryBitmap.Height,
-                                                                            item.X + entryBitmap.Width, item.Y + entryBitmap.Height + border));
+                                g.DrawImage(entryBitmap, new Rectangle(item.X, item.Y + entryBitmap.Height, entryBitmap.Width, border),
+                                                                       0, 0, entryBitmap.Width, border, GraphicsUnit.Pixel);
                             }
                             else
                             {
                                 if (alwaysCropBorder || entry.TargetY == 0)
                                 {
                                     // top
-                                    canvas.DrawBitmap(entryBitmap, new SKRectI(0, 0, entryBitmap.Width, 1),
-                                                                    new SKRectI(item.X, item.Y - border, item.X + entryBitmap.Width, item.Y));
+                                    g.DrawImage(entryBitmap, new Rectangle(item.X, item.Y - border, entryBitmap.Width, border),
+                                                                           0, 0, entryBitmap.Width, 1, GraphicsUnit.Pixel);
                                 }
                                 if (alwaysCropBorder || entry.TargetY + entry.TargetHeight == entry.BoundHeight)
                                 {
                                     // bottom
-                                    canvas.DrawBitmap(entryBitmap, new SKRectI(0, entryBitmap.Height - 1, entryBitmap.Width, entryBitmap.Height),
-                                                                    new SKRectI(item.X, item.Y + entryBitmap.Height,
-                                                                                item.X + entryBitmap.Width, item.Y + entryBitmap.Height + border));
+                                    g.DrawImage(entryBitmap, new Rectangle(item.X, item.Y + entryBitmap.Height, entryBitmap.Width, border),
+                                                                           0, entryBitmap.Height - 1, entryBitmap.Width, 1, GraphicsUnit.Pixel);
                                 }
                             }
                         }

@@ -1,5 +1,5 @@
 ﻿using DogScepterLib.Core.Models;
-using SkiaSharp;
+using System.Drawing;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using DogScepterLib.Project.Util;
 
 namespace DogScepterLib.Project.Assets
 {
@@ -44,14 +45,13 @@ namespace DogScepterLib.Project.Assets
                 string pngPath = basePath + "_" + ind.ToString() + ".png";
                 while (File.Exists(pngPath))
                 {
-                    byte[] pngBuff = File.ReadAllBytes(pngPath);
-                    SKBitmap imgBitmap = SKBitmap.Decode(pngBuff);
-                    if (imgBitmap.ColorType != SKColorType.Bgra8888 &&
-                        imgBitmap.ColorType != SKColorType.Rgba8888)
-                        throw new Exception("Expected BGRA8888 or RGBA8888 color format in PNG.");
-                    byte[] imgBuff = imgBitmap.Bytes;
+                    // Load PNG file, make new texture item for it
+                    Bitmap imgBitmap;
+                    using (var temp = new Bitmap(pngPath))
+                        imgBitmap = temp.FullCopy();
                     res.TextureItems.Add(new GMTextureItem(imgBitmap));
 
+                    byte[] imgBuff = imgBitmap.GetReadOnlyByteArray();
                     sha1.TransformBlock(imgBuff, 0, imgBuff.Length, null, 0);
                     res.Length += imgBuff.Length;
 
@@ -81,11 +81,9 @@ namespace DogScepterLib.Project.Assets
                     pngPath = basePath + "_mask_" + ind.ToString() + ".png";
                     while (File.Exists(pngPath))
                     {
-                        byte[] pngBuff = File.ReadAllBytes(pngPath);
-                        SKBitmap imgBitmap = SKBitmap.Decode(pngBuff);
-                        if (imgBitmap.ColorType != SKColorType.Bgra8888 &&
-                            imgBitmap.ColorType != SKColorType.Rgba8888)
-                            throw new Exception("Expected BGRA8888 or RGBA8888 color format in PNG.");
+                        Bitmap imgBitmap;
+                        using (var temp = new Bitmap(pngPath))
+                            imgBitmap = temp.FullCopy();
 
                         byte[] mask = CollisionMasks.GetMaskFromImage(imgBitmap);
                         res.CollisionMask.RawMasks.Add(mask);
@@ -128,18 +126,17 @@ namespace DogScepterLib.Project.Assets
                     GMTextureItem item = TextureItems[i];
 
                     byte[] imgBuff;
-                    SKBitmap imgBitmap;
+                    Bitmap imgBitmap;
                     if (item.TexturePageID == -1)
                         imgBitmap = item._Bitmap;
                     else
                         imgBitmap = pf.Textures.GetTextureEntryBitmap(item, true, Width, Height);
-                    imgBuff = imgBitmap.Bytes;
+                    imgBuff = imgBitmap.GetReadOnlyByteArray();
 
                     if (actuallyWrite)
                     {
-                        byte[] pngBuff = imgBitmap.Encode(SKEncodedImageFormat.Png, 0).ToArray();
                         using (FileStream fs = new FileStream(Path.Combine(dir, Name + "_" + i.ToString() + ".png"), FileMode.Create))
-                            fs.Write(pngBuff, 0, pngBuff.Length);
+                            imgBitmap.Save(fs, System.Drawing.Imaging.ImageFormat.Png);
                     }
 
                     Length += imgBuff.Length;
@@ -171,9 +168,8 @@ namespace DogScepterLib.Project.Assets
 
                         if (actuallyWrite)
                         {
-                            byte[] png = CollisionMasks.GetImageFromMask(Width, Height, mask).Encode(SKEncodedImageFormat.Png, 0).ToArray();
                             using (FileStream fs = new FileStream(Path.Combine(dir, Name + "_mask_" + i.ToString() + ".png"), FileMode.Create))
-                                fs.Write(png, 0, png.Length);
+                                CollisionMasks.GetImageFromMask(Width, Height, mask).Save(fs, System.Drawing.Imaging.ImageFormat.Png);
                         }
 
                         Length += mask.Length;
