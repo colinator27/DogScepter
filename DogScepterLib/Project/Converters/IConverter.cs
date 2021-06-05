@@ -26,7 +26,7 @@ namespace DogScepterLib.Project.Converters
             int index = 0;
             foreach (GMNamedSerializable asset in dataAssets)
             {
-                projectAssets.Add(new AssetRef<T>(asset.Name.Content, index++, asset)
+                projectAssets.Add(new AssetRef<T>(asset.Name?.Content ?? $"null-{index}", index++, asset)
                 {
                     CachedData = makeCachedData?.Invoke(asset) ?? null
                 });

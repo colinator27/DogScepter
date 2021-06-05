@@ -19,7 +19,7 @@ namespace DogScepterLib.Project.Converters
 
             AssetPath projectAsset = new AssetPath()
             {
-                Name = asset.Name.Content,
+                Name = asset.Name?.Content,
                 Smooth = asset.Smooth,
                 Closed = asset.Closed,
                 Precision = asset.Precision,

@@ -32,7 +32,7 @@ namespace DogScepterLib.Project.Converters
 
             AssetSound projectAsset = new AssetSound()
             {
-                Name = asset.Name.Content,
+                Name = asset.Name?.Content,
                 AudioGroup = ((CachedSoundRefData)pf.Sounds[index].CachedData).AudioGroupName,
                 Volume = asset.Volume,
                 Pitch = asset.Pitch,

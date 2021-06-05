@@ -45,7 +45,7 @@ namespace DogScepterLib.Project.Converters
 
             AssetSprite projectAsset = new AssetSprite()
             {
-                Name = asset.Name.Content,
+                Name = asset.Name?.Content,
                 Transparent = asset.Transparent,
                 Smooth = asset.Smooth,
                 Preload = asset.Preload,
@@ -200,7 +200,7 @@ namespace DogScepterLib.Project.Converters
                         
                         projectAsset.SpecialInfo.Sequence = new AssetSprite.SpriteSpecialInfo.SequenceInfo()
                         {
-                            Name = seq.Name.Content,
+                            Name = seq.Name?.Content,
                             Frames = frames,
                             BroadcastMessages = broadcastMessages
                         };

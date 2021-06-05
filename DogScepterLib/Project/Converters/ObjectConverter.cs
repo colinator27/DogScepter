@@ -21,7 +21,7 @@ namespace DogScepterLib.Project.Converters
 
             AssetObject projectAsset = new AssetObject()
             {
-                Name = asset.Name.Content,
+                Name = asset.Name?.Content,
                 Sprite = asset.SpriteID >= 0 ? pf.Sprites[asset.SpriteID].Name : null,
                 Visible = asset.Visible,
                 Solid = asset.Solid,
