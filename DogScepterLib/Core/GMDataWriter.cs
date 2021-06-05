@@ -44,21 +44,36 @@ namespace DogScepterLib.Core
             // Handle serialization of pointer offsets
             Parallel.ForEach(PendingPointerWrites, kvp =>
             {
-                // Note: this will throw an exception if this object hasn't been written, yet is referenced
-                int ptr = PointerOffsets[kvp.Key];
-
-                // Iterate through each reference and write the pointer
-                foreach (int addr in kvp.Value)
-                    WriteAt(addr, ptr);
+                if (PointerOffsets.TryGetValue(kvp.Key, out int ptr))
+                {
+                    // Iterate through each reference and write the pointer
+                    foreach (int addr in kvp.Value)
+                        WriteAt(addr, ptr);
+                }
+                else
+                {
+                    // Iterate through each reference and write null
+                    foreach (int addr in kvp.Value)
+                        WriteAt(addr, 0);
+                }
             });
             Parallel.ForEach(PendingStringPointerWrites, kvp =>
             {
-                // Note: this will throw an exception if this string hasn't been written, yet is referenced
-                int ptr = PointerOffsets[kvp.Key] + 4;
+                if (PointerOffsets.TryGetValue(kvp.Key, out int ptr))
+                {
+                    // Adjust offset to string contents beginning
+                    ptr += 4;
 
-                // Iterate through each reference and write the pointer
-                foreach (int addr in kvp.Value)
-                    WriteAt(addr, ptr);
+                    // Iterate through each reference and write the pointer
+                    foreach (int addr in kvp.Value)
+                        WriteAt(addr, ptr);
+                }
+                else
+                {
+                    // Iterate through each reference and write null
+                    foreach (int addr in kvp.Value)
+                        WriteAt(addr, 0);
+                }
             });
         }
 

@@ -148,11 +148,13 @@ namespace DogScepterLib.Core
         /// </summary>
         public string ReadGMString()
         {
-            int length = ReadInt32();
-            string res = Encoding.GetString(Buffer, Offset, length);
-            Offset += length;
-            if (Buffer[Offset++] != 0)
-                Warnings.Add(new GMWarning("String not null terminated around " + Offset.ToString()));
+            Offset += 4; // Skip length; unreliable
+            int baseOffset = Offset;
+            while (Buffer[Offset] != 0)
+                Offset++;
+            int length = Offset - baseOffset;
+            string res = Encoding.GetString(Buffer, baseOffset, length);
+            Offset++; // go past null terminator
             return res;
         }
 

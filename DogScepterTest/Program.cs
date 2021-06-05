@@ -50,8 +50,8 @@ namespace DogScepterTest
                     pf.SaveAll();
                 } else
                 {
-                    foreach (var g in pf.Textures.TextureGroups)
-                        g.Dirty = true;
+                    //foreach (var g in pf.Textures.TextureGroups)
+                    //    g.Dirty = true;
                     //var cvt = pf.GetConverter<SpriteConverter>();
                     //Parallel.ForEach(Enumerable.Range(0, pf.Sprites.Count), (i) => cvt.ConvertData(pf, i));
                     pf.LoadMain();
