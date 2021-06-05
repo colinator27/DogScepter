@@ -58,7 +58,7 @@ namespace DogScepterLib.Project
                 Bitmap toAdd;
 
                 if (item.TexturePageID != -1)
-                    toAdd = pf.Textures.GetTextureEntryBitmap(item, true, width, height);
+                    toAdd = pf.Textures.GetTextureEntryBitmap(item, width, height);
                 else
                     toAdd = item._BitmapBeforeCrop ?? item._Bitmap;
 

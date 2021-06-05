@@ -450,16 +450,13 @@ namespace DogScepterLib.Project
             }       
         }
 
-        public Bitmap GetTextureEntryBitmap(GMTextureItem entry, bool forceCopy = false, int? suggestWidth = null, int? suggestHeight = null)
+        public Bitmap GetTextureEntryBitmap(GMTextureItem entry, int? suggestWidth = null, int? suggestHeight = null)
         {
             if (entry.TargetX == 0 && entry.TargetY == 0 &&
                 entry.SourceWidth == entry.BoundWidth &&
                 entry.SourceHeight == entry.BoundHeight &&
-                suggestWidth == null)
+                (suggestWidth == null || (suggestWidth == entry.SourceWidth && suggestHeight == entry.SourceHeight)))
             {
-                if (forceCopy)
-                    return new Bitmap(GetTextureEntryBitmapFast(entry));
-
                 // This can be done without copying
                 return GetTextureEntryBitmapFast(entry);
             }
@@ -866,25 +863,25 @@ namespace DogScepterLib.Project
                                 {
                                     // left
                                     g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y, border, entryBitmap.Height),
-                                                                           0, 0, 1, entryBitmap.Height, GraphicsUnit.Pixel);
+                                                                           0, 0, 0.5f, entryBitmap.Height, GraphicsUnit.Pixel);
                                     // top left
                                     g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y - border, border, border),
-                                                                           0, 0, 1, 1, GraphicsUnit.Pixel);
+                                                                           0, 0, 0.5f, 0.5f, GraphicsUnit.Pixel);
                                     // bottom left
                                     g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y + entryBitmap.Height, border, border),
-                                                                           0, entryBitmap.Height - 1, 1, 1, GraphicsUnit.Pixel);
+                                                                           0, entryBitmap.Height - 1, 0.5f, 0.5f, GraphicsUnit.Pixel);
                                 }
                                 if (alwaysCropBorder || entry.TargetX + entry.TargetWidth == entry.BoundWidth)
                                 {
                                     // right
                                     g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y, border, entryBitmap.Height),
-                                                                           entryBitmap.Width - 1, 0, 1, entryBitmap.Height, GraphicsUnit.Pixel);
+                                                                           entryBitmap.Width - 1, 0, 0.5f, entryBitmap.Height, GraphicsUnit.Pixel);
                                     // top right
                                     g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y - border, border, border),
-                                                                           entryBitmap.Width - 1, 0, 1, 1, GraphicsUnit.Pixel);
+                                                                           entryBitmap.Width - 1, 0, 0.5f, 0.5f, GraphicsUnit.Pixel);
                                     // bottom right
                                     g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y + entryBitmap.Height, border, border),
-                                                                           entryBitmap.Width - 1, entryBitmap.Height - 1, 1, 1, GraphicsUnit.Pixel);
+                                                                           entryBitmap.Width - 1, entryBitmap.Height - 1, 0.5f, 0.5f, GraphicsUnit.Pixel);
                                 }
                             }
 
@@ -903,13 +900,13 @@ namespace DogScepterLib.Project
                                 {
                                     // top
                                     g.DrawImage(entryBitmap, new Rectangle(item.X, item.Y - border, entryBitmap.Width, border),
-                                                                           0, 0, entryBitmap.Width, 1, GraphicsUnit.Pixel);
+                                                                           0f, 0f, entryBitmap.Width, 0.5f, GraphicsUnit.Pixel);
                                 }
                                 if (alwaysCropBorder || entry.TargetY + entry.TargetHeight == entry.BoundHeight)
                                 {
                                     // bottom
                                     g.DrawImage(entryBitmap, new Rectangle(item.X, item.Y + entryBitmap.Height, entryBitmap.Width, border),
-                                                                           0, entryBitmap.Height - 1, entryBitmap.Width, 1, GraphicsUnit.Pixel);
+                                                                           0, entryBitmap.Height - 1, entryBitmap.Width, 0.5f, GraphicsUnit.Pixel);
                                 }
                             }
                         }
