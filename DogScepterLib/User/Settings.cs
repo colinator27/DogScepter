@@ -1,17 +1,18 @@
-﻿using System;
+﻿using DogScepterLib.User;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace DogScepter
+namespace DogScepterLib.User
 {
     public class Settings
     {
-        public string Language { get; set; } = "en_US";
         public List<string> RecentProjects { get; set; } = new List<string>();
         public Dictionary<string, string> ProjectDataFiles { get; set; } = new Dictionary<string, string>();
+        public Dictionary<string, string> CustomSettings { get; set; } = new Dictionary<string, string>();
 
         public static JsonSerializerOptions JsonOptions = new JsonSerializerOptions
         {
@@ -23,14 +24,15 @@ namespace DogScepter
 
         public static void Save(Settings settings)
         {
-            Storage.WriteAllBytes("settings.json", JsonSerializer.SerializeToUtf8Bytes(settings, JsonOptions));
+            Storage.Config.WriteAllBytes("settings.json", JsonSerializer.SerializeToUtf8Bytes(settings, JsonOptions));
         }
 
         public static Settings Load()
         {
-            byte[] bytes = Storage.ReadAllBytes("settings.json");
+            byte[] bytes = Storage.Config.ReadAllBytes("settings.json");
             if (bytes == null)
                 return new Settings();
+            // TODO: handle exception here, maybe?
             return JsonSerializer.Deserialize<Settings>(bytes, JsonOptions);
         }
     }

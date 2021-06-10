@@ -1,11 +1,12 @@
-﻿using System;
+﻿using DogScepterLib.User;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DogScepter
+namespace DogScepterLib.User
 {
     public class Logger : IDisposable
     {
@@ -13,12 +14,10 @@ namespace DogScepter
 
         public Logger()
         {
-            if (Storage.FileSize("log.txt") >= 1024 * 1024 * 8)
-                Storage.Rename("log.txt", "log.old.txt");
+            if (Storage.Data.FileSize("log.txt") >= 1024 * 1024 * 8)
+                Storage.Data.Rename("log.txt", "log.old.txt");
 
-            writer = Storage.AppendText("log.txt");
-            writer.WriteLine($"===============================\n{DateTime.Now.ToLongTimeString()} {DateTime.Now.ToLongDateString()}\nDogScepter {MainWindow.Version}\n===============================");
-            writer.Flush();
+            writer = Storage.Data.AppendText("log.txt");
         }
 
         public void Write(string text)

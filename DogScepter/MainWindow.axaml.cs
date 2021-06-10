@@ -15,6 +15,7 @@ using MessageBox.Avalonia.DTO;
 using MessageBox.Avalonia.Enums;
 using System.Threading.Tasks;
 using System.Threading;
+using DogScepterLib.User;
 
 namespace DogScepter
 {
@@ -43,16 +44,26 @@ namespace DogScepter
             {
                 Logger = new Logger();
                 Settings = Settings.Load();
-            } catch (Exception e)
+            } 
+            catch (Exception e)
             {
                 HandleException(e);
                 Settings = new Settings();
+                Settings.CustomSettings["main.language"] = "en_US";
             }
+
             try
             {
                 TextData = new TextData();
-                TextData.LoadLanguage(Settings.Language);
-            } catch (Exception e)
+                if (Settings.CustomSettings.TryGetValue("main.language", out string lang))
+                    TextData.LoadLanguage(lang);
+                else
+                {
+                    Settings.CustomSettings["main.language"] = "en_US";
+                    TextData.LoadLanguage("en_US");
+                }
+            } 
+            catch (Exception e)
             {
                 HandleException(e);
             }
@@ -193,8 +204,10 @@ namespace DogScepter
                                 UpdateStatus("Creating temporary project...");
                                 Logger.WriteLine("Making temp project");
 
-                                Storage.ClearTempDirectory();
-                                ProjectFile = new ProjectFile(DataFile, Storage.GetTempDirectory(),
+                                string? err = Storage.Temp.Clear();
+                                if (err != null)
+                                    throw new IOException(err);
+                                ProjectFile = new ProjectFile(DataFile, Storage.Temp.Location,
                                     (ProjectFile.WarningType type, string info) =>
                                     {
                                         Logger.WriteLine($"Project warn: {type} {info ?? ""}");

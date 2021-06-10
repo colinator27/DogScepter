@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using DogScepterLib.User;
 
 namespace DogScepter
 {
@@ -23,18 +24,21 @@ namespace DogScepter
 
         public void Button_OpenDataDirectory()
         {
-            MainWindow.OpenFolder(Storage.DataDirectory);
+            Storage.Data.CreateDirectory();
+            MainWindow.OpenFolder(Storage.Data.Location);
         }
+
+        // TODO: add a button for Config directory
 
         public void Button_OpenTempDirectory()
         {
-            Storage.GetTempDirectory();
-            MainWindow.OpenFolder(Storage.TempDirectory);
+            Storage.Temp.CreateDirectory();
+            MainWindow.OpenFolder(Storage.Temp.Location);
         }
 
         public void Button_ClearTempDirectory()
         {
-            Storage.ClearTempDirectory();
+            Storage.Temp.Clear();
             var text = MainWindow.Instance?.TextData;
             if (text == null)
                 return;
