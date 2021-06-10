@@ -124,6 +124,9 @@ namespace DogScepterLib.Core
 
         public GMString DefineString(string content)
         {
+            if (content == null)
+                return null;
+
             var list = ((GMChunkSTRG)Chunks["STRG"]).List;
 
             lock (list)

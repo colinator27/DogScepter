@@ -32,18 +32,18 @@ namespace DogScepterLib.Core.Chunks
         public class EmbeddedImage : GMSerializable
         {
             public GMString Name;
-            public GMTextureItem Item;
+            public GMTextureItem TextureItem;
 
             public void Serialize(GMDataWriter writer)
             {
                 writer.WritePointerString(Name);
-                writer.WritePointer(Item);
+                writer.WritePointer(TextureItem);
             }
 
             public void Unserialize(GMDataReader reader)
             {
                 Name = reader.ReadStringPointerObject();
-                Item = reader.ReadPointer<GMTextureItem>();
+                TextureItem = reader.ReadPointer<GMTextureItem>();
             }
         }
     }

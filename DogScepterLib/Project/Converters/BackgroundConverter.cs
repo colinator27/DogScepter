@@ -31,7 +31,7 @@ namespace DogScepterLib.Project.Converters
 
             AssetBackground projectAsset = new AssetBackground()
             {
-                Name = asset.Name.Content,
+                Name = asset.Name?.Content,
                 Transparent = asset.Transparent,
                 Smooth = asset.Smooth,
                 Preload = asset.Preload,

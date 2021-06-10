@@ -41,12 +41,12 @@ namespace DogScepterTest
                 bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)
                 {
-                    //for (int i = 0; i < pf.Sprites.Count; i++)
-                    //{
-                    //    pf.GetConverter<SpriteConverter>().ConvertData(pf, i);
-                    //    pf.Sprites[i].Asset.Dirty = true;
-                    //}
-                    //pf.AddDirtyAssetsToJSON(pf.Sprites, "sprites");
+                    for (int i = 0; i < pf.Fonts.Count; i++)
+                    {
+                        pf.GetConverter<FontConverter>().ConvertData(pf, i);
+                        pf.Fonts[i].Asset.Dirty = true;
+                    }
+                    pf.AddDirtyAssetsToJSON(pf.Fonts, "fonts");
                     pf.SaveAll();
                 } else
                 {
@@ -56,7 +56,7 @@ namespace DogScepterTest
                     //Parallel.ForEach(Enumerable.Range(0, pf.Sprites.Count), (i) => cvt.ConvertData(pf, i));
                     pf.LoadMain();
                     //Parallel.ForEach(pf.Sprites, (s) => CollisionMasks.GetMasksForSprite(pf, s.Asset, out _));
-                    pf.PurgeIdenticalAssetsOnDisk(pf.Sprites);
+                    pf.PurgeIdenticalAssetsOnDisk(pf.Fonts);
                     pf.LoadAll();
                 }
 

@@ -53,7 +53,7 @@ namespace DogScepterLib.Project
                 Dirty = true;
 
                 Items.Add(entry);
-                if (entry.TexturePageID == -1 && AllowCrop)
+                if (entry.TexturePageID == -1 && !entry._EmptyBorder && AllowCrop)
                     entry.Crop();
 
                 long key = textures.GetHashKeyForEntry(entry);
@@ -229,6 +229,12 @@ namespace DogScepterLib.Project
                 referencedItems.Add(bg.TextureItem);
             foreach (GMFont fnt in Project.DataHandle.GetChunk<GMChunkFONT>().List)
                 referencedItems.Add(fnt.TextureItem);
+            var embi = Project.DataHandle.GetChunk<GMChunkEMBI>();
+            if (embi != null)
+            {
+                foreach (var img in embi.List)
+                    referencedItems.Add(img.TextureItem);
+            }
 
             var tpagList = Project.DataHandle.GetChunk<GMChunkTPAG>().List;
 
@@ -289,6 +295,12 @@ namespace DogScepterLib.Project
                 addPages(bg.TextureItem);
             foreach (GMFont fnt in Project.DataHandle.GetChunk<GMChunkFONT>().List)
                 addPages(fnt.TextureItem);
+            var embi = Project.DataHandle.GetChunk<GMChunkEMBI>();
+            if (embi != null)
+            {
+                foreach (var img in embi.List)
+                    addPages(img.TextureItem);
+            }
 
             var tpagList = Project.DataHandle.GetChunk<GMChunkTPAG>().List;
             var txtrList = Project.DataHandle.GetChunk<GMChunkTXTR>().List;
@@ -396,6 +408,15 @@ namespace DogScepterLib.Project
                 {
                     fnt.TextureItem._EmptyBorder = true;
                     findGroupWithPage(fnt.TextureItem.TexturePageID);
+                }
+            }
+            var embi = Project.DataHandle.GetChunk<GMChunkEMBI>();
+            if (embi != null)
+            {
+                foreach (var img in embi.List)
+                {
+                    if (img.TextureItem != null)
+                        findGroupWithPage(img.TextureItem.TexturePageID);
                 }
             }
 
@@ -936,6 +957,7 @@ namespace DogScepterLib.Project
 
                 var spriteConverter = Project.GetConverter<SpriteConverter>();
                 var bgConverter = Project.GetConverter<BackgroundConverter>();
+                var fntConverter = Project.GetConverter<Converters.FontConverter>();
 
                 foreach (var g in TextureGroups)
                 {
@@ -973,7 +995,13 @@ namespace DogScepterLib.Project
                     }
                 }
 
-                // TODO!! Font IDs
+                for (int i = 0; i < Project.Fonts.Count; i++)
+                {
+                    if (PageToGroup.TryGetValue(fntConverter.GetFirstPage(Project, i), out int ind))
+                    {
+                        tginList[ind].FontIDs.Add(new() { ID = i });
+                    }
+                }
             }
         }
     }

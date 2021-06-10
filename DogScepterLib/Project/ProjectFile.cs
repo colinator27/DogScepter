@@ -42,6 +42,7 @@ namespace DogScepterLib.Project
         public AssetRefList<AssetSound> Sounds { get; set; } = new();
         public AssetRefList<AssetSprite> Sprites { get; set; } = new();
         public AssetRefList<AssetBackground> Backgrounds { get; set; } = new();
+        public AssetRefList<AssetFont> Fonts { get; set; } = new();
         public AssetRefList<AssetPath> Paths { get; set; } = new();
         public AssetRefList<AssetObject> Objects { get; set; } = new();
 
@@ -75,6 +76,7 @@ namespace DogScepterLib.Project
             new SoundConverter(),
             new SpriteConverter(),
             new BackgroundConverter(),
+            new FontConverter(),
             new PathConverter(),
             new ObjectConverter(),
         };
@@ -84,6 +86,7 @@ namespace DogScepterLib.Project
             { typeof(AssetSound), typeof(SoundConverter) },
             { typeof(AssetSprite), typeof(SpriteConverter) },
             { typeof(AssetBackground), typeof(BackgroundConverter) },
+            { typeof(AssetFont), typeof(FontConverter) },
             { typeof(AssetObject), typeof(ObjectConverter) },
             { typeof(AssetPath), typeof(PathConverter) },
         };
@@ -168,6 +171,7 @@ namespace DogScepterLib.Project
             SaveAssets(Sounds);
             SaveAssets(Sprites);
             SaveAssets(Backgrounds);
+            SaveAssets(Fonts);
             SaveAssets(Paths);
             SaveAssets(Objects);
         }
@@ -228,6 +232,7 @@ namespace DogScepterLib.Project
             LoadAssets(Sounds);
             LoadAssets(Sprites);
             LoadAssets(Backgrounds);
+            LoadAssets(Fonts);
             LoadAssets(Paths);
             LoadAssets(Objects);
         }
@@ -477,6 +482,7 @@ namespace DogScepterLib.Project
             { typeof(AssetSound), "Sounds" },
             { typeof(AssetSprite), "Sprites" },
             { typeof(AssetBackground), "Backgrounds" },
+            { typeof(AssetFont), "Fonts" },
             { typeof(AssetObject), "Objects" },
             { typeof(AssetPath), "Paths" },
         };
@@ -485,6 +491,7 @@ namespace DogScepterLib.Project
             typeof(AssetSound),
             typeof(AssetBackground),
             typeof(AssetSprite),
+            typeof(AssetFont),
             typeof(AssetObject), // Code entries not implemented yet, will be eventually
         };
 

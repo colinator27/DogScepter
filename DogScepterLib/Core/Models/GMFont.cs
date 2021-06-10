@@ -7,9 +7,9 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker font.
     /// </summary>
-    public class GMFont : GMSerializable
+    public class GMFont : GMNamedSerializable
     {
-        public GMString Name;
+        public GMString Name { get; set; }
         public GMString DisplayName;
         public int Size; // In 2.3(?), this seems to be a float instead (below value)
         public float SizeFloat;
@@ -78,11 +78,14 @@ namespace DogScepterLib.Core.Models
 
     public class GMGlyph : GMSerializable
     {
-        public ushort Character;
-        public ushort X, Y;
-        public ushort Width, Height;
-        public short Shift, Offset;
-        public List<GMKerning> Kerning;
+        public ushort Character { get; set; }
+        public ushort X { get; set; }
+        public ushort Y { get; set; }
+        public ushort Width { get; set; }
+        public ushort Height{ get; set; }
+        public short Shift { get; set; }
+        public short Offset { get; set; }
+        public List<GMKerning> Kerning { get; set; }
 
         public void Serialize(GMDataWriter writer)
         {
@@ -119,8 +122,8 @@ namespace DogScepterLib.Core.Models
 
     public class GMKerning : GMSerializable
     {
-        public short Other;
-        public short Amount;
+        public short Other { get; set; }
+        public short Amount { get; set; }
 
         public void Serialize(GMDataWriter writer)
         {
