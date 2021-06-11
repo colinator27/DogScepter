@@ -22,6 +22,7 @@ namespace DogScepterTest
             using (FileStream fs = new FileStream(@"input/data.win", FileMode.Open))
             {
                 GMDataReader reader = new GMDataReader(fs, fs.Name);
+                reader.Unserialize();
                 foreach (GMWarning w in reader.Warnings)
                     Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
 

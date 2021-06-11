@@ -1,12 +1,17 @@
-﻿using System;
+﻿using CliFx;
+using System;
+using System.Threading.Tasks;
 
 namespace DogScepterCLI
 {
-    class Program
+    public static class Program
     {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("CLI coming... soon...");
-        }
+        public static async Task<int> Main() =>
+            await new CliApplicationBuilder()
+                .SetTitle("DogScepter CLI")
+                .SetDescription("DogScepter command line interface for project files.")
+                .AddCommandsFromThisAssembly()
+                .Build()
+                .RunAsync();
     }
 }

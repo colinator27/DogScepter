@@ -191,6 +191,7 @@ namespace DogScepter
                                     Logger.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
                                 DataFile = reader.Data;
                                 DataFile.Logger = Logger.WriteLine;
+                                reader.Unserialize();
 
                                 Logger.WriteLine("Finished loading data file");
 

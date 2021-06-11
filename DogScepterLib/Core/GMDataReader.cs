@@ -33,12 +33,21 @@ namespace DogScepterLib.Core
             Warnings = new List<GMWarning>();
             PointerOffsets = new Dictionary<int, GMSerializable>();
             Instructions = new Dictionary<int, GMCode.Bytecode.Instruction>();
+        }
 
+        public void Unserialize(bool clearData = true)
+        {
             // Parse the root chunk of the file, FORM
             if (ReadChars(4) != "FORM")
                 throw new GMException("Root chunk is not \"FORM\"; invalid file.");
             Data.FORM = new GMChunkFORM();
             Data.FORM.Unserialize(this);
+
+            if (clearData)
+            {
+                PointerOffsets.Clear();
+                Instructions.Clear();
+            }
         }
 
         /// <summary>
