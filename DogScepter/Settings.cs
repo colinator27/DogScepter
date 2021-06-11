@@ -10,9 +10,7 @@ namespace DogScepterLib.User
 {
     public class Settings
     {
-        public List<string> RecentProjects { get; set; } = new List<string>();
-        public Dictionary<string, string> ProjectDataFiles { get; set; } = new Dictionary<string, string>();
-        public Dictionary<string, string> CustomSettings { get; set; } = new Dictionary<string, string>();
+        public string Language { get; set; } = "en_US";
 
         public static JsonSerializerOptions JsonOptions = new JsonSerializerOptions
         {

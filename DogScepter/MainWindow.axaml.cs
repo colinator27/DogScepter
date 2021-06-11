@@ -49,19 +49,12 @@ namespace DogScepter
             {
                 HandleException(e);
                 Settings = new Settings();
-                Settings.CustomSettings["main.language"] = "en_US";
             }
 
             try
             {
                 TextData = new TextData();
-                if (Settings.CustomSettings.TryGetValue("main.language", out string lang))
-                    TextData.LoadLanguage(lang);
-                else
-                {
-                    Settings.CustomSettings["main.language"] = "en_US";
-                    TextData.LoadLanguage("en_US");
-                }
+                TextData.LoadLanguage(Settings.Language);
             } 
             catch (Exception e)
             {
