@@ -3,6 +3,7 @@ using CliFx.Attributes;
 using CliFx.Infrastructure;
 using DogScepterLib.Core;
 using DogScepterLib.Project;
+using DogScepterLib.User;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -74,7 +75,13 @@ namespace DogScepterCLI.Commands
             if (data == null)
                 return default;
             ProjectFile pf = console.OpenProject(data, dir);
-            console.SaveProject(pf);
+            if (!console.SaveProject(pf))
+                return default;
+            
+            // Update machine config file
+            MachineConfig cfg = MachineConfig.Load();
+            cfg.AddNewProject(dir, new ProjectConfig(DataFile, OutputDirectory));
+            MachineConfig.Save(cfg);
 
             if (Interactive)
                 ProjectShell.Run(pf);

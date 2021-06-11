@@ -12,6 +12,7 @@ namespace DogScepterLib.User
     {
         public const int MaxRecentProjects = 8;
 
+        public bool EnableProjectTracking { get; set; } = true;
         public Dictionary<string, ProjectConfig> Projects { get; set; } = new Dictionary<string, ProjectConfig>();
         public List<string> RecentProjects { get; set; } = new List<string>(MaxRecentProjects);
 
@@ -25,12 +26,12 @@ namespace DogScepterLib.User
 
         public static void Save(MachineConfig config)
         {
-            Storage.Config.WriteAllBytes("config.json", JsonSerializer.SerializeToUtf8Bytes(config, JsonOptions));
+            Storage.Data.WriteAllBytes("config.json", JsonSerializer.SerializeToUtf8Bytes(config, JsonOptions));
         }
 
         public static MachineConfig Load()
         {
-            byte[] bytes = Storage.Config.ReadAllBytes("config.json");
+            byte[] bytes = Storage.Data.ReadAllBytes("config.json");
             if (bytes == null)
                 return new MachineConfig();
             try
@@ -43,17 +44,20 @@ namespace DogScepterLib.User
             }
         }
 
-        public void AddNewProject(string projectFile, ProjectConfig config)
+        public void AddNewProject(string projectDir, ProjectConfig config)
         {
-            Projects[projectFile] = config;
+            if (!EnableProjectTracking)
+                return;
+
+            Projects[projectDir] = config;
 
             // Update recent projects list
-            int ind = RecentProjects.IndexOf(projectFile);
+            int ind = RecentProjects.IndexOf(projectDir);
             if (ind != -1)
                 RecentProjects.RemoveAt(ind);
             else if (RecentProjects.Count == MaxRecentProjects)
                 RecentProjects.RemoveAt(MaxRecentProjects - 1);
-            RecentProjects.Insert(0, projectFile);
+            RecentProjects.Insert(0, projectDir);
         }
 
         public void Clear()
