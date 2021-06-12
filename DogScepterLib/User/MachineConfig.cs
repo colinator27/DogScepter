@@ -44,7 +44,7 @@ namespace DogScepterLib.User
             }
         }
 
-        public void AddNewProject(string projectDir, ProjectConfig config)
+        public void EditProject(string projectDir, ProjectConfig config)
         {
             if (!EnableProjectTracking)
                 return;

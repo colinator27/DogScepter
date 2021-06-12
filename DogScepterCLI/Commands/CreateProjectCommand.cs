@@ -33,11 +33,11 @@ namespace DogScepterCLI.Commands
 
         public ValueTask ExecuteAsync(IConsole console)
         {
+            console.Output.WriteLine();
+
             string dir = ProjectDirectory ?? Environment.CurrentDirectory;
             if (!CheckExisting(console, dir))
                 return default;
-
-            console.Output.WriteLine();
 
             if (Interactive)
             {
@@ -65,6 +65,16 @@ namespace DogScepterCLI.Commands
                     console.Error.WriteLine("Missing arguments. Data file and output directory must be set.");
                     return default;
                 }
+                if (!File.Exists(DataFile))
+                {
+                    console.Error.WriteLine("Data file does not exist.");
+                    return default;
+                }
+                if (!Directory.Exists(OutputDirectory))
+                {
+                    console.Error.WriteLine("Output directory does not exist.");
+                    return default;
+                }
             }
 
             if (!CheckExisting(console, dir))
@@ -80,11 +90,11 @@ namespace DogScepterCLI.Commands
             
             // Update machine config file
             MachineConfig cfg = MachineConfig.Load();
-            cfg.AddNewProject(dir, new ProjectConfig(DataFile, OutputDirectory));
+            cfg.EditProject(dir, new ProjectConfig(DataFile, OutputDirectory));
             MachineConfig.Save(cfg);
 
             if (Interactive)
-                ProjectShell.Run(pf);
+                ProjectShell.Run(console, pf);
 
             return default;
         }
