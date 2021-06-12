@@ -28,7 +28,10 @@ namespace DogScepterLib.Core
 
             // Get directory of the data file for later usage
             if (path != null)
+            {
                 Data.Directory = Path.GetDirectoryName(path);
+                Data.Filename = Path.GetFileName(path);
+            }
 
             Warnings = new List<GMWarning>();
             PointerOffsets = new Dictionary<int, GMSerializable>();

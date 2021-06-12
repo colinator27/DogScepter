@@ -264,7 +264,7 @@ namespace DogScepterLib.Project
         /// <summary>
         /// Writes out all assets in main project JSON
         /// </summary>
-        private void SaveAssets<T>(List<AssetRef<T>> list) where T : Asset
+        public void SaveAssets<T>(AssetRefList<T> list) where T : Asset
         {
             // Collect IDs of existing assets in project
             Dictionary<string, int> assetIndices = new Dictionary<string, int>();
@@ -319,12 +319,79 @@ namespace DogScepterLib.Project
         }
 
         /// <summary>
-        /// Adds all dirty assets of this type in the project to the JSON; essentially marking them to be exported
+        /// Adds supplied indices of an asset list to the JSON; essentially marking them to be exported
         /// </summary>
-        public void AddDirtyAssetsToJSON<T>(List<AssetRef<T>> list, string assetDir) where T : Asset
+        public void AddAssetsToJSON<T>(List<AssetRef<T>> list, IEnumerable<int> indices, bool convert = false, string assetDir = null) where T : Asset
         {
             string jsonName = ProjectJson.AssetTypeName[typeof(T)];
-            JsonFile.Assets[jsonName] = new List<ProjectJson.AssetEntry>();
+            assetDir ??= jsonName.ToLowerInvariant();
+
+            List<ProjectJson.AssetEntry> jsonList;
+            if (!JsonFile.Assets.TryGetValue(jsonName, out jsonList))
+                JsonFile.Assets[jsonName] = jsonList = new List<ProjectJson.AssetEntry>();
+
+            AssetConverter<T> cvt = null;
+            if (convert)
+                cvt = (GetConverter(AssetTypeConverter[typeof(T)]) as AssetConverter<T>);
+
+            if (ProjectJson.AssetUsesFolder.Contains(typeof(T)))
+            {
+                // Use a folder, with a JSON inside of it
+                foreach (int assetIndex in indices)
+                {
+                    AssetRef<T> asset = list[assetIndex];
+                    if (asset.Asset == null)
+                    {
+                        if (convert)
+                            cvt.ConvertData(this, assetIndex);
+                        else
+                            continue;
+                    }
+
+                    asset.Asset.Dirty = true;
+                    jsonList.Add(new ProjectJson.AssetEntry()
+                    {
+                        Name = asset.Name,
+                        Path = $"{assetDir}/{asset.Name}/{asset.Name}.json"
+                    });
+                }
+            }
+            else
+            {
+                // Use a direct JSON file
+                foreach (int assetIndex in indices)
+                {
+                    AssetRef<T> asset = list[assetIndex];
+                    if (asset.Asset == null)
+                    {
+                        if (convert)
+                            cvt.ConvertData(this, assetIndex);
+                        else
+                            continue;
+                    }
+
+                    asset.Asset.Dirty = true;
+                    jsonList.Add(new ProjectJson.AssetEntry()
+                    {
+                        Name = asset.Name,
+                        Path = $"{assetDir}/{asset.Name}.json"
+                    });
+                }
+            }
+        }
+
+        /// <summary>
+        /// Adds all dirty assets of this type in the project to the JSON; essentially marking them to be exported
+        /// </summary>
+        public void AddDirtyAssetsToJSON<T>(List<AssetRef<T>> list, string assetDir = null) where T : Asset
+        {
+            string jsonName = ProjectJson.AssetTypeName[typeof(T)];
+            assetDir ??= jsonName.ToLowerInvariant();
+
+            List<ProjectJson.AssetEntry> jsonList;
+            if (!JsonFile.Assets.TryGetValue(jsonName, out jsonList))
+                JsonFile.Assets[jsonName] = jsonList = new List<ProjectJson.AssetEntry>();
+
             if (ProjectJson.AssetUsesFolder.Contains(typeof(T)))
             {
                 // Use a folder, with a JSON inside of it
@@ -333,7 +400,7 @@ namespace DogScepterLib.Project
                     if (asset.Asset == null || !asset.Asset.Dirty)
                         continue; // Skip if this isn't modified
 
-                    JsonFile.Assets[jsonName].Add(new ProjectJson.AssetEntry()
+                    jsonList.Add(new ProjectJson.AssetEntry()
                     {
                         Name = asset.Name,
                         Path = $"{assetDir}/{asset.Name}/{asset.Name}.json"
@@ -348,7 +415,7 @@ namespace DogScepterLib.Project
                     if (asset.Asset == null || !asset.Asset.Dirty)
                         continue; // Skip if this isn't modified
 
-                    JsonFile.Assets[jsonName].Add(new ProjectJson.AssetEntry()
+                    jsonList.Add(new ProjectJson.AssetEntry()
                     {
                         Name = asset.Name,
                         Path = $"{assetDir}/{asset.Name}.json"

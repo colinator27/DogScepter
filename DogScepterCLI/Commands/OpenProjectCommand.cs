@@ -113,7 +113,8 @@ namespace DogScepterCLI.Commands
                 return default;
 
             // Save potential changes to config
-            cfg.EditProject(dir, new ProjectConfig(DataFile, OutputDirectory));
+            var newPcfg = new ProjectConfig(DataFile, OutputDirectory);
+            cfg.EditProject(dir, newPcfg);
             MachineConfig.Save(cfg);
 
             // Initialize the project file
@@ -121,9 +122,11 @@ namespace DogScepterCLI.Commands
             if (data == null)
                 return default;
             ProjectFile pf = console.OpenProject(data, dir);
+            if (data == null)
+                return default;
 
             if (Interactive)
-                ProjectShell.Run(console, pf);
+                ProjectShell.Run(console, pf, newPcfg, Verbose);
 
             return default;
         }

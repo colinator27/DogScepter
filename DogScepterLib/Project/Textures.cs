@@ -698,60 +698,66 @@ namespace DogScepterLib.Project
         // Notably, the widths/heights of every item are the same
         public unsafe int CompareHashedTextures(GMTextureItem self, List<GMTextureItem> list, int startAt = 0)
         {
-            Bitmap texture = null;
-            int stride = 0;
-            BitmapData data = null;
+            if (startAt >= list.Count)
+                return -1;
 
-            for (int i = startAt; i < list.Count; i++)
+            Bitmap texture;
+            if (self.TexturePageID == -1)
+                texture = self._Bitmap; // Custom bitmap
+            else
+                texture = GetTexture(self.TexturePageID);
+            lock (texture)
             {
-                GMTextureItem entry = list[i];
+                BitmapData data = null;
+                int stride = 0;
 
-                // Eliminate or choose based off of basic factors
-                if (entry == self ||
-                    entry._HasExtraBorder != self._HasExtraBorder ||
-                    entry._TileHorizontally != self._TileHorizontally ||
-                    entry._TileVertically != self._TileVertically)
-                    continue;
-                if (self.TexturePageID != -1)
+                for (int i = startAt; i < list.Count; i++)
                 {
-                    if (self.TexturePageID == entry.TexturePageID)
-                    {
-                        if (self.SourceX == entry.SourceX &&
-                            self.SourceY == entry.SourceY)
-                            return i;
-                        continue; // These are on the same page but different X/Y, so ignore
-                    } else if (entry.TexturePageID != -1)
-                    {
-                        // These aren't on the same page...
+                    GMTextureItem entry = list[i];
+
+                    // Eliminate or choose based off of basic factors
+                    if (entry == self ||
+                        entry._HasExtraBorder != self._HasExtraBorder ||
+                        entry._TileHorizontally != self._TileHorizontally ||
+                        entry._TileVertically != self._TileVertically)
                         continue;
+                    if (self.TexturePageID != -1)
+                    {
+                        if (self.TexturePageID == entry.TexturePageID)
+                        {
+                            if (self.SourceX == entry.SourceX &&
+                                self.SourceY == entry.SourceY)
+                                return i;
+                            continue; // These are on the same page but different X/Y, so ignore
+                        }
+                        else if (entry.TexturePageID != -1)
+                        {
+                            // These aren't on the same page...
+                            continue;
+                        }
                     }
-                }
 
-                if (texture == null)
-                {
-                    if (self.TexturePageID == -1)
-                        texture = self._Bitmap; // Custom bitmap
+                    if (data == null)
+                    {
+                        data = texture.BasicLockBits();
+                        stride = (data.Stride / 4);
+                    }
+
+                    // Otherwise, get the raw data
+                    Bitmap entryTexture;
+                    int entryStride;
+                    BitmapData entryData = null;
+                    if (entry.TexturePageID == -1)
+                        entryTexture = entry._Bitmap; // Custom bitmap
                     else
-                        texture = GetTexture(self.TexturePageID);
-                    data = texture.BasicLockBits();
-                    stride = (data.Stride / 4);
-                }
+                        entryTexture = GetTexture(entry.TexturePageID);
 
-                // Otherwise, get the raw data
-                Bitmap entryTexture;
-                int entryStride;
-                BitmapData entryData;
-                if (entry.TexturePageID == -1)
-                    entryTexture = entry._Bitmap; // Custom bitmap
-                else
-                    entryTexture = GetTexture(entry.TexturePageID);
-                entryData = entryTexture.BasicLockBits();
-                entryStride = (entryData.Stride / 4);
-
-                lock (texture)
-                {
                     lock (entryTexture)
                     {
+                        if (entryTexture != texture)
+                            entryData = entryTexture.BasicLockBits();
+                        entryStride = (entryData != null) ? (entryData.Stride / 4) : (data.Stride / 4);
+
                         int* ptr = (int*)data.Scan0 + (self.SourceX + (self.SourceY * stride));
                         int* entryPtr = (int*)entryData.Scan0 + (entry.SourceX + (entry.SourceY * entryStride));
 
@@ -768,12 +774,12 @@ namespace DogScepterLib.Project
                                 ptr++;
                                 entryPtr++;
                             }
-                            int offsetToNext = stride - self.SourceWidth;
-                            ptr += offsetToNext;
-                            entryPtr += offsetToNext;
+                            ptr += stride - self.SourceWidth;
+                            entryPtr += entryStride - self.SourceWidth;
                         }
 
-                        entryTexture.UnlockBits(data);
+                        if (entryData != null)
+                            entryTexture.UnlockBits(entryData);
                         if (checking)
                         {
                             texture.UnlockBits(data);
@@ -781,10 +787,11 @@ namespace DogScepterLib.Project
                         }
                     }
                 }
-            }
 
-            texture?.UnlockBits(data);
-            return -1;
+                if (data != null)
+                    texture.UnlockBits(data);
+                return -1;
+            }
         }
 
         // After every element has been properly added to HashedItems, including any new ones

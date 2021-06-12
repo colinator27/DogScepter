@@ -85,16 +85,19 @@ namespace DogScepterCLI.Commands
             if (data == null)
                 return default;
             ProjectFile pf = console.OpenProject(data, dir);
+            if (pf == null)
+                return default;
             if (!console.SaveProject(pf))
                 return default;
             
             // Update machine config file
             MachineConfig cfg = MachineConfig.Load();
-            cfg.EditProject(dir, new ProjectConfig(DataFile, OutputDirectory));
+            var pcfg = new ProjectConfig(DataFile, OutputDirectory);
+            cfg.EditProject(dir, pcfg);
             MachineConfig.Save(cfg);
 
             if (Interactive)
-                ProjectShell.Run(console, pf);
+                ProjectShell.Run(console, pf, pcfg, Verbose);
 
             return default;
         }

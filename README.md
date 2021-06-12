@@ -22,7 +22,7 @@
 ## Roadmap (subject to change)
 - [x] Core library
     - Fully parse GameMaker IFF data files, store in memory, and be able to serialize them to new files byte-for-byte.
-- [ ] Project system (current focus)
+- [ ] Project system **(currently a work in progress)**
     - Convert from GameMaker structures into custom ones
     - Convert from custom structures back into GameMaker structures
     - Save and load these custom structures to JSON as necessary
@@ -36,8 +36,9 @@
     	- Backgrounds
     	- Sprites
     	- Fonts
-- [ ] Command line interface
+- [ ] Command line interface **(currently a work in progress)**
      - Simple CLI to allow actual work to be done with the above project system before everything else is done, including the UI itself. 
+	 - As of writing this, the CLI has basic features and is somewhat usable with an interactive shell.
 
 ## Special Thanks
 * Msnshame and Agentalex9 for assistance in creating the icon for the tool. Additional thanks to the Underminers Discord server members for being there to come up with the name, as well.

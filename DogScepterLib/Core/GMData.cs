@@ -106,6 +106,7 @@ namespace DogScepterLib.Core
         public Dictionary<string, int> StringCache;
 
         public string Directory;
+        public string Filename;
         public byte[] Hash;
         public int Length = 1024; // just give it a semi-reasonable minimum size
 
