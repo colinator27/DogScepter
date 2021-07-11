@@ -26,7 +26,7 @@
     - Convert from GameMaker structures into custom ones
     - Convert from custom structures back into GameMaker structures
     - Save and load these custom structures to JSON as necessary
-    - Assets that are currently supported as of writing:
+    - Assets that are currently supported (as of last README update):
     	- General info/options
     	- Audio groups
     	- Texture groups (and dealing with textures in general)
@@ -36,6 +36,7 @@
     	- Backgrounds
     	- Sprites
     	- Fonts
+		- Rooms
 - [ ] Command line interface **(currently a work in progress)**
      - Simple CLI to allow actual work to be done with the above project system before everything else is done, including the UI itself. 
 	 - As of writing this, the CLI has basic features and is somewhat usable with an interactive shell.

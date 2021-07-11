@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker room.
     /// </summary>
-    public class GMRoom : GMSerializable
+    public class GMRoom : GMNamedSerializable
     {
         [Flags]
         public enum RoomFlags : int
@@ -17,7 +17,7 @@ namespace DogScepterLib.Core.Models
             ClearDisplayBuffer = 4
         }
 
-        public GMString Name;
+        public GMString Name { get; set; }
         public GMString Caption;
         public int Width, Height;
         public int Speed;
@@ -477,7 +477,7 @@ namespace DogScepterLib.Core.Models
             public class LayerInstances : GMSerializable
             {
                 // IDs corresponding to the IDs given in the GameObjects list in the room
-                public List<int> Instances;
+                public List<int> Instances { get; set; }
 
                 public void Serialize(GMDataWriter writer)
                 {

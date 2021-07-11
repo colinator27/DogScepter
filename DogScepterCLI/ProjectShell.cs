@@ -68,7 +68,7 @@ namespace DogScepterCLI
             console.Output.WriteLine($"Added {indices.Count} assets.");
         }
 
-        private static bool ReloadProject(IConsole console, ProjectFile pf, ProjectConfig cfg, bool verbose, bool reloadData = true)
+        private static bool ReloadProject(IConsole console, ref ProjectFile pf, ProjectConfig cfg, bool verbose, bool reloadData = true)
         {
             // Reload project/data file completely now
             console.Output.WriteLine("Reloading project...");
@@ -127,7 +127,7 @@ namespace DogScepterCLI
                 "reload <optional:data>",
                 args =>
                 {
-                    if (!ReloadProject(console, pf, cfg, verbose, (args.Length == 2 && args[1] == "data")))
+                    if (!ReloadProject(console, ref pf, cfg, verbose, (args.Length == 2 && args[1] == "data")))
                         return Command.CommandResult.Quit;
                     return Command.CommandResult.None;
                 }),
@@ -158,6 +158,9 @@ namespace DogScepterCLI
                             break;
                         case "font": case "fonts":
                             AddAsset(console, args[2], pf.Fonts, pf);
+                            break;
+                        case "room": case "rooms":
+                            AddAsset(console, args[2], pf.Rooms, pf);
                             break;
                         default:
                             return Command.CommandResult.InvalidSyntax;
@@ -190,7 +193,7 @@ namespace DogScepterCLI
                         console.Error.WriteLine($"Failed to apply project: {e}");
                     }
 
-                    if (!ReloadProject(console, pf, cfg, verbose))
+                    if (!ReloadProject(console, ref pf, cfg, verbose))
                         return Command.CommandResult.Quit;
 
                     return Command.CommandResult.None;

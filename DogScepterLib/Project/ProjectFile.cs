@@ -45,6 +45,7 @@ namespace DogScepterLib.Project
         public AssetRefList<AssetFont> Fonts { get; set; } = new();
         public AssetRefList<AssetPath> Paths { get; set; } = new();
         public AssetRefList<AssetObject> Objects { get; set; } = new();
+        public AssetRefList<AssetRoom> Rooms { get; set; } = new();
 
         public Dictionary<int, GMChunkAUDO> _CachedAudioChunks;
         public Textures Textures;
@@ -79,6 +80,7 @@ namespace DogScepterLib.Project
             new FontConverter(),
             new PathConverter(),
             new ObjectConverter(),
+            new RoomConverter(),
         };
 
         public readonly static Dictionary<Type, Type> AssetTypeConverter = new Dictionary<Type, Type>()
@@ -89,6 +91,7 @@ namespace DogScepterLib.Project
             { typeof(AssetFont), typeof(FontConverter) },
             { typeof(AssetObject), typeof(ObjectConverter) },
             { typeof(AssetPath), typeof(PathConverter) },
+            { typeof(AssetRoom), typeof(RoomConverter) },
         };
 
         public T GetConverter<T>() where T : IConverter, new()
@@ -174,6 +177,7 @@ namespace DogScepterLib.Project
             SaveAssets(Fonts);
             SaveAssets(Paths);
             SaveAssets(Objects);
+            SaveAssets(Rooms);
         }
 
         public void LoadMain()
@@ -235,6 +239,7 @@ namespace DogScepterLib.Project
             LoadAssets(Fonts);
             LoadAssets(Paths);
             LoadAssets(Objects);
+            LoadAssets(Rooms);
         }
 
         /// <summary>
@@ -552,6 +557,7 @@ namespace DogScepterLib.Project
             { typeof(AssetFont), "Fonts" },
             { typeof(AssetObject), "Objects" },
             { typeof(AssetPath), "Paths" },
+            { typeof(AssetRoom), "Rooms" },
         };
         public readonly static HashSet<Type> AssetUsesFolder = new HashSet<Type>()
         {
@@ -559,7 +565,10 @@ namespace DogScepterLib.Project
             typeof(AssetBackground),
             typeof(AssetSprite),
             typeof(AssetFont),
-            typeof(AssetObject), // Code entries not implemented yet, will be eventually
+
+            // Code entries not implemented yet, will be eventually
+            typeof(AssetObject), 
+            typeof(AssetRoom)
         };
 
         public ProjectJson()
