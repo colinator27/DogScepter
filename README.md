@@ -36,7 +36,7 @@
     	- Backgrounds
     	- Sprites
     	- Fonts
-		- Rooms
+    	- Rooms
 - [ ] Command line interface **(currently a work in progress)**
      - Simple CLI to allow actual work to be done with the above project system before everything else is done, including the UI itself. 
 	 - As of writing this, the CLI has basic features and is somewhat usable with an interactive shell.
