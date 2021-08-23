@@ -8,7 +8,7 @@ using DogScepterLib.Core;
 using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
 using DogScepterLib.Project;
-using DogScepterLib.Project.Bytecode;
+using DogScepterLib.Project.GML;
 using DogScepterLib.Project.Converters;
 
 namespace DogScepterTest
@@ -26,20 +26,29 @@ namespace DogScepterTest
                 foreach (GMWarning w in reader.Warnings)
                     Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
 
-                //var blockTest = Block.GetBlocks(reader.Data.GetChunk<GMChunkCODE>().List[1]);
+                DecompileContext ctx = new DecompileContext();
+                ctx.Blocks = Block.GetBlocks(reader.Data.GetChunk<GMChunkCODE>().List[0]);
 
-                ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"), 
+                // Add node to beginning
+                ctx.BaseNode = new Block(-1, -1);
+                ctx.BaseNode.Branches.Add(ctx.Blocks.List[0]);
+                ctx.Blocks.List[0].Predecessors.Add(ctx.BaseNode);
+
+                ctx.Loops = Loops.FindLoops(ctx.Blocks);
+
+                Loops.InsertLoopNodes(ctx);
+
+                /*ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"), 
                     (ProjectFile.WarningType type, string info) => 
                     {
                         Console.WriteLine($"Project warn: {type} {info ?? ""}");
-                    });
+                    });*/
 
-                //SKBitmap testImage = SKBitmap.Decode(File.ReadAllBytes("testsprite.png"));
                 //foreach (var group in pf.Textures.TextureGroups)
                 //    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));
                 //pf.Textures.RegenerateTextures();
 
-                bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
+                /*bool first = !Directory.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"));
                 if (first)
                 {
                     for (int i = 0; i < pf.Rooms.Count; i++)
@@ -59,7 +68,7 @@ namespace DogScepterTest
                     //Parallel.ForEach(pf.Sprites, (s) => CollisionMasks.GetMasksForSprite(pf, s.Asset, out _));
                     pf.PurgeIdenticalAssetsOnDisk(pf.Rooms);
                     pf.LoadAll();
-                }
+                }*/
 
                 //foreach (var group in pf.Textures.TextureGroups)
                 //    group.Dirty = true;
@@ -80,7 +89,7 @@ namespace DogScepterTest
                 pf.Textures.PurgeUnreferencedPages();
                 */
 
-                Directory.CreateDirectory("output");
+                /*Directory.CreateDirectory("output");
                 using (FileStream fs2 = new FileStream("output/data.win", FileMode.Create))
                 {
                     using (GMDataWriter writer = new GMDataWriter(reader.Data, fs2, fs2.Name, reader.Length))
@@ -92,7 +101,7 @@ namespace DogScepterTest
                         foreach (GMWarning w in writer.Warnings)
                             Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
                     }
-                }
+                }*/
             }
             s.Stop();
             Console.WriteLine(string.Format("Took {0} ms, {1} seconds.", s.Elapsed.TotalMilliseconds, Math.Round(s.Elapsed.TotalMilliseconds/1000, 2)));

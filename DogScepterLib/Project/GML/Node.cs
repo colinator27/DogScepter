@@ -5,21 +5,45 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DogScepterLib.Project.Bytecode
+namespace DogScepterLib.Project.GML
 {
     public interface Node
     {
         public enum NodeType
         {
-            Base,
+            Error,
+
             Block,
-            ConditionalBranch,
             Loop
         }
 
         public NodeType Kind { get; set; }
+        public int Address { get; set; }
+        public int EndAddress { get; set; }
         public List<Node> Predecessors { get; set; }
         public List<Node> Branches { get; set; }
+    }
+
+    public class BlockList
+    {
+        public Dictionary<int, Block> AddressToBlock { get; init; }
+        public List<Block> List { get; init; }
+
+        public BlockList()
+        {
+            AddressToBlock = new Dictionary<int, Block>();
+            List = new List<Block>();
+        }
+
+        public void TryAddBlock(int start, int end)
+        {
+            var newBlock = new Block(start, end);
+            if (AddressToBlock.TryAdd(start, newBlock))
+            {
+                newBlock.Index = List.Count;
+                List.Add(newBlock);
+            }
+        }
     }
 
     public class Block : Node
@@ -28,40 +52,41 @@ namespace DogScepterLib.Project.Bytecode
         public List<Node> Predecessors { get; set; } = new List<Node>();
         public List<Node> Branches { get; set; } = new List<Node>();
 
-        public int StartAddress { get; private set; }
-        public int EndAddress { get; private set; }
-        public GMCode.Bytecode.Instruction.Opcode LastOpcode { get; set; }
+        public int Index = -1;
+        public int Address { get; set; }
+        public int EndAddress { get; set; }
+        public GMCode.Bytecode.Instruction LastInstr { get; set; } = null;
         public List<GMCode.Bytecode.Instruction> Instructions = new List<GMCode.Bytecode.Instruction>();
 
         public Block(int startAddress, int endAddress)
         {
-            StartAddress = startAddress;
+            Address = startAddress;
             EndAddress = endAddress;
         }
 
-        public static Dictionary<int, Block> GetBlocks(GMCode codeEntry)
+        public static BlockList GetBlocks(GMCode codeEntry, int startAddr = 0, int endAddr = -1)
         {
-            Dictionary<int, Block> res = new Dictionary<int, Block>();
+            BlockList res = new BlockList();
 
             // Get the addresses of blocks using the disassembler functionality
-            List<int> blockAddresses = Disassembler.FindBlockAddresses(codeEntry.BytecodeEntry);
+            if (endAddr == -1)
+                endAddr = codeEntry.Length;
+            List<int> blockAddresses = Disassembler.FindBlockAddresses(codeEntry.BytecodeEntry, startAddr, endAddr);
 
             // Ensure there's at least an exit block
-            blockAddresses.Add(codeEntry.Length);
-            blockAddresses.Add(codeEntry.Length);
+            blockAddresses.Add(endAddr);
+            blockAddresses.Add(endAddr);
 
             // Create blocks using the addresses
             for (int i = 0; i < blockAddresses.Count - 1; i++)
             {
-                int addr = blockAddresses[i];
-                if (!res.ContainsKey(addr))
-                    res[addr] = new Block(addr, blockAddresses[i + 1]);
+                res.TryAddBlock(blockAddresses[i], blockAddresses[i + 1]);
             }
 
             // Fill blocks with instructions, resolve references between blocks
-            foreach (Block b in res.Values)
+            foreach (Block b in res.List)
             {
-                int addr = b.StartAddress;
+                int addr = b.Address;
                 int ind = codeEntry.BytecodeEntry.Instructions.FindIndex((instr) => instr.Address == addr);
                 while (addr < b.EndAddress)
                 {
@@ -72,13 +97,12 @@ namespace DogScepterLib.Project.Bytecode
 
                 if (b.Instructions.Count != 0)
                 {
-                    var lastInstr = b.Instructions.Last();
-                    b.LastOpcode = lastInstr.Kind;
-                    switch (lastInstr.Kind)
+                    b.LastInstr = b.Instructions.Last();
+                    switch (b.LastInstr.Kind)
                     {
                         case GMCode.Bytecode.Instruction.Opcode.B:
                             {
-                                var other = res[(addr - 4) + (lastInstr.JumpOffset * 4)];
+                                var other = res.AddressToBlock[(addr - 4) + (b.LastInstr.JumpOffset * 4)];
                                 b.Branches.Add(other);
                                 other.Predecessors.Add(b);
                                 break;
@@ -87,28 +111,59 @@ namespace DogScepterLib.Project.Bytecode
                         case GMCode.Bytecode.Instruction.Opcode.Bt:
                         case GMCode.Bytecode.Instruction.Opcode.PushEnv:
                             {
-                                var other = res[(addr - 4) + (lastInstr.JumpOffset * 4)];
+                                var other = res.AddressToBlock[(addr - 4) + (b.LastInstr.JumpOffset * 4)];
                                 b.Branches.Add(other);
                                 other.Predecessors.Add(b);
 
-                                other = res[addr];
+                                other = res.AddressToBlock[addr];
                                 b.Branches.Add(other);
                                 other.Predecessors.Add(b);
                                 break;
                             }
                         default:
                             {
-                                var other = res[addr];
+                                var other = res.AddressToBlock[addr];
                                 b.Branches.Add(other);
                                 other.Predecessors.Add(b);
                                 break;
                             }
-                        // maybe not handle popenv? "with" is *kind of* a loop, but not really
                     }
                 }
             }
 
             return res;
+        }
+    }
+
+    public class Loop : Node
+    {
+        public enum LoopType
+        {
+            Error,
+
+            While,
+            DoUntil,
+            Repeat,
+            For
+        }
+
+        public Node.NodeType Kind { get; set; } = Node.NodeType.Loop;
+        public LoopType LoopKind { get; set; }
+        public List<Node> Predecessors { get; set; } = new List<Node>();
+        public List<Node> Branches { get; set; } = new List<Node>();
+
+        public int Address { get; set; }
+        public int EndAddress { get; set; }
+        public Block Header { get; set; }
+        public Block Tail { get; set; }
+
+        public Loop(LoopType type, Block header, Block tail)
+        {
+            LoopKind = type;
+            Address = header.Address;
+            EndAddress = tail.EndAddress;
+            Header = header;
+            Tail = tail;
         }
     }
 }

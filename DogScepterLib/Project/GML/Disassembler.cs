@@ -7,7 +7,7 @@ using DogScepterLib.Core.Models;
 using System.Globalization;
 using DogScepterLib.Core.Chunks;
 
-namespace DogScepterLib.Project.Bytecode
+namespace DogScepterLib.Project.GML
 {
     public static class Disassembler
     {
@@ -41,7 +41,9 @@ namespace DogScepterLib.Project.Bytecode
             { -4, "pushac" },
             { -5, "setowner" },
             { -6, "isstaticok" },
-            { -7, "setstatic" }
+            { -7, "setstatic" },
+            { -8, "savearef" },
+            { -9, "restorearef" },
         };
 
         public static string Disassemble(GMCode codeEntry, GMData data)
@@ -146,15 +148,20 @@ namespace DogScepterLib.Project.Bytecode
             return sb.ToString();
         }
 
-        public static List<int> FindBlockAddresses(GMCode.Bytecode bytecode)
+        public static List<int> FindBlockAddresses(GMCode.Bytecode bytecode, int startAddr = 0, int endAddr = int.MaxValue)
         {
             HashSet<int> addresses = new HashSet<int>();
 
             if (bytecode.Instructions.Count != 0)
-                addresses.Add(0);
+                addresses.Add(startAddr);
 
             foreach (var i in bytecode.Instructions)
             {
+                if (i.Address < startAddr)
+                    continue;
+                if (i.Address >= endAddr)
+                    break;
+
                 switch (i.Kind)
                 {
                     case GMCode.Bytecode.Instruction.Opcode.B:
