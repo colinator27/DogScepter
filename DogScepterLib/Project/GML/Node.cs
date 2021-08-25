@@ -57,6 +57,17 @@ namespace DogScepterLib.Project.GML
         public int EndAddress { get; set; }
         public GMCode.Bytecode.Instruction LastInstr { get; set; } = null;
         public List<GMCode.Bytecode.Instruction> Instructions = new List<GMCode.Bytecode.Instruction>();
+        public ControlFlowType ControlFlow { get; set; } = ControlFlowType.None;
+
+        public enum ControlFlowType
+        {
+            None,
+
+            Break,
+            Continue,
+
+            RepeatExpression, // Block that precedes a repeat loop (and thus pushes the expression for it)
+        }
 
         public Block(int startAddress, int endAddress)
         {
@@ -144,7 +155,8 @@ namespace DogScepterLib.Project.GML
             While,
             DoUntil,
             Repeat,
-            For
+            With, // TODO: implement this type; it has continue/break functionality that needs to be taken care of
+            For,
         }
 
         public Node.NodeType Kind { get; set; } = Node.NodeType.Loop;

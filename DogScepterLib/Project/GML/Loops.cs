@@ -99,13 +99,21 @@ namespace DogScepterLib.Project.GML
                 foreach (var pred in loop.Header.Predecessors)
                     if ((pred.Address < loop.Address && pred.EndAddress <= loop.Address) || pred.Address >= loop.EndAddress)
                         loop.Predecessors.Add(pred);
-                foreach (var branch in loop.Header.Branches)
+                if (loop.LoopKind != Loop.LoopType.Repeat) // Hacky(?) fix to prevent too many loop branches
+                {
+                    foreach (var branch in loop.Header.Branches)
+                        if ((branch.Address < loop.Address && branch.EndAddress <= loop.Address) || branch.Address >= loop.EndAddress)
+                            loop.Branches.Add(branch);
+                }
+                foreach (var branch in loop.Tail.Branches)
                     if ((branch.Address < loop.Address && branch.EndAddress <= loop.Address) || branch.Address >= loop.EndAddress)
                         loop.Branches.Add(branch);
 
                 // Change any nodes jumped outbound to be marked as jumped from this loop
                 Stack<Node> work = new Stack<Node>();
                 List<Node> visited = new List<Node>();
+                // TODO: could maybe add all blocks from the block indices to the work stack,
+                //       so that unused blocks get continue/break resolved? would need to test
                 work.Push(loop.Header);
                 visited.Add(loop.Header);
                 while (work.Count != 0)
@@ -116,20 +124,64 @@ namespace DogScepterLib.Project.GML
                         var branch = curr.Branches[i];
                         if ((branch.Address < loop.Address && branch.EndAddress <= loop.Address) || branch.Address >= loop.EndAddress)
                         {
-                            if (!loop.Branches.Contains(branch))
-                                loop.Branches.Add(branch);
-
-                            var preds = branch.Predecessors;
-                            for (int j = 0; j < preds.Count; j++)
+                            // This block branches outside of the loop.
+                            if (curr.Kind == Node.NodeType.Block && (curr as Block).LastInstr?.Kind == Instruction.Opcode.B && branch.Address >= loop.EndAddress)
                             {
-                                if (preds[j] == curr)
+                                // This is actually a break statement
+                                branch.Predecessors.Remove(curr);
+                                curr.Branches.Clear();
+
+                                // Remove `b` instruction, mark the block as a "break" block
+                                Block currBlock = (curr as Block);
+                                currBlock.Instructions.RemoveAt(currBlock.Instructions.Count - 1);
+                                currBlock.ControlFlow = Block.ControlFlowType.Break;
+                            }
+                            else
+                            {
+                                // Make the branch come from the loop instead
+                                if (!loop.Branches.Contains(branch))
+                                    loop.Branches.Add(branch);
+
+                                var preds = branch.Predecessors;
+                                for (int j = 0; j < preds.Count; j++)
                                 {
-                                    preds[j] = loop;
-                                    break;
+                                    if (preds[j] == curr)
+                                    {
+                                        preds[j] = loop;
+                                        break;
+                                    }
                                 }
                             }
                         }
-                        else if (!visited.Contains(branch))
+                        else if (branch == loop || branch == loop.Tail)
+                        {
+                            if (curr != loop.Tail && 
+                                curr.Kind == Node.NodeType.Block && (curr as Block).LastInstr?.Kind == Instruction.Opcode.B)
+                            {
+                                if (branch == loop.Tail && branch is Block b &&
+                                    b.Instructions.FirstOrDefault()?.Kind == Instruction.Opcode.Popz)
+                                {
+                                    // This is actually a break statement inside of a switch, inside of a loop
+                                    // Don't do anything to this here, because it should be processed later? (TODO?)
+                                }
+                                else
+                                {
+                                    // TODO: This might be faulty but will need more testing to verify
+                                    // This is a continue statement
+                                    branch.Predecessors.Remove(curr);
+                                    curr.Branches.Clear();
+
+                                    // Remove `b` instruction, mark the block as a "continue" block
+                                    Block currBlock = (curr as Block);
+                                    currBlock.Instructions.RemoveAt(currBlock.Instructions.Count - 1);
+                                    currBlock.ControlFlow = Block.ControlFlowType.Continue;
+                                }
+                            }
+
+                            // (otherwise just ignore the jump)
+                        }
+                        
+                        if (branch.Address >= loop.Address && branch.EndAddress <= loop.EndAddress && !visited.Contains(branch))
                         {
                             work.Push(branch);
                             visited.Add(branch);
@@ -156,6 +208,7 @@ namespace DogScepterLib.Project.GML
                         Block prev = loop.Predecessors[0] as Block;
                         prev.Branches.RemoveAt(0);
                         prev.Instructions.RemoveRange(prev.Instructions.Count - 4, 4);
+                        prev.ControlFlow = Block.ControlFlowType.RepeatExpression; // Mark this for later reference
 
                         // Remove decrement and branch
                         loop.Tail.Instructions.RemoveRange(loop.Tail.Instructions.Count - 5, 5);
