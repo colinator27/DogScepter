@@ -67,6 +67,7 @@ namespace DogScepterLib.Project.GML
             Continue,
 
             RepeatExpression, // Block that precedes a repeat loop (and thus pushes the expression for it)
+            WithExpression, // Block that precedes a with loop (ditto)
         }
 
         public Block(int startAddress, int endAddress)
@@ -155,7 +156,7 @@ namespace DogScepterLib.Project.GML
             While,
             DoUntil,
             Repeat,
-            With, // TODO: implement this type; it has continue/break functionality that needs to be taken care of
+            With,
             For,
         }
 

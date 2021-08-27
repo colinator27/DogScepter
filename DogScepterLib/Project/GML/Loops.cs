@@ -54,6 +54,18 @@ namespace DogScepterLib.Project.GML
                         }
                         break;
                 }
+
+                if (b.Instructions.Count >= 1)
+                {
+                    var firstInstr = b.Instructions[0];
+                    if (firstInstr.Kind == Instruction.Opcode.PopEnv && !firstInstr.PopenvExitMagic)
+                    {
+                        // This is part of a with loop
+                        var newLoop = new Loop(Loop.LoopType.With, blocks.AddressToBlock[firstInstr.Address + (firstInstr.JumpOffset * 4)], b);
+                        loops[b.EndAddress] = newLoop;
+                        loopEnds.Add(b.EndAddress);
+                    }
+                }
             }
 
             // Now add the processed while/for loops to the result
@@ -94,7 +106,7 @@ namespace DogScepterLib.Project.GML
                         }
                     }
                 }
-                
+
                 // Initialize predecessors/branches if they're outside of the loop bounds
                 foreach (var pred in loop.Header.Predecessors)
                     if ((pred.Address < loop.Address && pred.EndAddress <= loop.Address) || pred.Address >= loop.EndAddress)
@@ -128,8 +140,6 @@ namespace DogScepterLib.Project.GML
                             if (curr.Kind == Node.NodeType.Block && (curr as Block).LastInstr?.Kind == Instruction.Opcode.B && branch.Address >= loop.EndAddress)
                             {
                                 // This is actually a break statement
-                                branch.Predecessors.Remove(curr);
-                                curr.Branches.Clear();
 
                                 // Remove `b` instruction, mark the block as a "break" block
                                 Block currBlock = (curr as Block);
@@ -168,8 +178,6 @@ namespace DogScepterLib.Project.GML
                                 {
                                     // TODO: This might be faulty but will need more testing to verify
                                     // This is a continue statement
-                                    branch.Predecessors.Remove(curr);
-                                    curr.Branches.Clear();
 
                                     // Remove `b` instruction, mark the block as a "continue" block
                                     Block currBlock = (curr as Block);
@@ -190,7 +198,6 @@ namespace DogScepterLib.Project.GML
                 }
 
                 // Remove unnecessary instructions and references from the loop
-                loop.Tail.Branches.Clear();
                 switch (loop.LoopKind)
                 {
                     case Loop.LoopType.While:
@@ -204,11 +211,13 @@ namespace DogScepterLib.Project.GML
                         loop.Header.Branches.RemoveAt(0);
                         break;
                     case Loop.LoopType.Repeat:
-                        // Remove initial condition in block before loop, and its branch
-                        Block prev = loop.Predecessors[0] as Block;
-                        prev.Branches.RemoveAt(0);
-                        prev.Instructions.RemoveRange(prev.Instructions.Count - 4, 4);
-                        prev.ControlFlow = Block.ControlFlowType.RepeatExpression; // Mark this for later reference
+                        {
+                            // Remove initial condition in block before loop, and its branch
+                            Block prev = loop.Predecessors[0] as Block;
+                            prev.Branches.RemoveAt(0);
+                            prev.Instructions.RemoveRange(prev.Instructions.Count - 4, 4);
+                            prev.ControlFlow = Block.ControlFlowType.RepeatExpression; // Mark this for later reference
+                        }
 
                         // Remove decrement and branch
                         loop.Tail.Instructions.RemoveRange(loop.Tail.Instructions.Count - 5, 5);
@@ -220,8 +229,20 @@ namespace DogScepterLib.Project.GML
                         // Remove `bf`
                         loop.Tail.Instructions.RemoveAt(loop.Tail.Instructions.Count - 1);
                         break;
+                    case Loop.LoopType.With:
+                        {
+                            // Mark block before loop as a with expression (pushenv and popenv don't need to be removed; they're unique)
+                            Block prev = loop.Predecessors[0] as Block;
+                            prev.Branches.RemoveAt(0);
+                            prev.ControlFlow = Block.ControlFlowType.WithExpression; // Mark this for later reference
+                        }
+                        break;
                 }
             }
+
+            // Clear some additional unnecessary data
+            foreach (var loop in ctx.Loops)
+                loop.Tail.Branches.Clear();
         }
     }
 }
