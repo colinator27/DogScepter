@@ -14,7 +14,8 @@ namespace DogScepterLib.Project.GML
             Error,
 
             Block,
-            Loop
+            Loop,
+            ShortCircuit,
         }
 
         public NodeType Kind { get; set; }
@@ -67,7 +68,9 @@ namespace DogScepterLib.Project.GML
             Continue,
 
             RepeatExpression, // Block that precedes a repeat loop (and thus pushes the expression for it)
-            WithExpression, // Block that precedes a with loop (ditto)
+            WithExpression, // Block that precedes a with loop (ditto),
+
+            WhileCondition, // Block that ends a while loop condition
         }
 
         public Block(int startAddress, int endAddress)
@@ -176,6 +179,34 @@ namespace DogScepterLib.Project.GML
             Address = header.Address;
             EndAddress = tail.EndAddress;
             Header = header;
+            Tail = tail;
+        }
+    }
+
+    public class ShortCircuit : Node
+    {
+        public enum ShortCircuitType : short
+        {
+            And = 0,
+            Or = 1
+        }
+
+        public Node.NodeType Kind { get; set; } = Node.NodeType.ShortCircuit;
+        public ShortCircuitType ShortCircuitKind { get; set; }
+
+        public List<Node> Predecessors { get; set; }
+        public List<Node> Branches { get; set; } = new List<Node>();
+        public int Address { get; set; }
+        public int EndAddress { get; set; }
+
+        public List<Node> Conditions { get; set; } = new List<Node>();
+        public Block Tail;
+
+        public ShortCircuit(ShortCircuitType type, Block header, Block tail)
+        {
+            ShortCircuitKind = type;
+            Address = header.Address;
+            EndAddress = tail.EndAddress;
             Tail = tail;
         }
     }

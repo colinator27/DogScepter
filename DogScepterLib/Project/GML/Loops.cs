@@ -10,7 +10,8 @@ namespace DogScepterLib.Project.GML
 {
     public static class Loops
     {
-        public static List<Loop> FindLoops(BlockList blocks)
+        /// Finds all loops within the given list of nodes
+        public static List<Loop> Find(BlockList blocks)
         {
             Dictionary<int, Block> whileLoops = new Dictionary<int, Block>();
             Dictionary<int, Loop> loops = new Dictionary<int, Loop>();
@@ -90,8 +91,11 @@ namespace DogScepterLib.Project.GML
             return res;
         }
 
-        public static void InsertLoopNodes(DecompileContext ctx)
+        /// Inserts loop nodes into the graph, and resolves break/continue
+        public static void InsertNodes(DecompileContext ctx)
         {
+            List<Node> allOutwardJumps = new List<Node>();
+
             foreach (var loop in ctx.Loops)
             {
                 // Change header predecessors to point to the loop instead
@@ -136,10 +140,11 @@ namespace DogScepterLib.Project.GML
                         var branch = curr.Branches[i];
                         if ((branch.Address < loop.Address && branch.EndAddress <= loop.Address) || branch.Address >= loop.EndAddress)
                         {
-                            // This block branches outside of the loop.
+                            // This node branches outside of the loop.
                             if (curr.Kind == Node.NodeType.Block && (curr as Block).LastInstr?.Kind == Instruction.Opcode.B && branch.Address >= loop.EndAddress)
                             {
                                 // This is actually a break statement
+                                allOutwardJumps.Add(curr);
 
                                 // Remove `b` instruction, mark the block as a "break" block
                                 Block currBlock = (curr as Block);
@@ -176,7 +181,6 @@ namespace DogScepterLib.Project.GML
                                 }
                                 else
                                 {
-                                    // TODO: This might be faulty but will need more testing to verify
                                     // This is a continue statement
 
                                     // Remove `b` instruction, mark the block as a "continue" block
@@ -197,18 +201,43 @@ namespace DogScepterLib.Project.GML
                     }
                 }
 
-                // Remove unnecessary instructions and references from the loop
+                // Set it up so that the last branch signifies REAL header/body (not just the block)
+                loop.Header.Predecessors.Clear();
+                loop.Branches.Add(loop.Header);
+                loop.Header.Predecessors.Add(loop);
+
+                // Remove unnecessary instructions and deal with references for the loop
                 switch (loop.LoopKind)
                 {
                     case Loop.LoopType.While:
-                        // Remove `bf`
-                        loop.Header.Instructions.RemoveAt(loop.Header.Instructions.Count - 1);
-
                         // Remove `b`
                         loop.Tail.Instructions.RemoveAt(loop.Tail.Instructions.Count - 1);
 
-                        // Remove false branch from loop
-                        loop.Header.Branches.RemoveAt(0);
+                        // Find the end of the condition:
+                        //  - Branches out from loop.Header (or is loop.Header)
+                        //  - Ends in a `bf` instruction
+                        //  - First branch goes out of loop
+                        Block conditionBlock = null;
+                        work.Push(loop.Header);
+                        while (work.Count != 0)
+                        {
+                            Node curr = work.Pop();
+                            if (curr.Kind == Node.NodeType.Block && (curr as Block).LastInstr?.Kind == Instruction.Opcode.Bf)
+                            {
+                                if (curr.Branches[0].Address >= loop.EndAddress)
+                                {
+                                    // We found the condition!
+                                    conditionBlock = curr as Block;
+                                    break;
+                                }
+                            }
+
+                            foreach (var branch in curr.Branches)
+                                work.Push(branch);
+                        }
+                        conditionBlock.Branches.RemoveAt(0);
+                        conditionBlock.Instructions.RemoveAt(conditionBlock.Instructions.Count - 1); // Remove `bf`
+                        conditionBlock.ControlFlow = Block.ControlFlowType.WhileCondition;
                         break;
                     case Loop.LoopType.Repeat:
                         {
@@ -240,9 +269,11 @@ namespace DogScepterLib.Project.GML
                 }
             }
 
-            // Clear some additional unnecessary data
+            // Clear some additional unnecessary branches
             foreach (var loop in ctx.Loops)
                 loop.Tail.Branches.Clear();
+            foreach (var node in allOutwardJumps)
+                node.Branches.Clear();
         }
     }
 }

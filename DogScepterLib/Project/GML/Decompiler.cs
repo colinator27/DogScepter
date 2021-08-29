@@ -10,6 +10,7 @@ namespace DogScepterLib.Project.GML
     {
         public BlockList Blocks { get; set; }
         public List<Loop> Loops { get; set; }
+        public List<ShortCircuit> ShortCircuits { get; set; }
         public Node BaseNode { get; set; }
 
         public DecompileContext()

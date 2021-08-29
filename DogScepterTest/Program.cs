@@ -34,9 +34,11 @@ namespace DogScepterTest
                 ctx.BaseNode.Branches.Add(ctx.Blocks.List[0]);
                 ctx.Blocks.List[0].Predecessors.Add(ctx.BaseNode);
 
-                ctx.Loops = Loops.FindLoops(ctx.Blocks);
+                ctx.Loops = Loops.Find(ctx.Blocks);
+                ctx.ShortCircuits = ShortCircuits.Find(ctx.Blocks);
 
-                Loops.InsertLoopNodes(ctx);
+                Loops.InsertNodes(ctx);
+                ShortCircuits.InsertNodes(ctx);
 
                 /*ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"), 
                     (ProjectFile.WarningType type, string info) => 
