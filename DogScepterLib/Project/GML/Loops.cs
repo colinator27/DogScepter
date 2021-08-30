@@ -10,7 +10,7 @@ namespace DogScepterLib.Project.GML
 {
     public static class Loops
     {
-        /// Finds all loops within the given list of nodes
+        /// Finds all loops within the given list of blocks
         public static List<Loop> Find(BlockList blocks)
         {
             Dictionary<int, Block> whileLoops = new Dictionary<int, Block>();
@@ -271,7 +271,10 @@ namespace DogScepterLib.Project.GML
 
             // Clear some additional unnecessary branches
             foreach (var loop in ctx.Loops)
-                loop.Tail.Branches.Clear();
+            {
+                if (loop.LoopKind != Loop.LoopType.With) // A with statement tail is the block after
+                    loop.Tail.Branches.Clear();
+            }
             foreach (var node in allOutwardJumps)
                 node.Branches.Clear();
         }

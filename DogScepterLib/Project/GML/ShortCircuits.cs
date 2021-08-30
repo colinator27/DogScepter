@@ -8,7 +8,7 @@ using static DogScepterLib.Core.Models.GMCode.Bytecode;
 
 namespace DogScepterLib.Project.GML
 {
-    public class ShortCircuits
+    public static class ShortCircuits
     {
         /// Finds all the short-circuit operations within a list of nodes
         public static List<ShortCircuit> Find(BlockList blocks)

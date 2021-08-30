@@ -16,6 +16,7 @@ namespace DogScepterLib.Project.GML
             Block,
             Loop,
             ShortCircuit,
+            IfStatement,
         }
 
         public NodeType Kind { get; set; }
@@ -71,6 +72,8 @@ namespace DogScepterLib.Project.GML
             WithExpression, // Block that precedes a with loop (ditto),
 
             WhileCondition, // Block that ends a while loop condition
+
+            IfCondition, // Block that ends an if statement condition
         }
 
         public Block(int startAddress, int endAddress)
@@ -208,6 +211,29 @@ namespace DogScepterLib.Project.GML
             Address = header.Address;
             EndAddress = tail.EndAddress;
             Tail = tail;
+        }
+    }
+
+    public class IfStatement : Node
+    {
+        public Node.NodeType Kind { get; set; } = Node.NodeType.IfStatement;
+
+        public List<Node> Predecessors { get; set; } = new List<Node>();
+        public List<Node> Branches { get; set; } = new List<Node>();
+        public int Address { get; set; }
+        public int EndAddress { get; set; }
+
+        public Block Header;
+        public Node After;
+        public Node EndTruthy;
+
+        public IfStatement(Block header, Node after, Node endTruthy)
+        {
+            Address = header.Address;
+            EndAddress = after.Address;
+            Header = header;
+            After = after;
+            EndTruthy = endTruthy;
         }
     }
 }

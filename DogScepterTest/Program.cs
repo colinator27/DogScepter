@@ -40,6 +40,9 @@ namespace DogScepterTest
                 Loops.InsertNodes(ctx);
                 ShortCircuits.InsertNodes(ctx);
 
+                ctx.IfStatements = IfStatements.Find(ctx.Blocks);
+                IfStatements.InsertNodes(ctx);
+
                 /*ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"), 
                     (ProjectFile.WarningType type, string info) => 
                     {
