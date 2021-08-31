@@ -43,6 +43,9 @@ namespace DogScepterTest
                 ctx.IfStatements = IfStatements.Find(ctx.Blocks);
                 IfStatements.InsertNodes(ctx);
 
+                ctx.SwitchStatements = SwitchStatements.Find(ctx.Blocks);
+                SwitchStatements.InsertNodes(ctx);
+
                 /*ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"), 
                     (ProjectFile.WarningType type, string info) => 
                     {

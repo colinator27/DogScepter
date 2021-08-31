@@ -17,6 +17,7 @@ namespace DogScepterLib.Project.GML
             Loop,
             ShortCircuit,
             IfStatement,
+            SwitchStatement,
         }
 
         public NodeType Kind { get; set; }
@@ -68,12 +69,16 @@ namespace DogScepterLib.Project.GML
             Break,
             Continue,
 
-            RepeatExpression, // Block that precedes a repeat loop (and thus pushes the expression for it)
+            RepeatExpression, // Block that precedes a repeat loop (and thus ends pushing the expression for it)
             WithExpression, // Block that precedes a with loop (ditto),
+            SwitchExpression, // Block that precedes a switch statement (ditto)
 
             WhileCondition, // Block that ends a while loop condition
 
             IfCondition, // Block that ends an if statement condition
+
+            SwitchCase, // Block that represents a switch case entry
+            SwitchDefault, // Block that represents a switch default entry
         }
 
         public Block(int startAddress, int endAddress)
@@ -234,6 +239,36 @@ namespace DogScepterLib.Project.GML
             Header = header;
             After = after;
             EndTruthy = endTruthy;
+        }
+    }
+
+    public class SwitchStatement : Node
+    {
+        public Node.NodeType Kind { get; set; } = Node.NodeType.SwitchStatement;
+
+        public List<Node> Predecessors { get; set; } = new List<Node>();
+        public List<Node> Branches { get; set; } = new List<Node>();
+        public int Address { get; set; }
+        public int EndAddress { get; set; }
+        public Block Header;
+        public Block Tail;
+        public bool Empty;
+        public Block DefaultCaseBranch;
+        public Block EndCasesBranch;
+        public Block ContinueBlock;
+        public List<Block> CaseBranches;
+
+        public SwitchStatement(Block header, Block tail, bool empty, List<Block> caseBranches, Block defaultCaseBranch, Block endCasesBranch, Block continueBlock)
+        {
+            Header = header;
+            Address = header.Address;
+            Tail = tail;
+            EndAddress = tail.Address;
+            Empty = empty;
+            CaseBranches = caseBranches;
+            DefaultCaseBranch = defaultCaseBranch;
+            EndCasesBranch = endCasesBranch;
+            ContinueBlock = continueBlock;
         }
     }
 }

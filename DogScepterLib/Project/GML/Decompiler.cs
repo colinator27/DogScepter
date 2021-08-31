@@ -12,6 +12,7 @@ namespace DogScepterLib.Project.GML
         public List<Loop> Loops { get; set; }
         public List<ShortCircuit> ShortCircuits { get; set; }
         public List<IfStatement> IfStatements { get; set; }
+        public List<SwitchStatement> SwitchStatements { get; set; }
         public Node BaseNode { get; set; }
 
         public DecompileContext()
