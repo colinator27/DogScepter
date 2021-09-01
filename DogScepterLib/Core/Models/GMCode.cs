@@ -28,7 +28,8 @@ namespace DogScepterLib.Core.Models
             if (writer.VersionInfo.FormatID <= 14)
             {
                 BytecodeEntry.Serialize(writer);
-            } else
+            }
+            else
             {
                 writer.Write(LocalsCount);
                 writer.Write((short)((int)ArgumentsCount | ((int)Flags << 13)));
@@ -46,7 +47,8 @@ namespace DogScepterLib.Core.Models
             {
                 BytecodeEntry = new Bytecode();
                 BytecodeEntry.Unserialize(reader, Length);
-            } else
+            }
+            else
             {
                 LocalsCount = reader.ReadInt16();
                 int v = reader.ReadInt16();
@@ -125,16 +127,16 @@ namespace DogScepterLib.Core.Models
             /// </summary>
             public class Instruction : GMSerializable
             {
+                public enum VariableType : byte
+                {
+                    Array,
+                    StackTop = 0x80,
+                    Normal = 0xA0,
+                    Unknown = 0xE0,  // room scope?
+                }
+
                 public class Reference<T> : GMSerializable
                 {
-                    public enum VariableType : byte
-                    {
-                        Array,
-                        StackTop = 0x80,
-                        Normal = 0xA0,
-                        Unknown = 0xE0,  // room scope?
-                    }
-
                     public int NextOccurrence;
                     public VariableType Type;
                     public T Target;
@@ -369,7 +371,7 @@ namespace DogScepterLib.Core.Models
                 public object Value { get; set; }
                 public int JumpOffset;
                 public bool PopenvExitMagic;
-                public short ArgumentsCount;
+                public short ArgumentCount;
                 public byte Extra;
                 public short SwapExtra;
 
@@ -513,7 +515,7 @@ namespace DogScepterLib.Core.Models
                             break;
                         case InstructionType.Call:
                             {
-                                writer.Write(ArgumentsCount);
+                                writer.Write(ArgumentCount);
                                 writer.Write((byte)Type1);
                                 if (writer.VersionInfo.FormatID <= 14)
                                     writer.Write(NewOpcodeToOld((byte)Kind, 0));
@@ -645,7 +647,8 @@ namespace DogScepterLib.Core.Models
                                                 Kind = Opcode.PushLoc;
                                                 break;
                                         }
-                                    } else if (Type1 == DataType.Int16)
+                                    }
+                                    else if (Type1 == DataType.Int16)
                                         Kind = Opcode.PushI;
                                 }
 
@@ -684,7 +687,7 @@ namespace DogScepterLib.Core.Models
                             break;
                         case InstructionType.Call:
                             {
-                                ArgumentsCount = reader.ReadInt16();
+                                ArgumentCount = reader.ReadInt16();
                                 Type1 = (DataType)reader.ReadByte();
 
                                 reader.Offset += 1;

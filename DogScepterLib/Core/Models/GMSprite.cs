@@ -130,7 +130,8 @@ namespace DogScepterLib.Core.Models
                     writer.WriteObjectPointer(GMS2_3_2_NineSlice);
                     GMS2_3_2_NineSlice.Serialize(writer);
                 }
-            } else
+            }
+            else
             {
                 // Normal sprite type
                 TextureItems.Serialize(writer);
@@ -232,7 +233,8 @@ namespace DogScepterLib.Core.Models
                         }
                         break;
                 }
-            } else
+            }
+            else
             {
                 // Normal, GM:S 1.4 sprite
                 reader.Offset -= 4;

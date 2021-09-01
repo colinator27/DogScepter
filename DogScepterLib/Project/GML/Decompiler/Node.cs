@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DogScepterLib.Project.GML
+namespace DogScepterLib.Project.GML.Decompiler
 {
     public interface Node
     {

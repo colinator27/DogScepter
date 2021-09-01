@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 using static DogScepterLib.Core.Models.GMCode.Bytecode;
 
-namespace DogScepterLib.Project.GML
+namespace DogScepterLib.Project.GML.Decompiler
 {
     public static class ShortCircuits
     {
@@ -104,6 +104,10 @@ namespace DogScepterLib.Project.GML
                     node.Predecessors.Clear();
                     node.Predecessors.Add(s);
                 }
+
+                // Remove all the branches from conditions
+                foreach (var cond in s.Conditions)
+                    cond.Branches.Clear();
 
                 // Transfer predecessors and branches
                 s.Predecessors = header.Predecessors;

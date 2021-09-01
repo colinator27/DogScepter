@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 using static DogScepterLib.Core.Models.GMCode.Bytecode;
 
-namespace DogScepterLib.Project.GML
+namespace DogScepterLib.Project.GML.Decompiler
 {
     public static class IfStatements
     {
@@ -150,7 +150,8 @@ namespace DogScepterLib.Project.GML
                         }
                     }
                 }
-                s.After.Predecessors.RemoveRange(s.After.Predecessors.Count - 2, 2);
+                // Might reimplement this, but this seems to break things
+                //s.After.Predecessors.RemoveRange(s.After.Predecessors.Count - 2, 2);
                 s.After.Predecessors.Insert(0, s);
             }
         }

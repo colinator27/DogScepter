@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 using static DogScepterLib.Core.Models.GMCode.Bytecode;
 
-namespace DogScepterLib.Project.GML
+namespace DogScepterLib.Project.GML.Decompiler
 {
     public static class SwitchStatements
     {

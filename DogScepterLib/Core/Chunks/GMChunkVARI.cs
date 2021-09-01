@@ -31,7 +31,8 @@ namespace DogScepterLib.Core.Chunks
                         else if (v.VariableID >= 0 && v.VariableType == GMCode.Bytecode.Instruction.InstanceType.Self)
                             VarCount2++;
                     }
-                } else
+                }
+                else
                 {
                     VarCount1 = -1;
                     foreach (GMVariable v in List)

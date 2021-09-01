@@ -210,7 +210,8 @@ namespace DogScepterLib.Core
                 if (elemReader == null)
                 {
                     elem = reader.ReadPointerObject<T>(reader.ReadInt32(), true);
-                } else
+                }
+                else
                 {
                     elem = (T)elemReader(reader, true);
                 }

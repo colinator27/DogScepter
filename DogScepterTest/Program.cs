@@ -8,7 +8,7 @@ using DogScepterLib.Core;
 using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
 using DogScepterLib.Project;
-using DogScepterLib.Project.GML;
+using DogScepterLib.Project.GML.Decompiler;
 using DogScepterLib.Project.Converters;
 
 namespace DogScepterTest
@@ -27,6 +27,7 @@ namespace DogScepterTest
                     Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
 
                 DecompileContext ctx = new DecompileContext();
+                ctx.Data = reader.Data;
                 ctx.Blocks = Block.GetBlocks(reader.Data.GetChunk<GMChunkCODE>().List[0]);
 
                 // Add node to beginning
@@ -45,6 +46,8 @@ namespace DogScepterTest
 
                 ctx.SwitchStatements = SwitchStatements.Find(ctx.Blocks);
                 SwitchStatements.InsertNodes(ctx);
+
+                ASTBlock block = ASTBuilder.FromContext(ctx);
 
                 /*ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"), 
                     (ProjectFile.WarningType type, string info) => 

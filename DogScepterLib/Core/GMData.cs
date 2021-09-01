@@ -44,20 +44,23 @@ namespace DogScepterLib.Core
                     Minor = minor;
                     Release = release;
                     Build = build;
-                } else if (Major == major)
+                }
+                else if (Major == major)
                 {
                     if (Minor < minor)
                     {
                         Minor = minor;
                         Release = release;
                         Build = build;
-                    } else if (Minor == minor)
+                    }
+                    else if (Minor == minor)
                     {
                         if (Release < release)
                         {
                             Release = release;
                             Build = build;
-                        } else if (Release == release)
+                        }
+                        else if (Release == release)
                         {
                             if (Build < build)
                                 Build = build;

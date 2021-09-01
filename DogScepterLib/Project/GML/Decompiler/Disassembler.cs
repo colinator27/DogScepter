@@ -7,7 +7,7 @@ using DogScepterLib.Core.Models;
 using System.Globalization;
 using DogScepterLib.Core.Chunks;
 
-namespace DogScepterLib.Project.GML
+namespace DogScepterLib.Project.GML.Decompiler
 {
     public static class Disassembler
     {
@@ -132,7 +132,7 @@ namespace DogScepterLib.Project.GML
                         break;
 
                     case GMCode.Bytecode.Instruction.InstructionType.Call:
-                        sb.Append($".{DataTypeToChar[i.Type1]} {i.Function.Target.Name.Content} {i.ArgumentsCount}");
+                        sb.Append($".{DataTypeToChar[i.Type1]} {i.Function.Target.Name.Content} {i.ArgumentCount}");
                         break;
 
                     case GMCode.Bytecode.Instruction.InstructionType.Break:
@@ -231,7 +231,7 @@ namespace DogScepterLib.Project.GML
 
         private static string StringifyVariableRef(GMCode.Bytecode.Instruction.Reference<GMVariable> var)
         {
-            if (var.Type != GMCode.Bytecode.Instruction.Reference<GMVariable>.VariableType.Normal)
+            if (var.Type != GMCode.Bytecode.Instruction.VariableType.Normal)
                 return $"({var.Type.ToString().ToLower()}){var.Target.Name.Content}";
             else
                 return var.Target.Name.Content;

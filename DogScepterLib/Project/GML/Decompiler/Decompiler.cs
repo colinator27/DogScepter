@@ -1,13 +1,15 @@
-﻿using System;
+﻿using DogScepterLib.Core;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DogScepterLib.Project.GML
+namespace DogScepterLib.Project.GML.Decompiler
 {
     public class DecompileContext
     {
+        public GMData Data { get; set; }
         public BlockList Blocks { get; set; }
         public List<Loop> Loops { get; set; }
         public List<ShortCircuit> ShortCircuits { get; set; }
