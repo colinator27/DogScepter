@@ -73,7 +73,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             WithExpression, // Block that precedes a with loop (ditto),
             SwitchExpression, // Block that precedes a switch statement (ditto)
 
-            WhileCondition, // Block that ends a while loop condition
+            LoopCondition, // Block that ends certain loop conditions
 
             IfCondition, // Block that ends an if statement condition
 

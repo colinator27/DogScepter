@@ -26,9 +26,14 @@ namespace DogScepterTest
                 foreach (GMWarning w in reader.Warnings)
                     Console.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
 
-                DecompileContext ctx = new DecompileContext();
-                ctx.Data = reader.Data;
-                ctx.Blocks = Block.GetBlocks(reader.Data.GetChunk<GMChunkCODE>().List[0]);
+                ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"), 
+                    (ProjectFile.WarningType type, string info) => 
+                    {
+                        Console.WriteLine($"Project warn: {type} {info ?? ""}");
+                    });
+
+                DecompileContext ctx = new DecompileContext(pf);
+                ctx.Blocks = Block.GetBlocks(reader.Data.GetChunk<GMChunkCODE>().List[1]);
 
                 // Add node to beginning
                 ctx.BaseNode = new Block(-1, -1);
@@ -47,13 +52,8 @@ namespace DogScepterTest
                 ctx.SwitchStatements = SwitchStatements.Find(ctx.Blocks);
                 SwitchStatements.InsertNodes(ctx);
 
-                ASTBlock block = ASTBuilder.FromContext(ctx);
-
-                /*ProjectFile pf = new ProjectFile(reader.Data, Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "project"), 
-                    (ProjectFile.WarningType type, string info) => 
-                    {
-                        Console.WriteLine($"Project warn: {type} {info ?? ""}");
-                    });*/
+                ctx.BaseASTBlock = ASTBuilder.FromContext(ctx);
+                string result = ASTNode.WriteFromContext(ctx);
 
                 //foreach (var group in pf.Textures.TextureGroups)
                 //    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));

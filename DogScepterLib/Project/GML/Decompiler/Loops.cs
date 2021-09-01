@@ -121,9 +121,24 @@ namespace DogScepterLib.Project.GML.Decompiler
                         if ((branch.Address < loop.Address && branch.EndAddress <= loop.Address) || branch.Address >= loop.EndAddress)
                             loop.Branches.Add(branch);
                 }
-                foreach (var branch in loop.Tail.Branches)
-                    if ((branch.Address < loop.Address && branch.EndAddress <= loop.Address) || branch.Address >= loop.EndAddress)
-                        loop.Branches.Add(branch);
+                if (loop.LoopKind == Loop.LoopType.With)
+                {
+                    foreach (var pred in loop.Tail.Predecessors)
+                    {
+                        for (int i = pred.Branches.Count - 1; i >= 0; i--)
+                            if (pred.Branches[i] == loop.Tail)
+                                pred.Branches.RemoveAt(i);
+                    }
+                    loop.Tail.Predecessors.Clear();
+                    loop.Branches.Add(loop.Tail);
+                    loop.Tail.Predecessors.Add(loop);
+                }
+                else
+                {
+                    foreach (var branch in loop.Tail.Branches)
+                        if ((branch.Address < loop.Address && branch.EndAddress <= loop.Address) || branch.Address >= loop.EndAddress)
+                            loop.Branches.Add(branch);
+                }
 
                 // Change any nodes jumped outbound to be marked as jumped from this loop
                 Stack<Node> work = new Stack<Node>();
@@ -154,7 +169,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                             else
                             {
                                 // Make the branch come from the loop instead
-                                if (!loop.Branches.Contains(branch))
+                                if (loop.LoopKind != Loop.LoopType.With && !loop.Branches.Contains(branch))
                                     loop.Branches.Add(branch);
 
                                 var preds = branch.Predecessors;
@@ -237,7 +252,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         }
                         conditionBlock.Branches.RemoveAt(0);
                         conditionBlock.Instructions.RemoveAt(conditionBlock.Instructions.Count - 1); // Remove `bf`
-                        conditionBlock.ControlFlow = Block.ControlFlowType.WhileCondition;
+                        conditionBlock.ControlFlow = Block.ControlFlowType.LoopCondition;
                         break;
                     case Loop.LoopType.Repeat:
                         {
@@ -257,12 +272,12 @@ namespace DogScepterLib.Project.GML.Decompiler
                     case Loop.LoopType.DoUntil:
                         // Remove `bf`
                         loop.Tail.Instructions.RemoveAt(loop.Tail.Instructions.Count - 1);
+                        loop.Tail.ControlFlow = Block.ControlFlowType.LoopCondition;
                         break;
                     case Loop.LoopType.With:
                         {
                             // Mark block before loop as a with expression (pushenv and popenv don't need to be removed; they're unique)
                             Block prev = loop.Predecessors[0] as Block;
-                            prev.Branches.RemoveAt(0);
                             prev.ControlFlow = Block.ControlFlowType.WithExpression; // Mark this for later reference
                         }
                         break;
@@ -272,8 +287,8 @@ namespace DogScepterLib.Project.GML.Decompiler
             // Clear some additional unnecessary branches
             foreach (var loop in ctx.Loops)
             {
-                if (loop.LoopKind != Loop.LoopType.With) // A with statement tail is the block after
-                    loop.Tail.Branches.Clear();
+                if (loop.LoopKind != Loop.LoopType.With)
+                    loop.Tail.Branches.Clear(); // A with statement tail is the block after
             }
             foreach (var node in allOutwardJumps)
                 node.Branches.Clear();

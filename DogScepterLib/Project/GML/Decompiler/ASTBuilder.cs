@@ -44,6 +44,16 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 case Block.ControlFlowType.Continue:
                                     curr.Children.Add(new ASTContinue());
                                     break;
+                                case Block.ControlFlowType.LoopCondition:
+                                case Block.ControlFlowType.SwitchExpression:
+                                    curr.Children.Insert(0, stack.Pop());
+                                    break;
+                                case Block.ControlFlowType.SwitchCase:
+                                    curr.Children.Add(new ASTSwitchCase(stack.Pop()));
+                                    break;
+                                case Block.ControlFlowType.SwitchDefault:
+                                    curr.Children.Add(new ASTSwitchDefault());
+                                    break;
                             }
 
                             if (block.Branches.Count == 0)
@@ -87,8 +97,57 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                             var astStatement = new ASTShortCircuit(s.ShortCircuitKind, new List<ASTNode>(s.Conditions.Count));
                             foreach (var cond in s.Conditions)
-                                astStatement.Children.Add(BuildFromNode(ctx, astStatement, cond).Pop());
+                                astStatement.Children.Add(BuildFromNode(ctx, curr, cond).Pop());
                             stack.Push(astStatement);
+
+                            if (s.Branches.Count == 0)
+                                break;
+                            statementStack.Push(curr);
+                            nodeStack.Push(s.Branches[0]);
+                        }
+                        break;
+                    case Node.NodeType.Loop:
+                        {
+                            Loop s = node as Loop;
+
+                            ASTNode astStatement = null;
+                            switch (s.LoopKind)
+                            {
+                                case Loop.LoopType.While:
+                                    astStatement = new ASTWhileLoop();
+                                    break;
+                                case Loop.LoopType.DoUntil:
+                                    astStatement = new ASTDoUntilLoop();
+                                    break;
+                                case Loop.LoopType.Repeat:
+                                    astStatement = new ASTRepeatLoop(stack.Pop());
+                                    break;
+                                case Loop.LoopType.With:
+                                    astStatement = new ASTWithLoop(stack.Pop());
+                                    break;
+                            }
+
+                            curr.Children.Add(astStatement);
+                            statementStack.Push(astStatement);
+                            nodeStack.Push(s.Branches[1]);
+
+                            if (s.Branches.Count == 0)
+                                break;
+                            statementStack.Push(curr);
+                            nodeStack.Push(s.Branches[0]);
+                        }
+                        break;
+                    case Node.NodeType.SwitchStatement:
+                        {
+                            SwitchStatement s = node as SwitchStatement;
+
+                            var astStatement = new ASTSwitchStatement();
+                            curr.Children.Add(astStatement);
+                            for (int i = s.Branches.Count - 1; i >= 1; i--)
+                            {
+                                statementStack.Push(astStatement);
+                                nodeStack.Push(s.Branches[i]);
+                            }
 
                             if (s.Branches.Count == 0)
                                 break;
@@ -130,7 +189,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                                         variable.Left = stack.Pop();
                                     else if (inst.Variable.Type == Instruction.VariableType.StackTop)
                                         variable.Left = stack.Pop();
-                                    // TODO: everything else here
+                                    else if (inst.Variable.Type == Instruction.VariableType.Array)
+                                    {
+                                        variable.Children = ProcessArrayIndex(ctx, stack.Pop());
+                                        variable.Left = stack.Pop();
+                                    }
                                     else
                                         variable.Left = new ASTTypeInst((int)inst.TypeInst);
 
@@ -170,7 +233,17 @@ namespace DogScepterLib.Project.GML.Decompiler
                         break;
                     case Instruction.Opcode.Pop:
                         {
-                            // TODO pop.e.v
+                            if (inst.Variable == null)
+                            {
+                                // pop.e.v 5/6 - Swap instruction
+                                ASTNode e1 = stack.Pop();
+                                ASTNode e2 = stack.Pop();
+                                for (int j = 0; j < inst.SwapExtra - 4; j++)
+                                    stack.Pop();
+                                stack.Push(e2);
+                                stack.Push(e1);
+                                break;
+                            }
 
                             ASTVariable variable = new ASTVariable(inst.Variable.Target, inst.Variable.Type);
 
@@ -179,11 +252,17 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 value = stack.Pop();
                             if (inst.Variable.Type == Instruction.VariableType.StackTop)
                                 variable.Left = stack.Pop();
+                            else if (inst.Variable.Type == Instruction.VariableType.Array)
+                            {
+                                variable.Children = ProcessArrayIndex(ctx, stack.Pop());
+                                variable.Left = stack.Pop();
+                            }
                             else
                                 variable.Left = new ASTTypeInst((int)inst.TypeInst);
-                            // TODO everything else
                             if (inst.Type1 == Instruction.DataType.Variable)
                                 value = stack.Pop();
+
+                            // TODO handle +=, -=, etc
 
                             curr.Children.Add(new ASTAssign(variable, value));
                         }
@@ -225,10 +304,63 @@ namespace DogScepterLib.Project.GML.Decompiler
                         curr.Children.Add(new ASTExit());
                         break;
                     case Instruction.Opcode.Popz:
+                        if (stack.Count == 0)
+                            break; // This occasionally happens in switch statements; this is probably the fastest way to handle it
                         curr.Children.Add(stack.Pop());
+                        break;
+                    case Instruction.Opcode.Dup:
+                        if (inst.ComparisonKind != 0)
+                        {
+                            // This is a special instruction for moving around an instance on the stack in GMS2.3
+                            throw new System.Exception("Unimplemented GMS2.3");
+                        }
+
+                        // Get the number of times duplications should occur
+                        // dup.i 1 is the same as dup.l 0
+                        int count = ((inst.Extra + 1) * (inst.Type1 == Instruction.DataType.Int64 ? 2 : 1));
+
+                        List<ASTNode> expr1 = new List<ASTNode>();
+                        List<ASTNode> expr2 = new List<ASTNode>();
+                        for (int j = 0; j < count; j++)
+                        {
+                            var item = stack.Pop();
+                            item.Duplicated = true;
+                            expr1.Add(item);
+                            expr2.Add(item);
+                        }
+                        for (int j = count - 1; j >= 0; j--)
+                            stack.Push(expr1[j]);
+                        for (int j = count - 1; j >= 0; j--)
+                            stack.Push(expr2[j]);
                         break;
                 }
             }
+        }
+
+        public static List<ASTNode> ProcessArrayIndex(DecompileContext ctx, ASTNode index)
+        {
+            // All array indices are normal in 2.3
+            if (ctx.Data.VersionInfo.IsNumberAtLeast(2, 3))
+                return new() { index };
+            
+            // Check for 2D array indices
+            if (index.Kind == ASTNode.StatementKind.Binary)
+            {
+                var add = index as ASTBinary;
+                if (add.Instruction.Kind == Instruction.Opcode.Add &&
+                    add.Children[0].Kind == ASTNode.StatementKind.Binary)
+                {
+                    var mul = add.Children[1] as ASTBinary;
+                    if (mul.Instruction.Kind == Instruction.Opcode.Mul &&
+                        mul.Children[1].Kind == ASTNode.StatementKind.Int16 &&
+                        (mul.Children[1] as ASTInt16).Value == 32000)
+                    {
+                        return new() { add.Children[1], mul.Children[0] };
+                    }
+                }
+            }
+
+            return new() { index };
         }
     }
 }
