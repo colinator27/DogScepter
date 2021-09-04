@@ -94,8 +94,6 @@ namespace DogScepterLib.Project.GML.Decompiler
         /// Inserts loop nodes into the graph, and resolves break/continue
         public static void InsertNodes(DecompileContext ctx)
         {
-            List<Node> allOutwardJumps = new List<Node>();
-
             foreach (var loop in ctx.Loops)
             {
                 // Change header predecessors to point to the loop instead
@@ -143,8 +141,6 @@ namespace DogScepterLib.Project.GML.Decompiler
                 // Change any nodes jumped outbound to be marked as jumped from this loop
                 Stack<Node> work = new Stack<Node>();
                 List<Node> visited = new List<Node>();
-                // TODO: could maybe add all blocks from the block indices to the work stack,
-                //       so that unused blocks get continue/break resolved? would need to test
                 work.Push(loop.Header);
                 visited.Add(loop.Header);
                 while (work.Count != 0)
@@ -156,10 +152,10 @@ namespace DogScepterLib.Project.GML.Decompiler
                         if ((branch.Address < loop.Address && branch.EndAddress <= loop.Address) || branch.Address >= loop.EndAddress)
                         {
                             // This node branches outside of the loop.
-                            if (curr.Kind == Node.NodeType.Block && (curr as Block).LastInstr?.Kind == Instruction.Opcode.B && branch.Address >= loop.EndAddress)
+                            if (curr.Kind == Node.NodeType.Block && (curr as Block).LastInstr?.Kind == Instruction.Opcode.B && 
+                                branch.Address >= loop.EndAddress)
                             {
                                 // This is actually a break statement
-                                allOutwardJumps.Add(curr);
 
                                 // Remove `b` instruction, mark the block as a "break" block
                                 Block currBlock = (curr as Block);
@@ -185,7 +181,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         }
                         else if (branch == loop || branch == loop.Tail)
                         {
-                            if (curr != loop.Tail && 
+                            if (curr != loop.Tail &&
                                 curr.Kind == Node.NodeType.Block && (curr as Block).LastInstr?.Kind == Instruction.Opcode.B)
                             {
                                 if (branch == loop.Tail && branch is Block b &&
@@ -290,8 +286,6 @@ namespace DogScepterLib.Project.GML.Decompiler
                 if (loop.LoopKind != Loop.LoopType.With)
                     loop.Tail.Branches.Clear(); // A with statement tail is the block after
             }
-            foreach (var node in allOutwardJumps)
-                node.Branches.Clear();
         }
     }
 }

@@ -11,11 +11,11 @@ namespace DogScepterLib.Project.GML.Decompiler
     public static class IfStatements
     {
         /// Finds all the if statements within a list of blocks
-        public static List<IfStatement> Find(BlockList blocks)
+        public static List<IfStatement> Find(DecompileContext ctx)
         {
             List<IfStatement> res = new List<IfStatement>();
 
-            foreach (Block b in blocks.List)
+            foreach (Block b in ctx.Blocks.List)
             {
                 if (b.Instructions.Count >= 1)
                 {
@@ -25,31 +25,38 @@ namespace DogScepterLib.Project.GML.Decompiler
                         // Any `bf` instruction should be part of an if statement at the normal
                         // point in decompilation (only other control flow type is a switch statement).
 
+                        // Find the surrounding loop for later
+                        Loop surroundingLoop = null;
+                        foreach (var loop in ctx.Loops)
+                            if (loop.Address < b.Address && loop.EndAddress > b.Address && (surroundingLoop == null || loop.Address > surroundingLoop.Address))
+                                surroundingLoop = loop;
+
                         // Find the meetpoint/After node
                         Node after = null;
                         Node endTruthy = null;
+
                         if (b.Branches[0] == b.Branches[1])
                             after = b.Branches[0]; // Empty if statement
                         else
                         {
                             List<Node> visited = new List<Node>();
-                            Stack<Node> stack = new Stack<Node>();
-                            stack.Push(b.Branches[0]);
-                            while (stack.Count != 0)
+                            Stack<Node> work = new Stack<Node>();
+                            work.Push(b.Branches[0]);
+                            while (work.Count != 0)
                             {
-                                Node curr = stack.Pop();
+                                Node curr = work.Pop();
                                 visited.Add(curr);
 
                                 foreach (var branch in curr.Branches)
                                     if (!visited.Contains(branch))
-                                        stack.Push(branch);
+                                        work.Push(branch);
                             }
 
                             List<Node> otherVisited = new List<Node>();
-                            stack.Push(b.Branches[1]);
-                            while (stack.Count != 0 && after == null)
+                            work.Push(b.Branches[1]);
+                            while (work.Count != 0)
                             {
-                                Node curr = stack.Pop();
+                                Node curr = work.Pop();
                                 otherVisited.Add(curr);
 
                                 foreach (var branch in curr.Branches)
@@ -58,19 +65,24 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     {
                                         if (visited.Contains(branch))
                                         {
-                                            // `branch` is the meetpoint
-                                            // TODO? maybe will have to check for minimum address, but this would be faster if it works
-                                            endTruthy = curr;
-                                            after = branch;
-                                            break;
+                                            if (endTruthy == null || (curr.Unreachable && curr.Address > endTruthy.Address))
+                                            {
+                                                // `curr` is the end of the true branch
+                                                endTruthy = curr;
+                                            }
+                                            if (after == null)
+                                            {
+                                                // `branch` is the meetpoint
+                                                after = branch;
+                                            }
                                         }
-                                        stack.Push(branch);
+                                        work.Push(branch);
                                     }
                                 }
                             }
                         }
 
-                        res.Add(new IfStatement(b, after, endTruthy));
+                        res.Add(new IfStatement(b, after, endTruthy, surroundingLoop));
                     }
                 }
             }
@@ -80,80 +92,152 @@ namespace DogScepterLib.Project.GML.Decompiler
         }
 
         /// Inserts if statement nodes into the graph
-        public static void InsertNodes(DecompileContext ctx)
+        public static void InsertNode(DecompileContext ctx, IfStatement s)
         {
-            foreach (var s in ctx.IfStatements)
+            // Transfer predecessors and branches
+            s.Predecessors.AddRange(s.Header.Predecessors);
+            s.Branches.Add(s.After);
+
+            // Identify true/else nodes, do some cleanup
+            s.Header.Instructions.RemoveAt(s.Header.Instructions.Count - 1); // Remove `bf`
+            s.Header.ControlFlow = Block.ControlFlowType.IfCondition;
+            if (s.Header.Branches[0] == s.Header.Branches[1])
             {
-                // Transfer predecessors and branches
-                s.Predecessors.AddRange(s.Header.Predecessors);
-                s.Branches.Add(s.After);
+                // This is an empty if statement
+                s.Branches.Add(new Block(-1, -1));
+            }
+            else
+            {
+                Node jumpTarget = null;
 
-                // Identify true/else nodes, do some cleanup
-                s.Header.Instructions.RemoveAt(s.Header.Instructions.Count - 1); // Remove `bf`
-                s.Header.ControlFlow = Block.ControlFlowType.IfCondition;
-                if (s.Header.Branches[0] == s.Header.Branches[1])
+                // First deal with continues being wonky
+                Block endTruthyBlock = null;
+                if (s.EndTruthy.Kind == Node.NodeType.Block)
                 {
-                    // This is an empty if statement
-                    s.Branches.Add(new Block(-1, -1));
-                }
-                else
-                {
-                    // Link up the truthy clause
-                    Node truthy = s.Header.Branches[1];
-                    s.Branches.Add(truthy);
-                    truthy.Predecessors.Clear();
-                    truthy.Predecessors.Add(s);
-
-                    // Check for else clause
-                    Node potential = s.EndTruthy;
-                    if (potential?.Kind == Node.NodeType.Block)
+                    endTruthyBlock = s.EndTruthy as Block;
+                    if (endTruthyBlock.ControlFlow == Block.ControlFlowType.Continue)
                     {
-                        Block potentialBlock = potential as Block;
-                        if (potentialBlock.Instructions.Count >= 1)
+                        // First check if this is actually an impossible goto
+                        bool possible = true;
+                        if (s.SurroundingLoop.LoopKind == Loop.LoopType.While)
                         {
-                            var lastInstr = potentialBlock.Instructions[^1];
-                            if (lastInstr.Kind == Instruction.Opcode.B)
+                            jumpTarget = endTruthyBlock.Branches[0];
+                            if (s.After == jumpTarget &&
+                                (jumpTarget != s.SurroundingLoop.Tail || jumpTarget.Address < s.SurroundingLoop.EndAddress - 4)) // 4 bytes for the `b` instruction
                             {
-                                // This is the end of the else clause
-                                potentialBlock.Instructions.RemoveAt(potentialBlock.Instructions.Count - 1); // Remove `b`
+                                // This loop can't be a while loop
+                                possible = false;
+                                s.SurroundingLoop.LoopKind = Loop.LoopType.For;
 
-                                Node falsey = s.Header.Branches[0];
-                                s.Branches.Add(falsey);
-                                falsey.Predecessors.Clear();
-                                falsey.Predecessors.Add(s);
+                                s.SurroundingLoop.Branches.Add(jumpTarget);
                             }
+                            else
+                                jumpTarget = null;
+                        }
+
+                        if (possible)
+                        {
+                            // This was initially detected as a continue, but now we know it's (most likely) not
+                            endTruthyBlock.Instructions.Insert(endTruthyBlock.Instructions.Count, endTruthyBlock.LastInstr);
+                            endTruthyBlock.ControlFlow = Block.ControlFlowType.None;
                         }
                     }
                 }
-                s.Header.Branches.Clear();
 
-                // Change header predecessors to point to this node instead
-                foreach (var node in s.Header.Predecessors)
+                // Do a check for if a while loop needs to be turned into a for loop because of continue statements
+                if (s.SurroundingLoop?.LoopKind == Loop.LoopType.While)
                 {
-                    for (int i = 0; i < node.Branches.Count; i++)
+                    Stack<Node> work = new Stack<Node>();
+                    // TODO? maybe add a visited list here--but should maybe be unnecessary
+                    work.Push(s.Header);
+                    while (work.Count != 0)
                     {
-                        if (node.Branches[i] != node && node.Branches[i] == s.Header)
-                            node.Branches[i] = s;
+                        Node curr = work.Pop();
+
+                        if (curr.Kind == Node.NodeType.Block)
+                        {
+                            Block currBlock = curr as Block;
+                            if (currBlock.ControlFlow == Block.ControlFlowType.Continue)
+                            {
+                                jumpTarget = currBlock.Branches[0];
+                                if (jumpTarget != s.SurroundingLoop.Tail || jumpTarget.Address < s.SurroundingLoop.EndAddress - 4) // 4 bytes for the `b` instruction
+                                {
+                                    // This loop can't be a while loop
+                                    s.SurroundingLoop.LoopKind = Loop.LoopType.For;
+                                    s.SurroundingLoop.Branches.Add(jumpTarget);
+                                }
+                                else
+                                    jumpTarget = null;
+                            }
+                        }
+
+                        foreach (var branch in curr.Branches)
+                            if (branch.Address > s.Header.Address && branch.Address < s.After.Address)
+                                work.Push(branch);
                     }
                 }
 
-                // Change After predecessors to come from the if statement instead, and remove their internal references
-                foreach (var pred in s.After.Predecessors)
+                // Link up the truthy clause
+                Node truthy = s.Header.Branches[1];
+                s.Branches.Add(truthy);
+                truthy.Predecessors.Clear();
+                truthy.Predecessors.Add(s);
+
+                // Check for else clause
+                if (endTruthyBlock?.Instructions.Count >= 1)
                 {
-                    if (pred.Address >= s.Address && pred.EndAddress <= s.EndAddress)
+                    var lastInstr = endTruthyBlock.Instructions[^1];
+                    if (lastInstr.Kind == Instruction.Opcode.B)
+                    {
+                        // This is the end of the else clause
+                        endTruthyBlock.Instructions.RemoveAt(endTruthyBlock.Instructions.Count - 1); // Remove `b`
+
+                        Node falsey = s.Header.Branches[0];
+                        s.Branches.Add(falsey);
+                        falsey.Predecessors.Clear();
+                        falsey.Predecessors.Add(s);
+                    }
+                }
+
+                if (jumpTarget != null)
+                {
+                    // This is a continuation of the impossible "continue" logic from both places above
+                    // Need to rewire predecessors of `jumpTarget` to go nowhere
+                    foreach (var pred in jumpTarget.Predecessors)
                     {
                         for (int i = pred.Branches.Count - 1; i >= 0; i--)
                         {
-                            if (pred.Branches[i].Address >= s.EndAddress)
-                                pred.Branches[i] = new Block(-1, -1); // Make an empty block, don't just remove (otherwise making the AST later is more annoying)
-                                                                      // Though... TODO? Maybe it's already annoying in the cases of some loops, in which case this can just remove
+                            if (pred.Branches[i] == jumpTarget)
+                                pred.Branches.RemoveAt(i);
                         }
                     }
                 }
-                // Might reimplement this, but this seems to break things
-                //s.After.Predecessors.RemoveRange(s.After.Predecessors.Count - 2, 2);
-                s.After.Predecessors.Insert(0, s);
             }
+            s.Header.Branches.Clear();
+
+            // Change header predecessors to point to this node instead
+            foreach (var node in s.Header.Predecessors)
+            {
+                for (int i = 0; i < node.Branches.Count; i++)
+                {
+                    if (node.Branches[i] != node && node.Branches[i] == s.Header)
+                        node.Branches[i] = s;
+                }
+            }
+
+            // Change After predecessors to come from the if statement instead, and remove their internal references
+            foreach (var pred in s.After.Predecessors)
+            {
+                if (pred.Address >= s.Address && pred.EndAddress <= s.EndAddress)
+                {
+                    for (int i = pred.Branches.Count - 1; i >= 0; i--)
+                    {
+                        if (pred.Branches[i].Address >= s.EndAddress)
+                            pred.Branches[i] = new Block(-1, -1); // Make an empty block, don't just remove (otherwise making the AST later is more annoying)
+                    }
+                }
+            }
+            s.After.Predecessors.Insert(0, s);
         }
     }
 }

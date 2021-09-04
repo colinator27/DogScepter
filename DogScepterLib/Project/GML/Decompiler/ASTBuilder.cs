@@ -40,11 +40,23 @@ namespace DogScepterLib.Project.GML.Decompiler
                             {
                                 case Block.ControlFlowType.Break:
                                     curr.Children.Add(new ASTBreak());
+
+                                    // Remove all non-unreachable branches
+                                    for (int i = block.Branches.Count - 1; i >= 0; i--)
+                                        if (!block.Branches[i].Unreachable)
+                                            block.Branches.RemoveAt(i);
                                     break;
                                 case Block.ControlFlowType.Continue:
                                     curr.Children.Add(new ASTContinue());
+
+                                    // Remove all non-unreachable branches
+                                    for (int i = block.Branches.Count - 1; i >= 0; i--)
+                                        if (!block.Branches[i].Unreachable)
+                                            block.Branches.RemoveAt(i);
                                     break;
                                 case Block.ControlFlowType.LoopCondition:
+                                    (curr as ASTBlock).LoopParent.Children.Add(stack.Pop());
+                                    break;
                                 case Block.ControlFlowType.SwitchExpression:
                                     curr.Children.Insert(0, stack.Pop());
                                     break;
@@ -116,6 +128,14 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 case Loop.LoopType.While:
                                     astStatement = new ASTWhileLoop();
                                     break;
+                                case Loop.LoopType.For:
+                                    astStatement = new ASTForLoop();
+
+                                    ASTBlock subBlock2 = new ASTBlock();
+                                    astStatement.Children.Add(subBlock2);
+                                    statementStack.Push(subBlock2);
+                                    nodeStack.Push(s.Branches[2]);
+                                    break;
                                 case Loop.LoopType.DoUntil:
                                     astStatement = new ASTDoUntilLoop();
                                     break;
@@ -127,12 +147,14 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     break;
                             }
 
+                            ASTBlock subBlock = new ASTBlock();
+                            subBlock.LoopParent = astStatement;
+                            astStatement.Children.Add(subBlock);
+
                             curr.Children.Add(astStatement);
-                            statementStack.Push(astStatement);
+                            statementStack.Push(subBlock);
                             nodeStack.Push(s.Branches[1]);
 
-                            if (s.Branches.Count == 0)
-                                break;
                             statementStack.Push(curr);
                             nodeStack.Push(s.Branches[0]);
                         }
@@ -350,12 +372,12 @@ namespace DogScepterLib.Project.GML.Decompiler
                 if (add.Instruction.Kind == Instruction.Opcode.Add &&
                     add.Children[0].Kind == ASTNode.StatementKind.Binary)
                 {
-                    var mul = add.Children[1] as ASTBinary;
+                    var mul = add.Children[0] as ASTBinary;
                     if (mul.Instruction.Kind == Instruction.Opcode.Mul &&
-                        mul.Children[1].Kind == ASTNode.StatementKind.Int16 &&
-                        (mul.Children[1] as ASTInt16).Value == 32000)
+                        mul.Children[1].Kind == ASTNode.StatementKind.Int32 &&
+                        (mul.Children[1] as ASTInt32).Value == 32000)
                     {
-                        return new() { add.Children[1], mul.Children[0] };
+                        return new() { mul.Children[0], add.Children[1] };
                     }
                 }
             }

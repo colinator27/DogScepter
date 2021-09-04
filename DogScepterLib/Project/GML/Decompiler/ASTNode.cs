@@ -46,6 +46,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             IfStatement,
             ShortCircuit,
             WhileLoop,
+            ForLoop,
             DoUntilLoop,
             RepeatLoop,
             WithLoop,
@@ -85,6 +86,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Block;
         public bool Duplicated { get; set; }
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
+        public ASTNode LoopParent { get; set; }
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
             sb.Append('{');
@@ -654,6 +656,35 @@ namespace DogScepterLib.Project.GML.Decompiler
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
             sb.Append("while (");
+            Children[1].Write(ctx, sb);
+            sb.Append(')');
+
+            // Main block
+            if (Children[0].Kind != ASTNode.StatementKind.Block)
+            {
+                ctx.IndentationLevel++;
+                ASTNode.Newline(ctx, sb);
+                Children[0].Write(ctx, sb);
+                ctx.IndentationLevel--;
+            }
+            else
+            {
+                ASTNode.Newline(ctx, sb);
+                Children[0].Write(ctx, sb);
+            }
+        }
+    }
+
+    public class ASTForLoop : ASTNode
+    {
+        public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.ForLoop;
+        public bool Duplicated { get; set; }
+        public List<ASTNode> Children { get; set; } = new List<ASTNode>();
+        public void Write(DecompileContext ctx, StringBuilder sb)
+        {
+            sb.Append("for (; ");
+            Children[2].Write(ctx, sb);
+            sb.Append("; ");
             Children[0].Write(ctx, sb);
             sb.Append(')');
 
@@ -681,25 +712,24 @@ namespace DogScepterLib.Project.GML.Decompiler
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
             sb.Append("do");
-            ASTNode.Newline(ctx, sb);
 
             // Main block
-            if (Children[1].Kind != ASTNode.StatementKind.Block)
+            if (Children[0].Kind != ASTNode.StatementKind.Block)
             {
                 ctx.IndentationLevel++;
                 ASTNode.Newline(ctx, sb);
-                Children[1].Write(ctx, sb);
+                Children[0].Write(ctx, sb);
                 ctx.IndentationLevel--;
             }
             else
             {
                 ASTNode.Newline(ctx, sb);
-                Children[1].Write(ctx, sb);
+                Children[0].Write(ctx, sb);
             }
 
             ASTNode.Newline(ctx, sb);
             sb.Append("until (");
-            Children[0].Write(ctx, sb);
+            Children[1].Write(ctx, sb);
             sb.Append(')');
         }
     }
@@ -714,21 +744,21 @@ namespace DogScepterLib.Project.GML.Decompiler
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
             sb.Append("repeat (");
-            Children[0].Write(ctx, sb);
+            Children[1].Write(ctx, sb);
             sb.Append(')');
 
             // Main block
-            if (Children[1].Kind != ASTNode.StatementKind.Block)
+            if (Children[0].Kind != ASTNode.StatementKind.Block)
             {
                 ctx.IndentationLevel++;
                 ASTNode.Newline(ctx, sb);
-                Children[1].Write(ctx, sb);
+                Children[0].Write(ctx, sb);
                 ctx.IndentationLevel--;
             }
             else
             {
                 ASTNode.Newline(ctx, sb);
-                Children[1].Write(ctx, sb);
+                Children[0].Write(ctx, sb);
             }
         }
     }
@@ -743,21 +773,21 @@ namespace DogScepterLib.Project.GML.Decompiler
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
             sb.Append("with (");
-            Children[0].Write(ctx, sb);
+            Children[1].Write(ctx, sb);
             sb.Append(')');
 
             // Main block
-            if (Children[1].Kind != ASTNode.StatementKind.Block)
+            if (Children[0].Kind != ASTNode.StatementKind.Block)
             {
                 ctx.IndentationLevel++;
                 ASTNode.Newline(ctx, sb);
-                Children[1].Write(ctx, sb);
+                Children[0].Write(ctx, sb);
                 ctx.IndentationLevel--;
             }
             else
             {
                 ASTNode.Newline(ctx, sb);
-                Children[1].Write(ctx, sb);
+                Children[0].Write(ctx, sb);
             }
         }
     }

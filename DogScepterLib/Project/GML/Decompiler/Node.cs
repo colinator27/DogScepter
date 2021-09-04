@@ -25,6 +25,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public int EndAddress { get; set; }
         public List<Node> Predecessors { get; set; }
         public List<Node> Branches { get; set; }
+        public bool Unreachable { get; set; }
     }
 
     public class BlockList
@@ -61,6 +62,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public GMCode.Bytecode.Instruction LastInstr { get; set; } = null;
         public List<GMCode.Bytecode.Instruction> Instructions = new List<GMCode.Bytecode.Instruction>();
         public ControlFlowType ControlFlow { get; set; } = ControlFlowType.None;
+        public bool Unreachable { get; set; } = false;
 
         public enum ControlFlowType
         {
@@ -153,6 +155,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                     }
                 }
             }
+            
+            foreach (Block b in res.List)
+            {
+                if (b.Predecessors.Count == 0)
+                {
+                    b.Unreachable = true;
+                    if (b.Index > 0)
+                    {
+                        Block prev = res.List[b.Index - 1];
+                        prev.Branches.Add(b);
+                        b.Predecessors.Add(prev);
+                    }
+                }
+            }
 
             return res;
         }
@@ -175,6 +191,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public LoopType LoopKind { get; set; }
         public List<Node> Predecessors { get; set; } = new List<Node>();
         public List<Node> Branches { get; set; } = new List<Node>();
+        public bool Unreachable { get; set; }
 
         public int Address { get; set; }
         public int EndAddress { get; set; }
@@ -187,6 +204,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             Address = header.Address;
             EndAddress = tail.EndAddress;
             Header = header;
+            Unreachable = header.Unreachable;
             Tail = tail;
         }
     }
@@ -204,6 +222,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public List<Node> Predecessors { get; set; }
         public List<Node> Branches { get; set; } = new List<Node>();
+        public bool Unreachable { get; set; }
         public int Address { get; set; }
         public int EndAddress { get; set; }
 
@@ -215,6 +234,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             ShortCircuitKind = type;
             Address = header.Address;
             EndAddress = tail.EndAddress;
+            Unreachable = header.Unreachable;
             Tail = tail;
         }
     }
@@ -225,20 +245,23 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public List<Node> Predecessors { get; set; } = new List<Node>();
         public List<Node> Branches { get; set; } = new List<Node>();
+        public bool Unreachable { get; set; } = false;
         public int Address { get; set; }
         public int EndAddress { get; set; }
 
         public Block Header;
         public Node After;
         public Node EndTruthy;
+        public Loop SurroundingLoop;
 
-        public IfStatement(Block header, Node after, Node endTruthy)
+        public IfStatement(Block header, Node after, Node endTruthy, Loop surroundingLoop)
         {
             Address = header.Address;
             EndAddress = after.Address;
             Header = header;
             After = after;
             EndTruthy = endTruthy;
+            SurroundingLoop = surroundingLoop;
         }
     }
 
@@ -248,6 +271,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public List<Node> Predecessors { get; set; } = new List<Node>();
         public List<Node> Branches { get; set; } = new List<Node>();
+        public bool Unreachable { get; set; } = false;
         public int Address { get; set; }
         public int EndAddress { get; set; }
         public Block Header;
@@ -257,8 +281,10 @@ namespace DogScepterLib.Project.GML.Decompiler
         public Block EndCasesBranch;
         public Block ContinueBlock;
         public List<Block> CaseBranches;
+        public Loop SurroundingLoop;
 
-        public SwitchStatement(Block header, Block tail, bool empty, List<Block> caseBranches, Block defaultCaseBranch, Block endCasesBranch, Block continueBlock)
+        public SwitchStatement(Block header, Block tail, bool empty, List<Block> caseBranches, Block defaultCaseBranch, 
+                               Block endCasesBranch, Block continueBlock, Loop surroundingLoop)
         {
             Header = header;
             Address = header.Address;
@@ -269,6 +295,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             DefaultCaseBranch = defaultCaseBranch;
             EndCasesBranch = endCasesBranch;
             ContinueBlock = continueBlock;
+            SurroundingLoop = surroundingLoop;
         }
     }
 }

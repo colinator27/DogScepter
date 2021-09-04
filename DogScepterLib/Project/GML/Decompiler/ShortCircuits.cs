@@ -60,7 +60,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 s.Conditions.Add(b);    // This has the full condition in the block
                             else
                                 s.Conditions.Add(prev); // Another short-circuit node
-                            b.Instructions.RemoveAt(b.Instructions.Count - 1);
+                            if (b.Instructions.LastOrDefault()?.Kind == Instruction.Opcode.B) // It might not be inside a loop!
+                                b.Instructions.RemoveAt(b.Instructions.Count - 1);
+                            b.ControlFlow = Block.ControlFlowType.None;
                             break;
                         }
                         else // (assuming either Bf or Bt)

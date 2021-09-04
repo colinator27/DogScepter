@@ -33,7 +33,7 @@ namespace DogScepterTest
                     });
 
                 DecompileContext ctx = new DecompileContext(pf);
-                ctx.Blocks = Block.GetBlocks(reader.Data.GetChunk<GMChunkCODE>().List[1]);
+                ctx.Blocks = Block.GetBlocks(reader.Data.GetChunk<GMChunkCODE>().List[0]);
 
                 // Add node to beginning
                 ctx.BaseNode = new Block(-1, -1);
@@ -46,11 +46,21 @@ namespace DogScepterTest
                 Loops.InsertNodes(ctx);
                 ShortCircuits.InsertNodes(ctx);
 
-                ctx.IfStatements = IfStatements.Find(ctx.Blocks);
-                IfStatements.InsertNodes(ctx);
+                ctx.SwitchStatements = SwitchStatements.Find(ctx);
+                ctx.IfStatements = IfStatements.Find(ctx);
 
-                ctx.SwitchStatements = SwitchStatements.Find(ctx.Blocks);
-                SwitchStatements.InsertNodes(ctx);
+                List<Node> toProcess = new List<Node>();
+                toProcess.AddRange(ctx.SwitchStatements);
+                toProcess.AddRange(ctx.IfStatements);
+                toProcess = toProcess.OrderBy(s => s.EndAddress).ThenByDescending(s => s.Address).ToList();
+
+                foreach (var node in toProcess)
+                {
+                    if (node.Kind == Node.NodeType.IfStatement)
+                        IfStatements.InsertNode(ctx, node as IfStatement);
+                    else
+                        SwitchStatements.InsertNode(ctx, node as SwitchStatement);
+                }
 
                 ctx.BaseASTBlock = ASTBuilder.FromContext(ctx);
                 string result = ASTNode.WriteFromContext(ctx);
