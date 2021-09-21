@@ -274,6 +274,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             Address = header.Address;
             EndAddress = after.Address;
             Header = header;
+            Unreachable = header.Unreachable;
             After = after;
             EndTruthy = endTruthy;
             SurroundingLoop = surroundingLoop;
@@ -307,6 +308,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                Block endCasesBranch, Block continueBlock, Loop surroundingLoop)
         {
             Header = header;
+            Unreachable = header.Unreachable;
             Address = header.Address;
             Tail = tail;
             EndAddress = tail.Address;

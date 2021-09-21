@@ -19,17 +19,17 @@ namespace DogScepterLib.Project.GML.Decompiler
         // Also returns the remaining stack, if wanted
         public static Stack<ASTNode> BuildFromNode(DecompileContext ctx, ASTNode start, Node baseNode)
         {
-            Stack<ASTNode> statementStack = new Stack<ASTNode>();
-            Stack<Node> nodeStack = new Stack<Node>();
-            statementStack.Push(start);
-            nodeStack.Push(baseNode);
+            Stack<(ASTNode, Node, ASTNode)> statementStack = new Stack<(ASTNode, Node, ASTNode)>();
+            statementStack.Push((start, baseNode, null));
 
             Stack<ASTNode> stack = new Stack<ASTNode>();
 
             while (statementStack.Count != 0)
             {
-                ASTNode curr = statementStack.Pop();
-                Node node = nodeStack.Pop();
+                var tuple = statementStack.Pop();
+                ASTNode curr = tuple.Item1;
+                Node node = tuple.Item2;
+                ASTNode loop = tuple.Item3;
                 switch (node.Kind)
                 {
                     case Node.NodeType.Block:
@@ -55,7 +55,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                             block.Branches.RemoveAt(i);
                                     break;
                                 case Block.ControlFlowType.LoopCondition:
-                                    (curr as ASTBlock).LoopParent.Children.Add(stack.Pop());
+                                    loop.Children.Add(stack.Pop());
                                     break;
                                 case Block.ControlFlowType.SwitchExpression:
                                     curr.Children.Insert(0, stack.Pop());
@@ -70,8 +70,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                             if (block.Branches.Count == 0)
                                 break;
-                            statementStack.Push(curr);
-                            nodeStack.Push(block.Branches[0]);
+                            statementStack.Push((curr, block.Branches[0], loop));
                         }
                         break;
                     case Node.NodeType.IfStatement:
@@ -84,23 +83,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                             {
                                 // Main/true block
                                 var block = new ASTBlock();
-                                statementStack.Push(block);
-                                nodeStack.Push(s.Branches[1]);
+                                statementStack.Push((block, s.Branches[1], loop));
                                 astStatement.Children.Add(block);
                             }
                             if (s.Branches.Count >= 3)
                             {
                                 // Else block
                                 var block = new ASTBlock();
-                                statementStack.Push(block);
-                                nodeStack.Push(s.Branches[2]);
+                                statementStack.Push((block, s.Branches[2], loop));
                                 astStatement.Children.Add(block);
                             }
 
                             if (s.Branches.Count == 0)
                                 break;
-                            statementStack.Push(curr);
-                            nodeStack.Push(s.Branches[0]);
+                            statementStack.Push((curr, s.Branches[0], loop));
                         }
                         break;
                     case Node.NodeType.ShortCircuit:
@@ -114,8 +110,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                             if (s.Branches.Count == 0)
                                 break;
-                            statementStack.Push(curr);
-                            nodeStack.Push(s.Branches[0]);
+                            statementStack.Push((curr, s.Branches[0], loop));
                         }
                         break;
                     case Node.NodeType.Loop:
@@ -133,8 +128,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                                     ASTBlock subBlock2 = new ASTBlock();
                                     astStatement.Children.Add(subBlock2);
-                                    statementStack.Push(subBlock2);
-                                    nodeStack.Push(s.Branches[2]);
+                                    statementStack.Push((subBlock2, s.Branches[2], loop));
                                     break;
                                 case Loop.LoopType.DoUntil:
                                     astStatement = new ASTDoUntilLoop();
@@ -148,15 +142,12 @@ namespace DogScepterLib.Project.GML.Decompiler
                             }
 
                             ASTBlock subBlock = new ASTBlock();
-                            subBlock.LoopParent = astStatement;
                             astStatement.Children.Add(subBlock);
-
                             curr.Children.Add(astStatement);
-                            statementStack.Push(subBlock);
-                            nodeStack.Push(s.Branches[1]);
 
-                            statementStack.Push(curr);
-                            nodeStack.Push(s.Branches[0]);
+                            loop = astStatement;
+                            statementStack.Push((subBlock, s.Branches[1], loop));
+                            statementStack.Push((curr, s.Branches[0], loop));
                         }
                         break;
                     case Node.NodeType.SwitchStatement:
@@ -167,14 +158,12 @@ namespace DogScepterLib.Project.GML.Decompiler
                             curr.Children.Add(astStatement);
                             for (int i = s.Branches.Count - 1; i >= 1; i--)
                             {
-                                statementStack.Push(astStatement);
-                                nodeStack.Push(s.Branches[i]);
+                                statementStack.Push((astStatement, s.Branches[i], loop));
                             }
 
                             if (s.Branches.Count == 0)
                                 break;
-                            statementStack.Push(curr);
-                            nodeStack.Push(s.Branches[0]);
+                            statementStack.Push((curr, s.Branches[0], loop));
                         }
                         break;
                 }

@@ -28,7 +28,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         // Find the surrounding loop for later
                         Loop surroundingLoop = null;
                         foreach (var loop in ctx.Loops)
-                            if (loop.Address < b.Address && loop.EndAddress > b.Address && (surroundingLoop == null || loop.Address > surroundingLoop.Address))
+                            if (loop.Address <= b.Address && loop.EndAddress > b.Address && (surroundingLoop == null || loop.Address > surroundingLoop.Address))
                                 surroundingLoop = loop;
 
                         // Find the meetpoint/After node
@@ -64,7 +64,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 {
                                     Block currBlock = curr as Block;
                                     if (currBlock.ControlFlow == Block.ControlFlowType.Break ||
-                                        currBlock.ControlFlow == Block.ControlFlowType.Continue)
+                                        (currBlock.ControlFlow == Block.ControlFlowType.Continue && 
+                                         currBlock.Branches[0].Address < currBlock.Address))
                                     {
                                         if (currBlock.Branches.Count == 1)
                                         {
@@ -145,7 +146,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         if (s.SurroundingLoop.LoopKind == Loop.LoopType.While)
                         {
                             jumpTarget = endTruthyBlock.Branches[0];
-                            if (s.After == jumpTarget &&
+                            if (s.After == jumpTarget && jumpTarget.Address <= s.Header.Branches[1].Address &&
                                 (jumpTarget != s.SurroundingLoop.Tail || jumpTarget.Address < s.SurroundingLoop.EndAddress - 4)) // 4 bytes for the `b` instruction
                             {
                                 // This loop can't be a while loop
