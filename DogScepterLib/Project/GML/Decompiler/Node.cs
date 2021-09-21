@@ -172,6 +172,11 @@ namespace DogScepterLib.Project.GML.Decompiler
 
             return res;
         }
+
+        public override string ToString()
+        {
+            return $"Block {Index}, Address {Address}";
+        }
     }
 
     public class Loop : Node
@@ -207,6 +212,11 @@ namespace DogScepterLib.Project.GML.Decompiler
             Unreachable = header.Unreachable;
             Tail = tail;
         }
+
+        public override string ToString()
+        {
+            return $"{LoopKind} Loop, Address {Address}";
+        }
     }
 
     public class ShortCircuit : Node
@@ -237,6 +247,11 @@ namespace DogScepterLib.Project.GML.Decompiler
             Unreachable = header.Unreachable;
             Tail = tail;
         }
+
+        public override string ToString()
+        {
+            return $"{ShortCircuitKind} Short-Circuit, Address {Address}";
+        }
     }
 
     public class IfStatement : Node
@@ -262,6 +277,11 @@ namespace DogScepterLib.Project.GML.Decompiler
             After = after;
             EndTruthy = endTruthy;
             SurroundingLoop = surroundingLoop;
+        }
+
+        public override string ToString()
+        {
+            return $"If Statement, Address {Address}";
         }
     }
 
@@ -296,6 +316,11 @@ namespace DogScepterLib.Project.GML.Decompiler
             EndCasesBranch = endCasesBranch;
             ContinueBlock = continueBlock;
             SurroundingLoop = surroundingLoop;
+        }
+
+        public override string ToString()
+        {
+            return $"Switch Statement, Address {Address}";
         }
     }
 }

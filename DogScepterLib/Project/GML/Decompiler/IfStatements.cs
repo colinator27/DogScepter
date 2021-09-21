@@ -53,24 +53,47 @@ namespace DogScepterLib.Project.GML.Decompiler
                             }
 
                             List<Node> otherVisited = new List<Node>();
-                            work.Push(b.Branches[1]);
+                            bool ignoreFirst = true;
+                            work.Push(b);
                             while (work.Count != 0)
                             {
                                 Node curr = work.Pop();
                                 otherVisited.Add(curr);
 
+                                if (curr.Kind == Node.NodeType.Block)
+                                {
+                                    Block currBlock = curr as Block;
+                                    if (currBlock.ControlFlow == Block.ControlFlowType.Break ||
+                                        currBlock.ControlFlow == Block.ControlFlowType.Continue)
+                                    {
+                                        if (currBlock.Branches.Count == 1)
+                                        {
+                                            // There's no unreachable block, so there's no "else" here.
+                                            endTruthy = currBlock;
+                                            after = b.Branches[0];
+                                            break;
+                                        }
+                                    }
+                                }
+
                                 foreach (var branch in curr.Branches)
                                 {
-                                    if (!otherVisited.Contains(branch))
+                                    if (ignoreFirst)
+                                    {
+                                        // This is b.Branches[0], and we don't want to process it yet
+                                        ignoreFirst = false;
+                                    }
+                                    else if (branch.Address > b.Address && !otherVisited.Contains(branch))
                                     {
                                         if (visited.Contains(branch))
                                         {
-                                            if (endTruthy == null || (curr.Unreachable && curr.Address > endTruthy.Address))
+                                            if (endTruthy == null || (curr.Unreachable && curr.Address > endTruthy.Address &&
+                                                                      curr.Address < b.Branches[0].Address))
                                             {
                                                 // `curr` is the end of the true branch
                                                 endTruthy = curr;
                                             }
-                                            if (after == null)
+                                            if (after == null || (curr == endTruthy && branch.Address > after.Address) || branch.Address < after.Address)
                                             {
                                                 // `branch` is the meetpoint
                                                 after = branch;
@@ -135,9 +158,10 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 jumpTarget = null;
                         }
 
-                        if (possible)
+                        if (possible && endTruthyBlock.Branches[0].Address > endTruthyBlock.Address)
                         {
                             // This was initially detected as a continue, but now we know it's (most likely) not
+                            // TODO? This might not be a possible thing to occur, not sure what purpose this serves at the time of writing
                             endTruthyBlock.Instructions.Insert(endTruthyBlock.Instructions.Count, endTruthyBlock.LastInstr);
                             endTruthyBlock.ControlFlow = Block.ControlFlowType.None;
                         }
@@ -160,7 +184,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                             if (currBlock.ControlFlow == Block.ControlFlowType.Continue)
                             {
                                 jumpTarget = currBlock.Branches[0];
-                                if (jumpTarget != s.SurroundingLoop.Tail || jumpTarget.Address < s.SurroundingLoop.EndAddress - 4) // 4 bytes for the `b` instruction
+                                if (jumpTarget != s.SurroundingLoop && 
+                                    !jumpTarget.Unreachable &&
+                                    (jumpTarget != s.SurroundingLoop.Tail || jumpTarget.Address < s.SurroundingLoop.EndAddress - 4)) // 4 bytes for the `b` instruction
                                 {
                                     // This loop can't be a while loop
                                     s.SurroundingLoop.LoopKind = Loop.LoopType.For;
@@ -203,14 +229,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                 {
                     // This is a continuation of the impossible "continue" logic from both places above
                     // Need to rewire predecessors of `jumpTarget` to go nowhere
-                    foreach (var pred in jumpTarget.Predecessors)
-                    {
-                        for (int i = pred.Branches.Count - 1; i >= 0; i--)
-                        {
-                            if (pred.Branches[i] == jumpTarget)
-                                pred.Branches.RemoveAt(i);
-                        }
-                    }
+                    // ... but we'll do that later because otherwise we run into issues with other if statements, apparently
+                    ctx.PredecessorsToClear.Add(jumpTarget);
                 }
             }
             s.Header.Branches.Clear();

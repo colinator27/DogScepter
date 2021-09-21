@@ -49,18 +49,7 @@ namespace DogScepterTest
                 ctx.SwitchStatements = SwitchStatements.Find(ctx);
                 ctx.IfStatements = IfStatements.Find(ctx);
 
-                List<Node> toProcess = new List<Node>();
-                toProcess.AddRange(ctx.SwitchStatements);
-                toProcess.AddRange(ctx.IfStatements);
-                toProcess = toProcess.OrderBy(s => s.EndAddress).ThenByDescending(s => s.Address).ToList();
-
-                foreach (var node in toProcess)
-                {
-                    if (node.Kind == Node.NodeType.IfStatement)
-                        IfStatements.InsertNode(ctx, node as IfStatement);
-                    else
-                        SwitchStatements.InsertNode(ctx, node as SwitchStatement);
-                }
+                BranchStatements.InsertNodes(ctx);
 
                 ctx.BaseASTBlock = ASTBuilder.FromContext(ctx);
                 string result = ASTNode.WriteFromContext(ctx);

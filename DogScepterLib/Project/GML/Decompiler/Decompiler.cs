@@ -19,6 +19,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<ShortCircuit> ShortCircuits { get; set; }
         public List<IfStatement> IfStatements { get; set; }
         public List<SwitchStatement> SwitchStatements { get; set; }
+        public List<Node> PredecessorsToClear { get; set; }
         public Node BaseNode { get; set; }
         public ASTBlock BaseASTBlock { get; set; }
 
