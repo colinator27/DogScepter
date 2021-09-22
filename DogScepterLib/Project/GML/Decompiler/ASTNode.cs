@@ -795,11 +795,14 @@ namespace DogScepterLib.Project.GML.Decompiler
                     sb.Append(' ');
                     switch (Compound.Kind)
                     {
+                        case Instruction.Opcode.Add: sb.Append('+'); break;
+                        case Instruction.Opcode.Sub: sb.Append('-'); break;
                         case Instruction.Opcode.Mul: sb.Append('*'); break;
                         case Instruction.Opcode.Div: sb.Append('/'); break;
                         case Instruction.Opcode.Mod: sb.Append('%'); break;
-                        case Instruction.Opcode.Add: sb.Append('+'); break;
-                        case Instruction.Opcode.Sub: sb.Append('-'); break;
+                        case Instruction.Opcode.And: sb.Append('&'); break;
+                        case Instruction.Opcode.Or: sb.Append('|'); break;
+                        case Instruction.Opcode.Xor: sb.Append('^'); break;
                     }
                     sb.Append("= ");
                     Children[1].Write(ctx, sb);
