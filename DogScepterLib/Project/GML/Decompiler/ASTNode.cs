@@ -849,10 +849,33 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<ASTNode> Children { get; set; } = new List<ASTNode>(3);
         public bool ElseIf { get; set; } = false;
 
+        // Temporary ternary detection variables
+        public int StackCount { get; set; }
+        public ASTNode Parent { get; set; }
+
         public ASTIfStatement(ASTNode condition) => Children.Add(condition);
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
+#if DEBUG
+            if (Children.Count == 4)
+                throw new Exception("Ternary logic broke");
+#endif
+            if (Children.Count == 5)
+            {
+                // This is a ternary
+                if (NeedsParentheses)
+                    sb.Append('(');
+                Children[0].Write(ctx, sb);
+                sb.Append(" ? ");
+                Children[3].Write(ctx, sb);
+                sb.Append(" : ");
+                Children[4].Write(ctx, sb);
+                if (NeedsParentheses)
+                    sb.Append(')');
+                return;
+            }
+
             sb.Append("if (");
             Children[0].Write(ctx, sb);
             sb.Append(')');
@@ -908,6 +931,19 @@ namespace DogScepterLib.Project.GML.Decompiler
                 // This is an else if chain, so mark this as such
                 ElseIf = true;
                 Children[2] = Children[2].Children[0];
+            }
+            else if (Children.Count == 5)
+            {
+                // This is a ternary. Check if parentheses are needed for operands.
+                var kind = Children[0].Kind;
+                if (kind == ASTNode.StatementKind.Binary || kind == ASTNode.StatementKind.ShortCircuit || kind == ASTNode.StatementKind.IfStatement)
+                    Children[0].NeedsParentheses = true;
+                kind = Children[3].Kind;
+                if (kind == ASTNode.StatementKind.Binary || kind == ASTNode.StatementKind.ShortCircuit || kind == ASTNode.StatementKind.IfStatement)
+                    Children[3].NeedsParentheses = true;
+                kind = Children[4].Kind;
+                if (kind == ASTNode.StatementKind.Binary || kind == ASTNode.StatementKind.ShortCircuit || kind == ASTNode.StatementKind.IfStatement)
+                    Children[4].NeedsParentheses = true;
             }
 
             return this;

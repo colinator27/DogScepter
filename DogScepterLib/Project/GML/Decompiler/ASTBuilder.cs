@@ -15,31 +15,46 @@ namespace DogScepterLib.Project.GML.Decompiler
             return result;
         }
 
+        public class ASTContext
+        {
+            public ASTNode Current;
+            public Node Node;
+            public ASTNode Loop;
+            public ASTIfStatement IfStatement;
+
+            public ASTContext(ASTNode current, Node node, ASTNode loop, ASTIfStatement ifStatement)
+            {
+                Current = current;
+                Node = node;
+                Loop = loop;
+                IfStatement = ifStatement;
+            }
+        }
+
         // Simulates the stack and builds AST nodes, adding to the "start" node, and using "baseNode" as the data context
         // Also returns the remaining stack, if wanted
-        public static Stack<ASTNode> BuildFromNode(DecompileContext ctx, ASTNode start, Node baseNode)
+        public static Stack<ASTNode> BuildFromNode(DecompileContext dctx, ASTNode start, Node baseNode)
         {
-            Stack<(ASTNode, Node, ASTNode)> statementStack = new Stack<(ASTNode, Node, ASTNode)>();
-            statementStack.Push((start, baseNode, null));
+            Stack<ASTContext> statementStack = new Stack<ASTContext>();
+            statementStack.Push(new(start, baseNode, null, null));
 
             Stack<ASTNode> stack = new Stack<ASTNode>();
 
             while (statementStack.Count != 0)
             {
-                var tuple = statementStack.Pop();
-                ASTNode curr = tuple.Item1;
-                Node node = tuple.Item2;
-                ASTNode loop = tuple.Item3;
-                switch (node.Kind)
+                var context = statementStack.Pop();
+                switch (context.Node.Kind)
                 {
                     case Node.NodeType.Block:
                         {
-                            Block block = node as Block;
-                            ExecuteBlock(ctx, block, curr, stack);
+                            Block block = context.Node as Block;
+                            if (block.Branches.Count != 0)
+                                statementStack.Push(new(context.Current, block.Branches[0], context.Loop, context.IfStatement));
+                            ExecuteBlock(dctx, block, context.Current, stack);
                             switch (block.ControlFlow)
                             {
                                 case Block.ControlFlowType.Break:
-                                    curr.Children.Add(new ASTBreak());
+                                    context.Current.Children.Add(new ASTBreak());
 
                                     // Remove all non-unreachable branches
                                     for (int i = block.Branches.Count - 1; i >= 0; i--)
@@ -47,9 +62,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                                             block.Branches.RemoveAt(i);
                                     break;
                                 case Block.ControlFlowType.Continue:
-                                    curr.Children.Add(new ASTContinue());
-                                    if (loop.Kind == ASTNode.StatementKind.WhileLoop)
-                                        (loop as ASTWhileLoop).ContinueUsed = true;
+                                    context.Current.Children.Add(new ASTContinue());
+                                    if (context.Loop.Kind == ASTNode.StatementKind.WhileLoop)
+                                        (context.Loop as ASTWhileLoop).ContinueUsed = true;
 
                                     // Remove all non-unreachable branches
                                     for (int i = block.Branches.Count - 1; i >= 0; i--)
@@ -57,67 +72,97 @@ namespace DogScepterLib.Project.GML.Decompiler
                                             block.Branches.RemoveAt(i);
                                     break;
                                 case Block.ControlFlowType.LoopCondition:
-                                    loop.Children.Add(stack.Pop());
+                                    context.Loop.Children.Add(stack.Pop());
                                     break;
                                 case Block.ControlFlowType.SwitchExpression:
-                                    curr.Children.Insert(0, stack.Pop());
+                                    context.Current.Children.Insert(0, stack.Pop());
                                     break;
                                 case Block.ControlFlowType.SwitchCase:
-                                    curr.Children.Add(new ASTSwitchCase(stack.Pop()));
+                                    context.Current.Children.Add(new ASTSwitchCase(stack.Pop()));
                                     break;
                                 case Block.ControlFlowType.SwitchDefault:
-                                    curr.Children.Add(new ASTSwitchDefault());
+                                    context.Current.Children.Add(new ASTSwitchDefault());
+                                    break;
+                                case Block.ControlFlowType.IfCondition:
+                                case Block.ControlFlowType.WithExpression:
+                                case Block.ControlFlowType.RepeatExpression:
+                                    // Nothing special to do here
+                                    break;
+                                default:
+                                    if (context.IfStatement != null && stack.Count == context.IfStatement.StackCount + 1 &&
+                                        context.IfStatement.Children.Count >= 3 && context.IfStatement.Children.Count < 5)
+                                    {
+                                        // This is a ternary; add the expression
+                                        context.IfStatement.Children.Add(stack.Pop());
+                                        if (context.IfStatement.Children.Count >= 5)
+                                        {
+                                            var removeFrom = context.IfStatement.Parent.Children;
+                                            removeFrom.RemoveAt(removeFrom.Count - 1);
+                                            stack.Push(context.IfStatement);
+                                        }
+                                    }
                                     break;
                             }
-
-                            if (block.Branches.Count == 0)
-                                break;
-                            statementStack.Push((curr, block.Branches[0], loop));
                         }
                         break;
                     case Node.NodeType.IfStatement:
                         {
-                            IfStatement s = node as IfStatement;
-                            ExecuteBlock(ctx, s.Header, curr, stack);
+                            IfStatement s = context.Node as IfStatement;
+                            ExecuteBlock(dctx, s.Header, context.Current, stack);
+
+                            statementStack.Push(new(context.Current, s.Branches[0], context.Loop, context.IfStatement));
 
                             var astStatement = new ASTIfStatement(stack.Pop());
-                            curr.Children.Add(astStatement);
-                            {
-                                // Main/true block
-                                var block = new ASTBlock();
-                                statementStack.Push((block, s.Branches[1], loop));
-                                astStatement.Children.Add(block);
-                            }
+                            astStatement.StackCount = stack.Count;
+                            astStatement.Parent = context.Current;
+                            context.Current.Children.Add(astStatement);
                             if (s.Branches.Count >= 3)
                             {
                                 // Else block
+                                var elseBlock = new ASTBlock();
+                                statementStack.Push(new(elseBlock, s.Branches[2], context.Loop, astStatement));
+
+                                // Main/true block
                                 var block = new ASTBlock();
-                                statementStack.Push((block, s.Branches[2], loop));
+                                statementStack.Push(new(block, s.Branches[1], context.Loop, astStatement));
+
+                                astStatement.Children.Add(block);
+                                astStatement.Children.Add(elseBlock);
+                            }
+                            else
+                            {
+                                // Main/true block
+                                var block = new ASTBlock();
+                                statementStack.Push(new(block, s.Branches[1], context.Loop, astStatement));
                                 astStatement.Children.Add(block);
                             }
-
-                            if (s.Branches.Count == 0)
-                                break;
-                            statementStack.Push((curr, s.Branches[0], loop));
                         }
                         break;
                     case Node.NodeType.ShortCircuit:
                         {
-                            ShortCircuit s = node as ShortCircuit;
+                            ShortCircuit s = context.Node as ShortCircuit;
+
+                            if (s.Branches.Count != 0)
+                                statementStack.Push(new(context.Current, s.Branches[0], context.Loop, context.IfStatement));
 
                             var astStatement = new ASTShortCircuit(s.ShortCircuitKind, new List<ASTNode>(s.Conditions.Count));
                             foreach (var cond in s.Conditions)
-                                astStatement.Children.Add(BuildFromNode(ctx, curr, cond).Pop());
-                            stack.Push(astStatement);
+                            {
+                                Stack<ASTNode> returnedStack = BuildFromNode(dctx, context.Current, cond);
+                                astStatement.Children.Add(returnedStack.Pop());
 
-                            if (s.Branches.Count == 0)
-                                break;
-                            statementStack.Push((curr, s.Branches[0], loop));
+                                // The stack remains need to be moved to the main stack
+                                ASTNode[] remaining = returnedStack.ToArray();
+                                for (int i = remaining.Length - 1; i >= 0; i--)
+                                    stack.Push(remaining[i]);
+
+                            }
+                            stack.Push(astStatement);
                         }
                         break;
                     case Node.NodeType.Loop:
                         {
-                            Loop s = node as Loop;
+                            Loop s = context.Node as Loop;
 
                             ASTNode astStatement = null;
                             switch (s.LoopKind)
@@ -127,10 +172,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     break;
                                 case Loop.LoopType.For:
                                     astStatement = new ASTForLoop();
+                                    statementStack.Push(new(context.Current, s.Branches[0], astStatement, context.IfStatement));
 
                                     ASTBlock subBlock2 = new ASTBlock();
                                     astStatement.Children.Add(subBlock2);
-                                    statementStack.Push((subBlock2, s.Branches[2], loop));
+                                    statementStack.Push(new(subBlock2, s.Branches[2], context.Loop, context.IfStatement));
                                     break;
                                 case Loop.LoopType.DoUntil:
                                     astStatement = new ASTDoUntilLoop();
@@ -145,27 +191,24 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                             ASTBlock subBlock = new ASTBlock();
                             astStatement.Children.Add(subBlock);
-                            curr.Children.Add(astStatement);
+                            context.Current.Children.Add(astStatement);
 
-                            loop = astStatement;
-                            statementStack.Push((subBlock, s.Branches[1], loop));
-                            statementStack.Push((curr, s.Branches[0], loop));
+                            if (s.LoopKind != Loop.LoopType.For)
+                                statementStack.Push(new(context.Current, s.Branches[0], astStatement, context.IfStatement));
+                            statementStack.Push(new(subBlock, s.Branches[1], astStatement, context.IfStatement));
                         }
                         break;
                     case Node.NodeType.SwitchStatement:
                         {
-                            SwitchStatement s = node as SwitchStatement;
+                            SwitchStatement s = context.Node as SwitchStatement;
+
+                            if (s.Branches.Count != 0)
+                                statementStack.Push(new(context.Current, s.Branches[0], context.Loop, context.IfStatement));
 
                             var astStatement = new ASTSwitchStatement();
-                            curr.Children.Add(astStatement);
+                            context.Current.Children.Add(astStatement);
                             for (int i = s.Branches.Count - 1; i >= 1; i--)
-                            {
-                                statementStack.Push((astStatement, s.Branches[i], loop));
-                            }
-
-                            if (s.Branches.Count == 0)
-                                break;
-                            statementStack.Push((curr, s.Branches[0], loop));
+                                statementStack.Push(new(astStatement, s.Branches[i], context.Loop, context.IfStatement));
                         }
                         break;
                 }
@@ -174,7 +217,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             return stack;
         }
 
-        public static void ExecuteBlock(DecompileContext ctx, Block block, ASTNode curr, Stack<ASTNode> stack)
+        public static void ExecuteBlock(DecompileContext ctx, Block block, ASTNode current, Stack<ASTNode> stack)
         {
             for (int i = 0; i < block.Instructions.Count; i++)
             {
@@ -351,12 +394,12 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 if (value.Kind == ASTNode.StatementKind.Binary && value.Children[0].Kind == ASTNode.StatementKind.Variable)
                                 {
                                     ASTBinary binary = value as ASTBinary;
-                                    curr.Children.Add(new ASTAssign(variable, binary.Children[1], binary.Instruction));
+                                    current.Children.Add(new ASTAssign(variable, binary.Children[1], binary.Instruction));
                                     break;
                                 }
                             }
 
-                            curr.Children.Add(new ASTAssign(variable, value));
+                            current.Children.Add(new ASTAssign(variable, value));
                         }
                         break;
                     case Instruction.Opcode.Add:
@@ -390,15 +433,15 @@ namespace DogScepterLib.Project.GML.Decompiler
                         stack.Push(new ASTUnary(inst, stack.Pop()));
                         break;
                     case Instruction.Opcode.Ret:
-                        curr.Children.Add(new ASTReturn(stack.Pop()));
+                        current.Children.Add(new ASTReturn(stack.Pop()));
                         break;
                     case Instruction.Opcode.Exit:
-                        curr.Children.Add(new ASTExit());
+                        current.Children.Add(new ASTExit());
                         break;
                     case Instruction.Opcode.Popz:
                         if (stack.Count == 0)
                             break; // This occasionally happens in switch statements; this is probably the fastest way to handle it
-                        curr.Children.Add(stack.Pop());
+                        current.Children.Add(stack.Pop());
                         break;
                     case Instruction.Opcode.Dup:
                         if (inst.ComparisonKind != 0)
