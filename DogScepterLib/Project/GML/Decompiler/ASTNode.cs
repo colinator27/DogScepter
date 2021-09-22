@@ -1,4 +1,5 @@
 ﻿using DogScepterLib.Core.Models;
+using DogScepterLib.Project.Util;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -57,8 +58,10 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public StatementKind Kind { get; set; }
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
         public void Write(DecompileContext ctx, StringBuilder sb);
+        public ASTNode Clean(DecompileContext ctx);
 
         public static void Newline(DecompileContext ctx, StringBuilder sb)
         {
@@ -85,6 +88,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Block;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
 
         public void Write(DecompileContext ctx, StringBuilder sb)
@@ -100,16 +104,89 @@ namespace DogScepterLib.Project.GML.Decompiler
             ASTNode.Newline(ctx, sb);
             sb.Append('}');
         }
+
+        public static void WhileForConversion(DecompileContext ctx, List<ASTNode> nodes)
+        {
+            for (int i = nodes.Count - 1; i >= 0; i--)
+            {
+                nodes[i] = nodes[i].Clean(ctx);
+                if (i > 0 && nodes[i - 1].Kind == ASTNode.StatementKind.Assign)
+                {
+                    // Check for while/for loop conversions
+                    if (nodes[i].Kind == ASTNode.StatementKind.WhileLoop)
+                    {
+                        ASTWhileLoop loop = nodes[i] as ASTWhileLoop;
+                        if (!loop.ContinueUsed && loop.Children[0].Kind == ASTNode.StatementKind.Block)
+                        {
+                            ASTBlock block = loop.Children[0] as ASTBlock;
+                            if (block.Children.Count >= 1 && block.Children[^1].Kind == ASTNode.StatementKind.Assign)
+                            {
+                                // This while loop can be cleanly turned into a for loop, so do it!
+                                ASTForLoop newLoop = new ASTForLoop();
+                                newLoop.HasInitializer = true;
+                                newLoop.Children.Add(block.Children[^1]);
+                                newLoop.Children.Add(block);
+                                block.Children.RemoveAt(block.Children.Count - 1);
+                                newLoop.Children.Add(loop.Children[1]);
+                                newLoop.Children.Add(nodes[i - 1].Clean(ctx));
+                                nodes[i - 1] = newLoop;
+                                nodes.RemoveAt(i--);
+                            }
+                        }
+                    }
+                    else if (nodes[i].Kind == ASTNode.StatementKind.ForLoop)
+                    {
+                        // This for loop should have the intialization added to it
+                        ASTForLoop loop = nodes[i] as ASTForLoop;
+                        loop.HasInitializer = true;
+                        loop.Children.Add(nodes[i - 1].Clean(ctx));
+                        nodes.RemoveAt(--i);
+                    }
+                }
+            }
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            if (Children.Count == 1)
+            {
+                switch (Children[0].Kind)
+                {
+                    case ASTNode.StatementKind.IfStatement:
+                    case ASTNode.StatementKind.SwitchStatement:
+                    case ASTNode.StatementKind.WhileLoop:
+                    case ASTNode.StatementKind.ForLoop:
+                    case ASTNode.StatementKind.DoUntilLoop:
+                    case ASTNode.StatementKind.RepeatLoop:
+                    case ASTNode.StatementKind.WithLoop:
+                        // Don't get rid of curly brackets for these
+                        Children[0] = Children[0].Clean(ctx);
+                        break;
+                    default:
+                        Children[0] = Children[0].Clean(ctx);
+                        return Children[0];
+                }
+            }
+            else
+                WhileForConversion(ctx, Children);
+            return this;
+        }
     }
 
     public class ASTBreak : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Break;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
             sb.Append("break");
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
         }
     }
 
@@ -117,10 +194,16 @@ namespace DogScepterLib.Project.GML.Decompiler
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Continue;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
             sb.Append("continue");
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
         }
     }
 
@@ -128,6 +211,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Int16;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public short Value;
@@ -142,12 +226,18 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             sb.Append(Value);
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
+        }
     }
 
     public class ASTInt32 : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Int32;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public int Value;
@@ -157,12 +247,18 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             sb.Append(Value);
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
+        }
     }
 
     public class ASTInt64 : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Int64;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public long Value;
@@ -172,12 +268,18 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             sb.Append(Value);
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
+        }
     }
 
     public class ASTFloat : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Float;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public float Value;
@@ -185,7 +287,12 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
-            sb.Append(Value.ToString(null, CultureInfo.InvariantCulture));
+            sb.Append(Value.ToString("R", CultureInfo.InvariantCulture));
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
         }
     }
 
@@ -193,6 +300,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Double;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public double Value;
@@ -200,8 +308,12 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
-            // TODO: implement this with better precision/predefined values
-            sb.Append(Value.ToString(null, CultureInfo.InvariantCulture));
+            sb.Append(RoundTripDouble.ToRoundTrip(Value));
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
         }
     }
 
@@ -209,6 +321,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.String;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public int Value;
@@ -252,12 +365,18 @@ namespace DogScepterLib.Project.GML.Decompiler
             }
             sb.Append(val);
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
+        }
     }
 
     public class ASTBoolean : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Boolean;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public bool Value;
@@ -267,12 +386,18 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             sb.Append(Value ? "true" : "false");
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
+        }
     }
 
     public class ASTUnary : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Unary;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public Instruction Instruction;
@@ -284,6 +409,8 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
+            if (NeedsParentheses)
+                sb.Append('(');
             switch (Instruction.Kind)
             {
                 case Instruction.Opcode.Neg:
@@ -297,6 +424,16 @@ namespace DogScepterLib.Project.GML.Decompiler
                     break;
             }
             Children[0].Write(ctx, sb);
+            if (NeedsParentheses)
+                sb.Append(')');
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            Children[0] = Children[0].Clean(ctx);
+            if (Children[0].Kind == ASTNode.StatementKind.Binary || Children[0].Kind == ASTNode.StatementKind.ShortCircuit)
+                Children[0].NeedsParentheses = true;
+            return this;
         }
     }
 
@@ -304,6 +441,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Binary;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public Instruction Instruction;
@@ -313,8 +451,20 @@ namespace DogScepterLib.Project.GML.Decompiler
             Children = new() { left, right };
         }
 
+        public static bool IsTypeTheSame(ASTBinary a, ASTBinary b)
+        {
+            if (a.Instruction.Kind != b.Instruction.Kind)
+                return false;
+            if (a.Instruction.ComparisonKind != b.Instruction.ComparisonKind)
+                return false;
+            return true;
+        }
+
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
+            if (NeedsParentheses)
+                sb.Append('(');
+
             Children[0].Write(ctx, sb);
 
             string op = null;
@@ -366,6 +516,21 @@ namespace DogScepterLib.Project.GML.Decompiler
             sb.Append(op);
 
             Children[1].Write(ctx, sb);
+
+            if (NeedsParentheses)
+                sb.Append(')');
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+            {
+                Children[i] = Children[i].Clean(ctx);
+                if ((Children[i].Kind == ASTNode.StatementKind.Binary && !IsTypeTheSame(this, Children[i] as ASTBinary)) || 
+                     Children[i].Kind == ASTNode.StatementKind.ShortCircuit)
+                    Children[i].NeedsParentheses = true;
+            }
+            return this;
         }
     }
 
@@ -373,6 +538,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Function;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public GMFunctionEntry Function;
@@ -407,16 +573,29 @@ namespace DogScepterLib.Project.GML.Decompiler
             else
                 sb.Append(')');
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
+            return this;
+        }
     }
 
     public class ASTExit : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Exit;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
             sb.Append("exit");
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
         }
     }
 
@@ -424,6 +603,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Exit;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public ASTReturn(ASTNode arg) => Children = new() { arg };
@@ -433,12 +613,19 @@ namespace DogScepterLib.Project.GML.Decompiler
             sb.Append("return ");
             Children[0].Write(ctx, sb);
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            Children[0] = Children[0].Clean(ctx);
+            return this;
+        }
     }
 
     public class ASTVariable : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Variable;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public GMVariable Variable;
@@ -539,12 +726,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                 sb.Append(']');
             }
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children?.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
+            return this;
+        }
     }
 
     public class ASTTypeInst : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.TypeInst;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public int Value;
@@ -555,21 +750,91 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             // Doesn't really do anything on its own here
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
+        }
     }
 
     public class ASTAssign : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Assign;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
+        public Instruction Compound;
+        public CompoundType CompoundKind = CompoundType.None;
+        public enum CompoundType
+        {
+            None,
+            Normal,
+            Prefix,
+            Postfix
+        }    
 
-        public ASTAssign(ASTVariable var, ASTNode node) => Children = new() { var, node };
+        public ASTAssign(ASTVariable var, ASTNode node, Instruction compound = null)
+        {
+            Children = new() { var, node };
+            Compound = compound;
+            CompoundKind = (compound == null) ? CompoundType.None : CompoundType.Normal;
+        }
+        public ASTAssign(Instruction inst, ASTNode variable, bool isPrefix)
+        {
+            Compound = inst;
+            Children = new() { variable };
+            CompoundKind = isPrefix ? CompoundType.Prefix : CompoundType.Postfix;
+        }
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
-            Children[0].Write(ctx, sb);
-            sb.Append(" = "); // TODO others like +=
-            Children[1].Write(ctx, sb);
+            switch (CompoundKind)
+            {
+                case CompoundType.Normal:
+                    Children[0].Write(ctx, sb);
+                    sb.Append(' ');
+                    switch (Compound.Kind)
+                    {
+                        case Instruction.Opcode.Mul: sb.Append('*'); break;
+                        case Instruction.Opcode.Div: sb.Append('/'); break;
+                        case Instruction.Opcode.Mod: sb.Append('%'); break;
+                        case Instruction.Opcode.Add: sb.Append('+'); break;
+                        case Instruction.Opcode.Sub: sb.Append('-'); break;
+                    }
+                    sb.Append("= ");
+                    Children[1].Write(ctx, sb);
+                    break;
+                case CompoundType.Prefix:
+                    if (Compound.Kind == Instruction.Opcode.Add)
+                        sb.Append("++");
+                    else
+                        sb.Append("--");
+                    Children[0].Write(ctx, sb);
+                    break;
+                case CompoundType.Postfix:
+                    Children[0].Write(ctx, sb);
+                    if (Compound.Kind == Instruction.Opcode.Add)
+                        sb.Append("++");
+                    else
+                        sb.Append("--");
+                    break;
+                default:
+                    Children[0].Write(ctx, sb);
+                    sb.Append(" = ");
+                    Children[1].Write(ctx, sb);
+                    break;
+            }
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
+
+            // Check for pre/postfix, and compounds
+            // TODO
+
+            return this;
         }
     }
 
@@ -577,7 +842,9 @@ namespace DogScepterLib.Project.GML.Decompiler
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.IfStatement;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; } = new List<ASTNode>(3);
+        public bool ElseIf { get; set; } = false;
 
         public ASTIfStatement(ASTNode condition) => Children.Add(condition);
 
@@ -607,7 +874,12 @@ namespace DogScepterLib.Project.GML.Decompiler
                 ASTNode.Newline(ctx, sb);
                 sb.Append("else");
 
-                if (Children[2].Kind != ASTNode.StatementKind.Block)
+                if (ElseIf)
+                {
+                    sb.Append(' ');
+                    Children[2].Write(ctx, sb);
+                }
+                else if (Children[2].Kind != ASTNode.StatementKind.Block)
                 {
                     ctx.IndentationLevel++;
                     ASTNode.Newline(ctx, sb);
@@ -621,12 +893,29 @@ namespace DogScepterLib.Project.GML.Decompiler
                 }
             }
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
+
+            if (Children.Count == 3 && Children[2].Kind == ASTNode.StatementKind.Block &&
+                Children[2].Children.Count == 1 && Children[2].Children[0].Kind == ASTNode.StatementKind.IfStatement)
+            {
+                // This is an else if chain, so mark this as such
+                ElseIf = true;
+                Children[2] = Children[2].Children[0];
+            }
+
+            return this;
+        }
     }
 
     public class ASTShortCircuit : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.ShortCircuit;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public ShortCircuit.ShortCircuitType ShortCircuitKind;
@@ -638,6 +927,9 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
+            if (NeedsParentheses)
+                sb.Append('(');
+
             Children[0].Write(ctx, sb);
             string op = (ShortCircuitKind == ShortCircuit.ShortCircuitType.And) ? " && " : " || ";
             for (int i = 1; i < Children.Count; i++)
@@ -645,6 +937,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                 sb.Append(op);
                 Children[i].Write(ctx, sb);
             }
+
+            if (NeedsParentheses)
+                sb.Append(')');
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+            {
+                Children[i] = Children[i].Clean(ctx);
+                if (Children[i].Kind == ASTNode.StatementKind.ShortCircuit)
+                    Children[i].NeedsParentheses = true;
+            }
+            return this;
         }
     }
 
@@ -652,6 +958,8 @@ namespace DogScepterLib.Project.GML.Decompiler
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.WhileLoop;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
+        public bool ContinueUsed { get; set; }
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
@@ -673,16 +981,28 @@ namespace DogScepterLib.Project.GML.Decompiler
                 Children[0].Write(ctx, sb);
             }
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
+            return this;
+        }
     }
 
     public class ASTForLoop : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.ForLoop;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
+        public bool HasInitializer { get; set; }
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
-            sb.Append("for (; ");
+            sb.Append("for (");
+            if (HasInitializer)
+                Children[3].Write(ctx, sb);
+            sb.Append("; ");
             Children[2].Write(ctx, sb);
             sb.Append("; ");
             Children[0].Write(ctx, sb);
@@ -702,12 +1022,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                 Children[1].Write(ctx, sb);
             }
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
+            return this;
+        }
     }
 
     public class ASTDoUntilLoop : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.DoUntilLoop;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
@@ -732,12 +1060,20 @@ namespace DogScepterLib.Project.GML.Decompiler
             Children[1].Write(ctx, sb);
             sb.Append(')');
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
+            return this;
+        }
     }
 
     public class ASTRepeatLoop : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.RepeatLoop;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
 
         public ASTRepeatLoop(ASTNode expr) => Children.Add(expr);
@@ -761,12 +1097,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                 Children[1].Write(ctx, sb);
             }
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
+            return this;
+        }
     }
 
     public class ASTWithLoop : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.WithLoop;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
 
         public ASTWithLoop(ASTNode expr) => Children.Add(expr);
@@ -790,12 +1134,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                 Children[1].Write(ctx, sb);
             }
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
+            return this;
+        }
     }
 
     public class ASTSwitchStatement : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.SwitchStatement;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
@@ -827,12 +1179,19 @@ namespace DogScepterLib.Project.GML.Decompiler
             ASTNode.Newline(ctx, sb);
             sb.Append('}');
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            ASTBlock.WhileForConversion(ctx, Children);
+            return this;
+        }
     }
 
     public class ASTSwitchCase : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.SwitchCase;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
 
         public ASTSwitchCase(ASTNode expr) => Children = new() { expr };
@@ -843,16 +1202,28 @@ namespace DogScepterLib.Project.GML.Decompiler
             Children[0].Write(ctx, sb);
             sb.Append(':');
         }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            Children[0] = Children[0].Clean(ctx);
+            return this;
+        }
     }
 
     public class ASTSwitchDefault : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.SwitchDefault;
         public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
             sb.Append("default:");
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
         }
     }
 }

@@ -96,7 +96,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                         // Find surrounding loop for later
                         Loop surroundingLoop = null;
-                        foreach (var loop in ctx.Loops)
+                        foreach (var loop in ctx.LoopNodes)
                             if (loop.Address < header.Address && loop.EndAddress > header.Address && (surroundingLoop == null || loop.Address > surroundingLoop.Address))
                                 surroundingLoop = loop;
 

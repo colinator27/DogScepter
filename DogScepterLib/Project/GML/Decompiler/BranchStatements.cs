@@ -13,9 +13,9 @@ namespace DogScepterLib.Project.GML.Decompiler
             ctx.PredecessorsToClear = new List<Node>();
 
             // Process basic linear branch statements in nested order
-            List<Node> toProcess = new List<Node>(ctx.SwitchStatements.Count + ctx.IfStatements.Count);
-            toProcess.AddRange(ctx.SwitchStatements);
-            toProcess.AddRange(ctx.IfStatements);
+            List<Node> toProcess = new List<Node>(ctx.SwitchStatementNodes.Count + ctx.IfStatementNodes.Count);
+            toProcess.AddRange(ctx.SwitchStatementNodes);
+            toProcess.AddRange(ctx.IfStatementNodes);
             toProcess = toProcess.OrderBy(s => s.EndAddress).ThenByDescending(s => s.Address).ToList();
             foreach (var node in toProcess)
             {

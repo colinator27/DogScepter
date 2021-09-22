@@ -48,6 +48,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     break;
                                 case Block.ControlFlowType.Continue:
                                     curr.Children.Add(new ASTContinue());
+                                    if (loop.Kind == ASTNode.StatementKind.WhileLoop)
+                                        (loop as ASTWhileLoop).ContinueUsed = true;
 
                                     // Remove all non-unreachable branches
                                     for (int i = block.Branches.Count - 1; i >= 0; i--)
@@ -215,6 +217,75 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 stack.Push(new ASTDouble((double)inst.Value));
                                 break;
                             case Instruction.DataType.Int16:
+                                if ((short)inst.Value == 1)
+                                {
+                                    if (i >= 2 && i + 1 < block.Instructions.Count)
+                                    {
+                                        // Check for postfix
+                                        Instruction prev1 = block.Instructions[i - 1];
+                                        Instruction prev2 = block.Instructions[i - 2];
+                                        Instruction next = block.Instructions[i + 1];
+                                        if (
+                                            // Check for `dup.v`
+                                            (prev1.Kind == Instruction.Opcode.Dup && prev1.Type1 == Instruction.DataType.Variable) ||
+
+                                            // Check for `dup.v`, then `pop.e.v` (TODO: Only works before 2.3)
+                                            (prev2.Kind == Instruction.Opcode.Dup && prev2.Type1 == Instruction.DataType.Variable &&
+                                             prev1.Kind == Instruction.Opcode.Pop && prev1.Type1 == Instruction.DataType.Int16 && prev1.Type1 == Instruction.DataType.Variable))
+                                        {
+                                            if (next.Kind == Instruction.Opcode.Add || next.Kind == Instruction.Opcode.Sub)
+                                            {
+                                                // This is a postfix ++/--
+                                                // Remove duplicate from stack
+                                                stack.Pop();
+
+                                                // Make the statement
+                                                stack.Push(new ASTAssign(next, stack.Pop(), false));
+
+                                                // Continue until the end of this operation
+                                                while (i < block.Instructions.Count)
+                                                {
+                                                    if (block.Instructions[i].Kind == Instruction.Opcode.Pop || 
+                                                        (block.Instructions[i].Type1 == Instruction.DataType.Int16 && block.Instructions[i].Type2 == Instruction.DataType.Variable))
+                                                        i++;
+                                                    else
+                                                        break;
+                                                }
+
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    else if (i + 2 < block.Instructions.Count)
+                                    {
+                                        Instruction next1 = block.Instructions[i + 1];
+                                        Instruction next2 = block.Instructions[i + 1];
+
+                                        // Check for add/sub, then `dup.v`
+                                        if ((next1.Kind == Instruction.Opcode.Add || next1.Kind == Instruction.Opcode.Sub) &&
+                                            (next2.Kind == Instruction.Opcode.Dup && next2.Type1 == Instruction.DataType.Variable))
+                                        {
+                                            // This is a prefix ++/--
+                                            stack.Push(new ASTAssign(next1, stack.Pop(), true));
+
+                                            // Continue until the end of this operation
+                                            while (i < block.Instructions.Count && block.Instructions[i].Kind != Instruction.Opcode.Pop)
+                                                i++;
+
+                                            // If the end is a pop.e.v, then deal with it properly
+                                            // TODO: deal with this in 2.3
+                                            if (block.Instructions[i].Type1 == Instruction.DataType.Int16 && block.Instructions[i].Type2 == Instruction.DataType.Variable)
+                                            {
+                                                ASTNode e = stack.Pop();
+                                                stack.Pop();
+                                                stack.Push(e);
+                                                i++;
+                                            }
+
+                                            break;
+                                        }
+                                    }
+                                }
                                 stack.Push(new ASTInt16((short)inst.Value, inst.Kind));
                                 break;
                             case Instruction.DataType.Int64:
@@ -273,7 +344,17 @@ namespace DogScepterLib.Project.GML.Decompiler
                             if (inst.Type1 == Instruction.DataType.Variable)
                                 value = stack.Pop();
 
-                            // TODO handle +=, -=, etc
+                            // Check for compound operators
+                            if (variable.Left.Duplicated &&
+                                (inst.Variable.Type == Instruction.VariableType.StackTop || inst.Variable.Type == Instruction.VariableType.Array))
+                            {
+                                if (value.Kind == ASTNode.StatementKind.Binary && value.Children[0].Kind == ASTNode.StatementKind.Variable)
+                                {
+                                    ASTBinary binary = value as ASTBinary;
+                                    curr.Children.Add(new ASTAssign(variable, binary.Children[1], binary.Instruction));
+                                    break;
+                                }
+                            }
 
                             curr.Children.Add(new ASTAssign(variable, value));
                         }
@@ -343,6 +424,23 @@ namespace DogScepterLib.Project.GML.Decompiler
                             stack.Push(expr1[j]);
                         for (int j = count - 1; j >= 0; j--)
                             stack.Push(expr2[j]);
+                        break;
+                    case Instruction.Opcode.Conv:
+                        if (inst.Type1 == Instruction.DataType.Int32 && inst.Type2 == Instruction.DataType.Boolean && stack.Peek().Kind == ASTNode.StatementKind.Int16)
+                        {
+                            // Check if a 0 or 1 should be converted to a boolean for readability, such as in while (true)
+                            ASTInt16 val = stack.Peek() as ASTInt16;
+                            if (val.Value == 0)
+                            {
+                                stack.Pop();
+                                stack.Push(new ASTBoolean(false));
+                            }
+                            else if (val.Value == 1)
+                            {
+                                stack.Pop();
+                                stack.Push(new ASTBoolean(true));
+                            }
+                        }
                         break;
                 }
             }

@@ -33,26 +33,7 @@ namespace DogScepterTest
                     });
 
                 DecompileContext ctx = new DecompileContext(pf);
-                ctx.Blocks = Block.GetBlocks(reader.Data.GetChunk<GMChunkCODE>().List[0]);
-
-                // Add node to beginning
-                ctx.BaseNode = new Block(-1, -1);
-                ctx.BaseNode.Branches.Add(ctx.Blocks.List[0]);
-                ctx.Blocks.List[0].Predecessors.Add(ctx.BaseNode);
-
-                ctx.Loops = Loops.Find(ctx.Blocks);
-                ctx.ShortCircuits = ShortCircuits.Find(ctx.Blocks);
-
-                Loops.InsertNodes(ctx);
-                ShortCircuits.InsertNodes(ctx);
-
-                ctx.SwitchStatements = SwitchStatements.Find(ctx);
-                ctx.IfStatements = IfStatements.Find(ctx);
-
-                BranchStatements.InsertNodes(ctx);
-
-                ctx.BaseASTBlock = ASTBuilder.FromContext(ctx);
-                string result = ASTNode.WriteFromContext(ctx);
+                string result = ctx.DecompileSegment(reader.Data.GetChunk<GMChunkCODE>().List[0]);
 
                 //foreach (var group in pf.Textures.TextureGroups)
                 //    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));

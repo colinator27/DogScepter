@@ -35,7 +35,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         /// Inserts short-circuit nodes into the graph, and compile list of conditions
         public static void InsertNodes(DecompileContext ctx)
         {
-            foreach (var s in ctx.ShortCircuits)
+            foreach (var s in ctx.ShortCircuitNodes)
             {
                 Node header = ctx.Blocks.AddressToBlock[s.Address];
                 if ((header as Block).Instructions.Count == 1)

@@ -94,7 +94,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         /// Inserts loop nodes into the graph, and resolves break/continue
         public static void InsertNodes(DecompileContext ctx)
         {
-            foreach (var loop in ctx.Loops)
+            foreach (var loop in ctx.LoopNodes)
             {
                 // Change header predecessors to point to the loop instead
                 foreach (var node in loop.Header.Predecessors)
@@ -281,7 +281,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             }
 
             // Clear some additional unnecessary branches
-            foreach (var loop in ctx.Loops)
+            foreach (var loop in ctx.LoopNodes)
             {
                 if (loop.LoopKind != Loop.LoopType.With)
                     loop.Tail.Branches.Clear(); // A with statement tail is the block after

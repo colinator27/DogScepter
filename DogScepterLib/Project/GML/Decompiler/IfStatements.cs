@@ -27,7 +27,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                         // Find the surrounding loop for later
                         Loop surroundingLoop = null;
-                        foreach (var loop in ctx.Loops)
+                        foreach (var loop in ctx.LoopNodes)
                             if (loop.Address <= b.Address && loop.EndAddress > b.Address && (surroundingLoop == null || loop.Address > surroundingLoop.Address))
                                 surroundingLoop = loop;
 
@@ -159,10 +159,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 jumpTarget = null;
                         }
 
-                        if (possible && endTruthyBlock.Branches[0].Address > endTruthyBlock.Address)
+                        if (possible && endTruthyBlock.Branches[0].Address > endTruthyBlock.EndAddress)
                         {
                             // This was initially detected as a continue, but now we know it's (most likely) not
-                            // TODO? This might not be a possible thing to occur, not sure what purpose this serves at the time of writing
                             endTruthyBlock.Instructions.Insert(endTruthyBlock.Instructions.Count, endTruthyBlock.LastInstr);
                             endTruthyBlock.ControlFlow = Block.ControlFlowType.None;
                         }
