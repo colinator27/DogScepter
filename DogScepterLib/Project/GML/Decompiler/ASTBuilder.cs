@@ -239,7 +239,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 break;
                             case Instruction.DataType.Variable:
                                 {
-                                    ASTVariable variable = new ASTVariable(inst.Variable.Target, inst.Variable.Type);
+                                    ASTVariable variable = new ASTVariable(inst.Variable.Target, inst.Variable.Type, inst.Kind);
 
                                     if (inst.TypeInst == Instruction.InstanceType.StackTop)
                                         variable.Left = stack.Pop();
@@ -329,7 +329,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                         }
                                     }
                                 }
-                                stack.Push(new ASTInt16((short)inst.Value, inst.Kind));
+                                stack.Push(new ASTInt16((short)inst.Value, Instruction.Opcode.Push));
                                 break;
                             case Instruction.DataType.Int64:
                                 stack.Push(new ASTInt64((long)inst.Value));
@@ -346,7 +346,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         switch (inst.Type1)
                         {
                             case Instruction.DataType.Int16:
-                                stack.Push(new ASTInt16((short)inst.Value, inst.Kind));
+                                stack.Push(new ASTInt16((short)inst.Value, Instruction.Opcode.PushI));
                                 break;
                             case Instruction.DataType.Int32:
                                 stack.Push(new ASTInt32((int)inst.Value));
@@ -370,7 +370,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 break;
                             }
 
-                            ASTVariable variable = new ASTVariable(inst.Variable.Target, inst.Variable.Type);
+                            ASTVariable variable = new ASTVariable(inst.Variable.Target, inst.Variable.Type, inst.Kind);
 
                             ASTNode value = null;
                             if (inst.Type1 == Instruction.DataType.Int32)

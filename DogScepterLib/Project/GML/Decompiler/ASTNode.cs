@@ -631,11 +631,32 @@ namespace DogScepterLib.Project.GML.Decompiler
         public GMVariable Variable;
         public ASTNode Left;
         public Instruction.VariableType VarType;
+        public Instruction.Opcode Opcode;
 
-        public ASTVariable(GMVariable var, Instruction.VariableType varType)
+        public ASTVariable(GMVariable var, Instruction.VariableType varType, Instruction.Opcode opcode)
         {
             Variable = var;
             VarType = varType;
+            Opcode = opcode;
+        }
+
+        public bool IsSameAs(ASTVariable other)
+        {
+            if (Variable != other.Variable)
+                return false;
+            if (VarType != other.VarType)
+                return false;
+            if (Left.Kind != other.Left.Kind)
+                return false;
+            if (Children != null)
+            {
+                if (Children.Count != other.Children.Count)
+                    return false;
+                for (int i = 0; i < Children.Count; i++)
+                    if (Children[i] != other.Children[i])
+                        return false;
+            }
+            return true;
         }
 
         public void Write(DecompileContext ctx, StringBuilder sb)
@@ -834,8 +855,36 @@ namespace DogScepterLib.Project.GML.Decompiler
             for (int i = 0; i < Children.Count; i++)
                 Children[i] = Children[i].Clean(ctx);
 
-            // Check for pre/postfix, and compounds
-            // TODO
+            // Check for postfix and compounds
+            if (Children[0].Kind == ASTNode.StatementKind.Variable && Children[1].Kind == ASTNode.StatementKind.Binary)
+            {
+                ASTBinary bin = Children[1] as ASTBinary;
+                if (bin.Children[0].Kind == ASTNode.StatementKind.Variable)
+                {
+                    ASTVariable var = bin.Children[0] as ASTVariable;
+                    if (var.IsSameAs(Children[0] as ASTVariable))
+                    {
+                        // This is one of the two
+                        if (bin.Children[1].Kind == ASTNode.StatementKind.Int16)
+                        {
+                            ASTInt16 i16 = bin.Children[1] as ASTInt16;
+                            if (i16.Opcode == Instruction.Opcode.Push && i16.Value == 1)
+                            {
+                                CompoundKind = CompoundType.Postfix;
+                                Compound = bin.Instruction;
+                                return this;
+                            }
+                        }
+
+                        if (ctx.Data.VersionInfo.FormatID >= 15 && var.Opcode != Instruction.Opcode.Push && var.Variable.VariableType != Instruction.InstanceType.Self)
+                            return this; // Actually, this is a false positive (uses a different instruction in bytecode)
+
+                        CompoundKind = CompoundType.Normal;
+                        Compound = bin.Instruction;
+                        Children[1] = bin.Children[1];
+                    }
+                }
+            }
 
             return this;
         }
