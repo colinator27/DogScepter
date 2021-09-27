@@ -60,6 +60,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
+        public Instruction.DataType DataType { get; set; }
         public void Write(DecompileContext ctx, StringBuilder sb);
         public ASTNode Clean(DecompileContext ctx);
 
@@ -82,6 +83,26 @@ namespace DogScepterLib.Project.GML.Decompiler
 
             return sb.ToString();
         }
+
+        public static int GetStackLength(ASTNode node)
+        {
+            if (node.DataType != Instruction.DataType.Unset)
+                return Instruction.GetDataTypeStackLength(node.DataType);
+            switch (node.Kind)
+            {
+                case StatementKind.Int16:
+                case StatementKind.Int32:
+                case StatementKind.Boolean:
+                case StatementKind.Float:
+                    return 4;
+                case StatementKind.Int64:
+                case StatementKind.Double:
+                    return 8;
+                case StatementKind.Binary:
+                    return Instruction.GetDataTypeStackLength((node as ASTBinary).Instruction.Type2);
+            }
+            return 16;
+        }
     }
 
     public class ASTBlock : ASTNode
@@ -89,6 +110,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Block;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
 
         public void Write(DecompileContext ctx, StringBuilder sb)
@@ -129,7 +151,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 block.Children.RemoveAt(block.Children.Count - 1);
                                 newLoop.Children.Add(loop.Children[1]);
                                 newLoop.Children.Add(nodes[i - 1].Clean(ctx));
-                                nodes[i - 1] = newLoop;
+                                nodes[i - 1] = newLoop.Clean(ctx);
                                 nodes.RemoveAt(i--);
                             }
                         }
@@ -141,6 +163,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         loop.HasInitializer = true;
                         loop.Children.Add(nodes[i - 1].Clean(ctx));
                         nodes.RemoveAt(--i);
+                        loop.Clean(ctx);
                     }
                 }
             }
@@ -178,6 +201,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Break;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
@@ -195,6 +219,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Continue;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
@@ -212,6 +237,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Int16;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public short Value;
@@ -238,6 +264,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Int32;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public int Value;
@@ -259,6 +286,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Int64;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public long Value;
@@ -280,6 +308,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Float;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public float Value;
@@ -301,6 +330,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Double;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public double Value;
@@ -322,6 +352,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.String;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public int Value;
@@ -377,6 +408,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Boolean;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public bool Value;
@@ -398,6 +430,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Unary;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public Instruction Instruction;
@@ -442,6 +475,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Binary;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public Instruction Instruction;
@@ -539,6 +573,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Function;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public GMFunctionEntry Function;
@@ -587,6 +622,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Exit;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
@@ -604,6 +640,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Exit;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public ASTReturn(ASTNode arg) => Children = new() { arg };
@@ -626,6 +663,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Variable;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public GMVariable Variable;
@@ -761,6 +799,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.TypeInst;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public int Value;
@@ -783,6 +822,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Assign;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
         public Instruction Compound;
         public CompoundType CompoundKind = CompoundType.None;
@@ -856,7 +896,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                 Children[i] = Children[i].Clean(ctx);
 
             // Check for postfix and compounds
-            if (Children[0].Kind == ASTNode.StatementKind.Variable && Children[1].Kind == ASTNode.StatementKind.Binary)
+            if (CompoundKind == CompoundType.None &&
+                Children[0].Kind == ASTNode.StatementKind.Variable && Children[1].Kind == ASTNode.StatementKind.Binary)
             {
                 ASTBinary bin = Children[1] as ASTBinary;
                 if (bin.Children[0].Kind == ASTNode.StatementKind.Variable)
@@ -895,6 +936,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.IfStatement;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; } = new List<ASTNode>(3);
         public bool ElseIf { get; set; } = false;
 
@@ -1004,6 +1046,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.ShortCircuit;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public ShortCircuit.ShortCircuitType ShortCircuitKind;
@@ -1047,6 +1090,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.WhileLoop;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public bool ContinueUsed { get; set; }
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
         public void Write(DecompileContext ctx, StringBuilder sb)
@@ -1083,6 +1127,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.ForLoop;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public bool HasInitializer { get; set; }
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
         public void Write(DecompileContext ctx, StringBuilder sb)
@@ -1124,6 +1169,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.DoUntilLoop;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
@@ -1162,6 +1208,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.RepeatLoop;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
 
         public ASTRepeatLoop(ASTNode expr) => Children.Add(expr);
@@ -1199,6 +1246,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.WithLoop;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
 
         public ASTWithLoop(ASTNode expr) => Children.Add(expr);
@@ -1236,6 +1284,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.SwitchStatement;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
@@ -1280,6 +1329,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.SwitchCase;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
         public ASTSwitchCase(ASTNode expr) => Children = new() { expr };
@@ -1303,6 +1353,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.SwitchDefault;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
         public void Write(DecompileContext ctx, StringBuilder sb)
         {

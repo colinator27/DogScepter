@@ -19,7 +19,7 @@ namespace DogScepterTest
         {
             Stopwatch s = new Stopwatch();
             s.Start();
-            using (FileStream fs = new FileStream(@"input/data.win", FileMode.Open))
+            using (FileStream fs = new FileStream(@"input\data.win", FileMode.Open))
             {
                 GMDataReader reader = new GMDataReader(fs, fs.Name);
                 reader.Unserialize();
@@ -33,7 +33,19 @@ namespace DogScepterTest
                     });
 
                 DecompileContext ctx = new DecompileContext(pf);
-                string result = ctx.DecompileSegment(reader.Data.GetChunk<GMChunkCODE>().List[0]);
+                var list = reader.Data.GetChunk<GMChunkCODE>().List;
+                /*foreach (var elem in list)
+                {
+                    try
+                    {
+                        new DecompileContext(pf).DecompileSegment(elem);
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"Failed on {elem.Name.Content}");
+                    }
+                }*/
+                string result = ctx.DecompileSegment(list[0]);
 
                 //foreach (var group in pf.Textures.TextureGroups)
                 //    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));

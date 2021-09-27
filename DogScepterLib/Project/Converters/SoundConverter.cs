@@ -107,7 +107,15 @@ namespace DogScepterLib.Project.Converters
                     buff = null;
                 }
                 else
-                    buff = pf._CachedAudioChunks[sound.GroupID].List[sound.AudioID].Data;
+                {
+                    if (pf._CachedAudioChunks.TryGetValue(sound.GroupID, out var chunk))
+                        buff = chunk.List[sound.AudioID].Data;
+                    else
+                    {
+                        pf.WarningHandler.Invoke(ProjectFile.WarningType.MissingAudioGroup, $"Missing audio group ID {sound.GroupID} for {sound.Name?.Content ?? "<null>"}");
+                        buff = null;
+                    }
+                }
 
                 if (pf.AudioGroupSettings == null)
                     return new CachedSoundRefData(buff, "");

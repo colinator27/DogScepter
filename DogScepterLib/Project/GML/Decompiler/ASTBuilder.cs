@@ -33,12 +33,12 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         // Simulates the stack and builds AST nodes, adding to the "start" node, and using "baseNode" as the data context
         // Also returns the remaining stack, if wanted
-        public static Stack<ASTNode> BuildFromNode(DecompileContext dctx, ASTNode start, Node baseNode)
+        public static Stack<ASTNode> BuildFromNode(DecompileContext dctx, ASTNode start, Node baseNode, Stack<ASTNode> existingStack = null)
         {
             Stack<ASTContext> statementStack = new Stack<ASTContext>();
             statementStack.Push(new(start, baseNode, null, null));
 
-            Stack<ASTNode> stack = new Stack<ASTNode>();
+            Stack<ASTNode> stack = existingStack ?? new Stack<ASTNode>();
 
             while (statementStack.Count != 0)
             {
@@ -48,8 +48,6 @@ namespace DogScepterLib.Project.GML.Decompiler
                     case Node.NodeType.Block:
                         {
                             Block block = context.Node as Block;
-                            if (block.Branches.Count != 0)
-                                statementStack.Push(new(context.Current, block.Branches[0], context.Loop, context.IfStatement));
                             ExecuteBlock(dctx, block, context.Current, stack);
                             switch (block.ControlFlow)
                             {
@@ -103,6 +101,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     }
                                     break;
                             }
+                            if (block.Branches.Count != 0)
+                                statementStack.Push(new(context.Current, block.Branches[0], context.Loop, context.IfStatement));
                         }
                         break;
                     case Node.NodeType.IfStatement:
@@ -148,13 +148,13 @@ namespace DogScepterLib.Project.GML.Decompiler
                             var astStatement = new ASTShortCircuit(s.ShortCircuitKind, new List<ASTNode>(s.Conditions.Count));
                             foreach (var cond in s.Conditions)
                             {
-                                Stack<ASTNode> returnedStack = BuildFromNode(dctx, context.Current, cond);
+                                Stack<ASTNode> returnedStack = BuildFromNode(dctx, context.Current, cond, stack);
                                 astStatement.Children.Add(returnedStack.Pop());
 
                                 // The stack remains need to be moved to the main stack
                                 ASTNode[] remaining = returnedStack.ToArray();
-                                for (int i = remaining.Length - 1; i >= 0; i--)
-                                    stack.Push(remaining[i]);
+                                for (int j = remaining.Length - 1; j >= 0; j--)
+                                    stack.Push(remaining[j]);
 
                             }
                             stack.Push(astStatement);
@@ -288,11 +288,10 @@ namespace DogScepterLib.Project.GML.Decompiler
                                                 // Continue until the end of this operation
                                                 while (i < block.Instructions.Count)
                                                 {
-                                                    if (block.Instructions[i].Kind == Instruction.Opcode.Pop || 
+                                                    if (block.Instructions[i].Kind == Instruction.Opcode.Pop ||
                                                         (block.Instructions[i].Type1 == Instruction.DataType.Int16 && block.Instructions[i].Type2 == Instruction.DataType.Variable))
-                                                        i++;
-                                                    else
                                                         break;
+                                                    i++;
                                                 }
 
                                                 break;
@@ -450,22 +449,22 @@ namespace DogScepterLib.Project.GML.Decompiler
                             throw new System.Exception("Unimplemented GMS2.3");
                         }
 
-                        // Get the number of times duplications should occur
-                        // dup.i 1 is the same as dup.l 0
-                        int count = ((inst.Extra + 1) * (inst.Type1 == Instruction.DataType.Int64 ? 2 : 1));
-
+                        // Normal duplication instruction
+                        int bytes = (inst.Extra + 1) * Instruction.GetDataTypeStackLength(inst.Type1);
                         List<ASTNode> expr1 = new List<ASTNode>();
                         List<ASTNode> expr2 = new List<ASTNode>();
-                        for (int j = 0; j < count; j++)
+                        while (bytes > 0)
                         {
                             var item = stack.Pop();
                             item.Duplicated = true;
                             expr1.Add(item);
                             expr2.Add(item);
+
+                            bytes -= ASTNode.GetStackLength(item);
                         }
-                        for (int j = count - 1; j >= 0; j--)
+                        for (int j = expr1.Count - 1; j >= 0; j--)
                             stack.Push(expr1[j]);
-                        for (int j = count - 1; j >= 0; j--)
+                        for (int j = expr2.Count - 1; j >= 0; j--)
                             stack.Push(expr2[j]);
                         break;
                     case Instruction.Opcode.Conv:
@@ -484,6 +483,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 stack.Push(new ASTBoolean(true));
                             }
                         }
+                        stack.Peek().DataType = inst.Type2;
                         break;
                 }
             }

@@ -42,14 +42,34 @@ namespace DogScepterLib.Project.GML.Decompiler
                             List<Node> visited = new List<Node>();
                             Stack<Node> work = new Stack<Node>();
                             work.Push(b.Branches[0]);
+                            int specialEndPoint = int.MaxValue;
                             while (work.Count != 0)
                             {
                                 Node curr = work.Pop();
-                                visited.Add(curr);
 
-                                foreach (var branch in curr.Branches)
-                                    if (!visited.Contains(branch))
-                                        work.Push(branch);
+                                if (curr.Kind == Node.NodeType.Block)
+                                {
+                                    Block currBlock = curr as Block;
+                                    if (currBlock.ControlFlow == Block.ControlFlowType.Break ||
+                                        (currBlock.ControlFlow == Block.ControlFlowType.Continue &&
+                                         currBlock.Branches[0].Address < currBlock.Address))
+                                    {
+                                        specialEndPoint = currBlock.Address; // TODO? This is pretty hacky, but seems to work. Seen with break/continue in an else clause
+                                        break;
+                                    }
+
+                                    visited.Add(curr);
+                                    foreach (var branch in curr.Branches)
+                                        if (!visited.Contains(branch))
+                                            work.Push(branch);
+                                }
+                                else
+                                {
+                                    // This is some other node we shouldn't care about, besides its first branch
+                                    visited.Add(curr);
+                                    if (curr.Branches.Count != 0 && !visited.Contains(curr.Branches[0]))
+                                        work.Push(curr.Branches[0]);
+                                }
                             }
 
                             List<Node> otherVisited = new List<Node>();
@@ -64,7 +84,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 {
                                     Block currBlock = curr as Block;
                                     if (currBlock.ControlFlow == Block.ControlFlowType.Break ||
-                                        (currBlock.ControlFlow == Block.ControlFlowType.Continue && 
+                                        (currBlock.ControlFlow == Block.ControlFlowType.Continue &&
                                          currBlock.Branches[0].Address < currBlock.Address))
                                     {
                                         if (currBlock.Branches.Count == 1)
@@ -86,7 +106,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     }
                                     else if (branch.Address > b.Address && !otherVisited.Contains(branch))
                                     {
-                                        if (visited.Contains(branch))
+                                        if (visited.Contains(branch) || branch.Address >= specialEndPoint)
                                         {
                                             if (endTruthy == null || (curr.Unreachable && curr.Address > endTruthy.Address &&
                                                                       curr.Address < b.Branches[0].Address))
@@ -248,12 +268,13 @@ namespace DogScepterLib.Project.GML.Decompiler
             // Change After predecessors to come from the if statement instead, and remove their internal references
             foreach (var pred in s.After.Predecessors)
             {
+                Block endIf = new Block(s.After.Address, s.After.Address); // Make an empty block, don't just remove (otherwise making the AST later is more annoying)
                 if (pred.Address >= s.Address && pred.EndAddress <= s.EndAddress)
                 {
                     for (int i = pred.Branches.Count - 1; i >= 0; i--)
                     {
                         if (pred.Branches[i].Address >= s.EndAddress)
-                            pred.Branches[i] = new Block(-1, -1); // Make an empty block, don't just remove (otherwise making the AST later is more annoying)
+                            pred.Branches[i] = endIf;
                     }
                 }
             }

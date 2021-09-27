@@ -256,7 +256,21 @@ namespace DogScepterLib.Core.Models
                     Delete,
                     Undefined,
                     UnsignedInt,
-                    Int16 = 0x0f
+                    Int16 = 0x0f,
+                    
+                    Unset = 0xFF
+                }
+
+                public static int GetDataTypeStackLength(DataType type)
+                {
+                    return type switch
+                    {
+                        // todo? strings, instances?
+                        DataType.Int16 or DataType.Int32 or DataType.Float => 4,
+                        DataType.Int64 or DataType.Double => 8,
+                        DataType.Variable => 16,
+                        _ => 16,
+                    };
                 }
 
                 public enum InstanceType : short

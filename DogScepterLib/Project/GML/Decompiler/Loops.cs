@@ -63,8 +63,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                     {
                         // This is part of a with loop
                         var newLoop = new Loop(Loop.LoopType.With, blocks.AddressToBlock[firstInstr.Address + (firstInstr.JumpOffset * 4)], b);
-                        loops[b.EndAddress] = newLoop;
-                        loopEnds.Add(b.EndAddress);
+                        loops[firstInstr.Address + 4] = newLoop;
+                        loopEnds.Add(firstInstr.Address + 4);
                     }
                 }
             }
@@ -121,11 +121,18 @@ namespace DogScepterLib.Project.GML.Decompiler
                 }
                 if (loop.LoopKind == Loop.LoopType.With)
                 {
+                    // Need to make a new block at the end of the with statement so other control flow detection doesn't explode
+                    Block withEndBlock = new Block(loop.Tail.Address, loop.Tail.Address);
                     foreach (var pred in loop.Tail.Predecessors)
                     {
                         for (int i = pred.Branches.Count - 1; i >= 0; i--)
+                        {
                             if (pred.Branches[i] == loop.Tail)
-                                pred.Branches.RemoveAt(i);
+                            {
+                                pred.Branches[i] = withEndBlock;
+                                withEndBlock.Predecessors.Add(pred);
+                            }
+                        }
                     }
                     loop.Tail.Predecessors.Clear();
                     loop.Branches.Add(loop.Tail);
@@ -275,6 +282,16 @@ namespace DogScepterLib.Project.GML.Decompiler
                             // Mark block before loop as a with expression (pushenv and popenv don't need to be removed; they're unique)
                             Block prev = loop.Predecessors[0] as Block;
                             prev.ControlFlow = Block.ControlFlowType.WithExpression; // Mark this for later reference
+
+                            // Remove unnecessary branches from the block before
+                            for (int i = prev.Branches.Count - 1; i >= 0; i--)
+                            {
+                                if (prev.Branches[i] != loop)
+                                {
+                                    prev.Branches[i].Predecessors.Remove(prev.Branches[i]);
+                                    prev.Branches.RemoveAt(i);
+                                }
+                            }
                         }
                         break;
                 }

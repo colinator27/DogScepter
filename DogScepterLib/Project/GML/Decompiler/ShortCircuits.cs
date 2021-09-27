@@ -48,6 +48,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 // Find all the conditions
                 Node curr = header;
                 Node prev = header;
+                bool skip = false;
                 while (curr != s.Tail)
                 {
                     if (curr.Kind == Node.NodeType.Block)
@@ -56,10 +57,13 @@ namespace DogScepterLib.Project.GML.Decompiler
                         if (b.LastInstr.Kind == Instruction.Opcode.B)
                         {
                             // This is the last condition
-                            if (b.Instructions.Count != 1)
-                                s.Conditions.Add(b);    // This has the full condition in the block
-                            else
-                                s.Conditions.Add(prev); // Another short-circuit node
+                            if (!skip)
+                            {
+                                if (b.Instructions.Count != 1)
+                                    s.Conditions.Add(b);    // This has the full condition in the block
+                                else
+                                    s.Conditions.Add(prev); // Another short-circuit node
+                            }
                             if (b.Instructions.LastOrDefault()?.Kind == Instruction.Opcode.B) // It might not be inside a loop!
                                 b.Instructions.RemoveAt(b.Instructions.Count - 1);
                             b.ControlFlow = Block.ControlFlowType.None;
@@ -68,10 +72,15 @@ namespace DogScepterLib.Project.GML.Decompiler
                         else // (assuming either Bf or Bt)
                         {
                             // This is a new condition
-                            if (b.Instructions.Count != 1)
-                                s.Conditions.Add(b);    // This has the full condition in the block
+                            if (!skip)
+                            {
+                                if (b.Instructions.Count != 1)
+                                    s.Conditions.Add(b);    // This has the full condition in the block
+                                else
+                                    s.Conditions.Add(prev); // Another short-circuit node
+                            }
                             else
-                                s.Conditions.Add(prev); // Another short-circuit node
+                                skip = false;
                             b.Instructions.RemoveAt(b.Instructions.Count - 1);
 
                             // Continue onwards
@@ -83,7 +92,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                     {
                         // Continue onwards
                         prev = curr;
+                        s.Conditions.Add(curr);
                         curr = curr.Branches[0];
+                        skip = true;
                     }
                 }
 
@@ -107,9 +118,33 @@ namespace DogScepterLib.Project.GML.Decompiler
                     node.Predecessors.Add(s);
                 }
 
-                // Remove all the branches from conditions
+                // Remove necessary branches from conditions
                 foreach (var cond in s.Conditions)
-                    cond.Branches.Clear();
+                {
+                    for (int i = cond.Branches.Count - 1; i >= 0; i--)
+                    {
+                        if (cond.Branches[i].Address >= s.Tail.Address || s.Conditions.Contains(cond.Branches[i]))
+                            cond.Branches.RemoveAt(i);
+                        else
+                        {
+                            // Need to cut off the branch eventually
+                            // TODO: This is currently broken
+                            Stack<Node> work = new Stack<Node>();
+                            work.Push(cond.Branches[i]);
+                            while (work.Count != 0)
+                            {
+                                Node currBranch = work.Pop();
+                                for (int j = currBranch.Branches.Count - 1; j >= 0; j--)
+                                {
+                                    if (currBranch.Branches[j].Address >= s.EndAddress)
+                                        currBranch.Branches.RemoveAt(j);
+                                    else if (currBranch.Branches[j].Address > s.Address)
+                                        work.Push(currBranch.Branches[j]);
+                                }
+                            }
+                        }
+                    }
+                }
 
                 // Transfer predecessors and branches
                 s.Predecessors = header.Predecessors;

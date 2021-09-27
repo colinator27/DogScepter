@@ -24,7 +24,8 @@ namespace DogScepterLib.Project
         public enum WarningType
         {
             DataFileMismatch,
-            MissingAsset
+            MissingAsset,
+            MissingAudioGroup
         }
         public delegate void Warning(WarningType type, string info = null);
 
