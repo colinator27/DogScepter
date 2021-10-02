@@ -162,6 +162,11 @@ namespace DogScepterLib.Core.Models
                         NextOccurrence = reader.ReadInt24();
                         Type = (VariableType)reader.ReadByte();
                     }
+
+                    public override string ToString()
+                    {
+                        return $"Reference to {Target}";
+                    }
                 }
 
                 /// <summary>

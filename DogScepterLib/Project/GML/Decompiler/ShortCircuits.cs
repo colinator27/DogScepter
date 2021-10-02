@@ -123,12 +123,13 @@ namespace DogScepterLib.Project.GML.Decompiler
                 {
                     for (int i = cond.Branches.Count - 1; i >= 0; i--)
                     {
-                        if (cond.Branches[i].Address >= s.Tail.Address || s.Conditions.Contains(cond.Branches[i]))
+                        if (cond.Kind == Node.NodeType.ShortCircuit && cond.Branches[i].Address >= cond.EndAddress)
+                            cond.Branches.RemoveAt(i);
+                        else if (cond.Branches[i].Address >= s.Tail.Address || s.Conditions.Contains(cond.Branches[i]))
                             cond.Branches.RemoveAt(i);
                         else
                         {
                             // Need to cut off the branch eventually
-                            // TODO: This is currently broken
                             Stack<Node> work = new Stack<Node>();
                             work.Push(cond.Branches[i]);
                             while (work.Count != 0)
@@ -136,9 +137,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 Node currBranch = work.Pop();
                                 for (int j = currBranch.Branches.Count - 1; j >= 0; j--)
                                 {
-                                    if (currBranch.Branches[j].Address >= s.EndAddress)
+                                    if (currBranch.Branches[j].Address >= s.Tail.Address)
                                         currBranch.Branches.RemoveAt(j);
-                                    else if (currBranch.Branches[j].Address > s.Address)
+                                    else if (currBranch.Branches[j].Address > s.Address && currBranch.Branches[j] != s.Tail)
                                         work.Push(currBranch.Branches[j]);
                                 }
                             }

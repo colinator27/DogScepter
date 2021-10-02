@@ -943,6 +943,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         // Temporary ternary detection variables
         public int StackCount { get; set; }
         public ASTNode Parent { get; set; }
+        public bool EmptyElse { get; set; } = false;
 
         public ASTIfStatement(ASTNode condition) => Children.Add(condition);
 
@@ -1288,6 +1289,18 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
+            // Find statements before cases start
+            int startCases = 1;
+            for (; startCases < Children.Count; startCases++)
+                if (Children[startCases].Kind == ASTNode.StatementKind.SwitchCase ||
+                    Children[startCases].Kind == ASTNode.StatementKind.SwitchDefault)
+                    break;
+            for (int i = 1; i < startCases; i++)
+            {
+                Children[i].Write(ctx, sb);
+                ASTNode.Newline(ctx, sb);
+            }
+
             sb.Append("switch (");
             Children[0].Write(ctx, sb);
             sb.Append(')');
@@ -1295,7 +1308,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             ASTNode.Newline(ctx, sb);
             sb.Append('{');
             ctx.IndentationLevel += 2;
-            for (int i = 1; i < Children.Count; i++)
+            for (int i = startCases; i < Children.Count; i++)
             {
                 var child = Children[i];
                 if (child.Kind == ASTNode.StatementKind.SwitchCase ||

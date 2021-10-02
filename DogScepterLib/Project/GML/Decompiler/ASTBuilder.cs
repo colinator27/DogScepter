@@ -88,7 +88,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     break;
                                 default:
                                     if (context.IfStatement != null && stack.Count == context.IfStatement.StackCount + 1 &&
-                                        context.IfStatement.Children.Count >= 3 && context.IfStatement.Children.Count < 5)
+                                        context.IfStatement.Children.Count >= 3 && !context.IfStatement.EmptyElse && 
+                                        context.IfStatement.Children.Count < 5)
                                     {
                                         // This is a ternary; add the expression
                                         context.IfStatement.Children.Add(stack.Pop());
@@ -125,6 +126,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 // Main/true block
                                 var block = new ASTBlock();
                                 statementStack.Push(new(block, s.Branches[1], context.Loop, astStatement));
+
+                                astStatement.EmptyElse = s.Branches[0] == s.Branches[2];
 
                                 astStatement.Children.Add(block);
                                 astStatement.Children.Add(elseBlock);
@@ -445,7 +448,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                     case Instruction.Opcode.Dup:
                         if (inst.ComparisonKind != 0)
                         {
-                            // This is a special instruction for moving around an instance on the stack in GMS2.3
+                            // This is a special instruction for moving stuff around the stack in GMS2.3
                             throw new System.Exception("Unimplemented GMS2.3");
                         }
 
