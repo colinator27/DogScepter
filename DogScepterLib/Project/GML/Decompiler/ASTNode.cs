@@ -32,6 +32,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             Variable,
 
             TypeInst,
+            Asset,
 
             Binary,
             Unary,
@@ -631,6 +632,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             for (int i = 0; i < Children.Count; i++)
                 Children[i] = Children[i].Clean(ctx);
+            AssetResolver.ResolveFunction(ctx, this);
             return this;
         }
     }
@@ -1320,6 +1322,8 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             for (int i = 0; i < Children.Count; i++)
                 Children[i] = Children[i].Clean(ctx);
+            if (Children[0].Kind == ASTNode.StatementKind.Int16)
+                Children[0] = AssetResolver.ResolveObject(ctx, Children[0] as ASTInt16);
             return this;
         }
     }
@@ -1415,6 +1419,31 @@ namespace DogScepterLib.Project.GML.Decompiler
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
             sb.Append("default:");
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
+        }
+    }
+
+    public class ASTAsset : ASTNode
+    {
+        public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Asset;
+        public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Int32;
+        public List<ASTNode> Children { get; set; }
+        public string AssetName { get; set; }
+
+        public ASTAsset(string assetName)
+        {
+            AssetName = assetName;
+        }
+
+        public void Write(DecompileContext ctx, StringBuilder sb)
+        {
+            sb.Append(AssetName);
         }
 
         public ASTNode Clean(DecompileContext ctx)
