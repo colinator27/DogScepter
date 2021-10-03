@@ -34,7 +34,16 @@ namespace DogScepterTest
 
                 DecompileContext ctx = new DecompileContext(pf);
                 var list = reader.Data.GetChunk<GMChunkCODE>().List;
-                string result = ctx.DecompileSegment(list[0]);
+                /*int ind = -1;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    if (list[i].Name.Content.Contains("obj_mainchara_Step_0"))
+                    {
+                        ind = i;
+                        break;
+                    }
+                }
+                string result = ctx.DecompileSegment(list[ind]);*/
                 Directory.CreateDirectory("Decomp");
                 foreach (var elem in list)
                 {

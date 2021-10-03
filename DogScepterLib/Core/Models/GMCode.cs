@@ -132,7 +132,11 @@ namespace DogScepterLib.Core.Models
                     Array,
                     StackTop = 0x80,
                     Normal = 0xA0,
-                    Unknown = 0xE0,  // room scope?
+                    Instance = 0xE0, // used for room creation code?
+
+                    // GMS 2.3 types
+                    MultiPush = 0x10, // Multidimensional array, used with pushaf
+                    MultiPushPop = 0x90, // Multidimensional array, used with pushaf/popaf
                 }
 
                 public class Reference<T> : GMSerializable

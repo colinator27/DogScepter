@@ -33,11 +33,13 @@ namespace DogScepterLib.Project.GML.Decompiler
 
             TypeInst,
             Asset,
+            Instance,
 
             Binary,
             Unary,
 
             Function,
+            FunctionVar,
             Assign,
 
             Break,
@@ -632,7 +634,66 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             for (int i = 0; i < Children.Count; i++)
                 Children[i] = Children[i].Clean(ctx);
+
+            // Deal with 2.3 instance functions
+            switch (Function.Name.Content)
+            {
+                case "@@This@@":
+                    return new ASTInstance(ASTInstance.InstanceType.Self);
+                case "@@Other@@":
+                    return new ASTInstance(ASTInstance.InstanceType.Other);
+                case "@@Global@@":
+                    return new ASTInstance(ASTInstance.InstanceType.Global);
+                case "@@GetInstance@@":
+                    return AssetResolver.ResolveObject(ctx, Children[0] as ASTInt16);
+            }
+
             AssetResolver.ResolveFunction(ctx, this);
+            return this;
+        }
+    }
+
+    public class ASTFunctionVar : ASTNode
+    {
+        public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.FunctionVar;
+        public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
+        public List<ASTNode> Children { get; set; }
+
+        public ASTFunctionVar(ASTNode instance, ASTNode function, List<ASTNode> args)
+        {
+            Children = args;
+            Children.Insert(0, function);
+            Children.Insert(0, instance);
+        }
+
+        public void Write(DecompileContext ctx, StringBuilder sb)
+        {
+            if (Children[0].Kind != ASTNode.StatementKind.Instance ||
+                (Children[0] as ASTInstance).InstanceKind != ASTInstance.InstanceType.Self)
+            {
+                Children[0].Write(ctx, sb);
+                sb.Append('.');
+            }
+            Children[1].Write(ctx, sb);
+            sb.Append('(');
+
+            if (Children.Count >= 3)
+                Children[2].Write(ctx, sb);
+            for (int i = 3; i < Children.Count; i++)
+            {
+                sb.Append(", ");
+                Children[i].Write(ctx, sb);
+            }
+            
+            sb.Append(')');
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
             return this;
         }
     }
@@ -1444,6 +1505,49 @@ namespace DogScepterLib.Project.GML.Decompiler
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
             sb.Append(AssetName);
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
+        }
+    }
+
+    public class ASTInstance : ASTNode
+    {
+        public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Instance;
+        public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Variable;
+        public List<ASTNode> Children { get; set; }
+        public InstanceType InstanceKind { get; set; }
+        
+        public enum InstanceType
+        {
+            Self,
+            Other,
+            Global
+        }
+
+        public ASTInstance(InstanceType kind)
+        {
+            InstanceKind = kind;
+        }
+
+        public void Write(DecompileContext ctx, StringBuilder sb)
+        {
+            switch (InstanceKind)
+            {
+                case InstanceType.Self:
+                    sb.Append("self");
+                    break;
+                case InstanceType.Other:
+                    sb.Append("other");
+                    break;
+                case InstanceType.Global:
+                    sb.Append("global");
+                    break;
+            }
         }
 
         public ASTNode Clean(DecompileContext ctx)

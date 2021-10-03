@@ -14,10 +14,10 @@
 ## Features
 * Fully supports serializing/deserializing GameMaker data format ID 13 (an unknown version of GM:S 1) up to the latest GMS 2.3.2 runtime (format ID 17).
 * Work in progress "abstract" or "project" mode that deals with a custom project format on disk for ease in modding, even with multiple versions of a game.
+* Work in progress GML VM decompilation, for use in re-compiling back for modding purposes.
 * Planned features
     * A command line interface to deal with the aforementioned "project" mode, to deal with assets and compilation.
     * An actual editor similar to that of UndertaleModTool, but simplified.
-    * In the future, decompilation/compilation of VM code to an extent.
 
 ## Roadmap (subject to change)
 - [x] Core library

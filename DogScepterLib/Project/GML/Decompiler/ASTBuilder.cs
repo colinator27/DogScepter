@@ -43,6 +43,13 @@ namespace DogScepterLib.Project.GML.Decompiler
             while (statementStack.Count != 0)
             {
                 var context = statementStack.Pop();
+
+                // Guards to prevent massive RAM usage and an eventual crash
+                if (stack.Count >= 65536)
+                    throw new System.Exception("Massive stack, sign of infinite loop");
+                if (statementStack.Count >= 65536)
+                    throw new System.Exception("Massive statement stack, sign of infinite loop");
+
                 switch (context.Node.Kind)
                 {
                     case Node.NodeType.Block:
@@ -188,7 +195,21 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     astStatement = new ASTRepeatLoop(stack.Pop());
                                     break;
                                 case Loop.LoopType.With:
-                                    astStatement = new ASTWithLoop(stack.Pop());
+                                    if (dctx.Data.VersionInfo.IsNumberAtLeast(2, 3))
+                                    {
+                                        ASTNode n = stack.Pop();
+
+                                        if (n.Kind == ASTNode.StatementKind.Int16 && (n as ASTInt16).Value == -9)
+                                        {
+                                            // -9 signifies stacktop instance
+                                            if (stack.Count != 0 && !stack.Peek().Duplicated)
+                                                n = stack.Pop();
+                                        }
+
+                                        astStatement = new ASTWithLoop(n);
+                                    }
+                                    else
+                                        astStatement = new ASTWithLoop(stack.Pop());
                                     break;
                             }
 
@@ -235,6 +256,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                         switch (inst.Type1)
                         {
                             case Instruction.DataType.Int32:
+                                if (inst.Value == null)
+                                {
+                                    stack.Push(new ASTAsset(inst.Function.Target.Name.Content));
+                                    break;
+                                }
                                 stack.Push(new ASTInt32((int)inst.Value));
                                 break;
                             case Instruction.DataType.String:
@@ -253,11 +279,25 @@ namespace DogScepterLib.Project.GML.Decompiler
                                         variable.Children = ProcessArrayIndex(ctx, stack.Pop());
                                         variable.Left = stack.Pop();
                                     }
+                                    else if (inst.Variable.Type == Instruction.VariableType.MultiPush ||
+                                             inst.Variable.Type == Instruction.VariableType.MultiPushPop)
+                                    {
+                                        variable.Children = new() { stack.Pop() };
+                                        variable.Left = stack.Pop();
+                                    }
                                     else
                                         variable.Left = new ASTTypeInst((int)inst.TypeInst);
 
                                     if (variable.Variable.VariableType == Instruction.InstanceType.Local)
                                         ctx.RemainingLocals.Add(variable.Variable.Name?.Content);
+
+                                    // 2.3 stacktop instance
+                                    if (variable.Left.Kind == ASTNode.StatementKind.Int16 &&
+                                        ctx.Data.VersionInfo.IsNumberAtLeast(2, 3) &&
+                                        (variable.Left as ASTInt16).Value == -9)
+                                    {
+                                        variable.Left = stack.Pop();
+                                    }
 
                                     stack.Push(variable);
                                 }
@@ -389,6 +429,15 @@ namespace DogScepterLib.Project.GML.Decompiler
                             }
                             else
                                 variable.Left = new ASTTypeInst((int)inst.TypeInst);
+
+                            // 2.3 stacktop instance
+                            if (variable.Left.Kind == ASTNode.StatementKind.Int16 &&
+                                ctx.Data.VersionInfo.IsNumberAtLeast(2, 3) &&
+                                (variable.Left as ASTInt16).Value == -9)
+                            {
+                                variable.Left = stack.Pop();
+                            }
+
                             if (inst.Type1 == Instruction.DataType.Variable)
                                 value = stack.Pop();
 
@@ -436,6 +485,16 @@ namespace DogScepterLib.Project.GML.Decompiler
                             stack.Push(new ASTFunction(inst.Function.Target, args));
                         }
                         break;
+                    case Instruction.Opcode.CallV:
+                        {
+                            ASTNode func = stack.Pop();
+                            ASTNode instance = stack.Pop();
+                            List<ASTNode> args = new List<ASTNode>(inst.Extra + 2);
+                            for (int j = 0; j < inst.Extra; j++)
+                                args.Add(stack.Pop());
+                            stack.Push(new ASTFunctionVar(instance, func, args));
+                        }
+                        break;
                     case Instruction.Opcode.Neg:
                     case Instruction.Opcode.Not:
                         stack.Push(new ASTUnary(inst, stack.Pop()));
@@ -449,13 +508,52 @@ namespace DogScepterLib.Project.GML.Decompiler
                     case Instruction.Opcode.Popz:
                         if (stack.Count == 0)
                             break; // This occasionally happens in switch statements; this is probably the fastest way to handle it
-                        current.Children.Add(stack.Pop());
+                        {
+                            ASTNode node = stack.Pop();
+                            if (!node.Duplicated)
+                                current.Children.Add(node);
+                        }
                         break;
                     case Instruction.Opcode.Dup:
                         if (inst.ComparisonKind != 0)
                         {
-                            // This is a special instruction for moving stuff around the stack in GMS2.3
-                            throw new System.Exception("Unimplemented GMS2.3");
+                            // This is a GMS2.3 "swap" instruction
+
+                            // Variable type seems to do literally nothing
+                            if (inst.Type1 == Instruction.DataType.Variable)
+                                break;
+
+                            int sourceBytes = inst.Extra * 4;
+                            Stack<ASTNode> source = new Stack<ASTNode>();
+                            while (sourceBytes > 0)
+                            {
+                                ASTNode e = stack.Pop();
+                                source.Push(e);
+                                sourceBytes -= ASTNode.GetStackLength(e);
+#if DEBUG
+                                if (sourceBytes < 0)
+                                    throw new System.Exception("Dup swap stack size incorrect #1");
+#endif
+                            }
+
+                            int moveBytes = (((byte)inst.ComparisonKind & 0x7F) >> 3) * 4;
+                            Stack<ASTNode> moved = new Stack<ASTNode>();
+                            while (moveBytes > 0)
+                            {
+                                ASTNode e = stack.Pop();
+                                moved.Push(e);
+                                moveBytes -= ASTNode.GetStackLength(e);
+#if DEBUG
+                                if (moveBytes < 0)
+                                    throw new System.Exception("Dup swap stack size incorrect #2");
+#endif
+                            }
+
+                            while (source.Count != 0)
+                                stack.Push(source.Pop());
+                            while (moved.Count != 0)
+                                stack.Push(moved.Pop());
+                            break;
                         }
 
                         // Normal duplication instruction
@@ -470,6 +568,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                             expr2.Add(item);
 
                             bytes -= ASTNode.GetStackLength(item);
+
+#if DEBUG
+                            if (bytes < 0)
+                                throw new System.Exception("Dup stack size incorrect");
+#endif
                         }
                         for (int j = expr1.Count - 1; j >= 0; j--)
                             stack.Push(expr1[j]);
@@ -493,6 +596,43 @@ namespace DogScepterLib.Project.GML.Decompiler
                             }
                         }
                         stack.Peek().DataType = inst.Type2;
+                        break;
+                    case Instruction.Opcode.Break:
+                        switch ((short)inst.Value)
+                        {
+                            case -2:
+                                // pushaf
+                                {
+                                    ASTNode ind = stack.Pop();
+                                    ASTVariable variable = stack.Pop() as ASTVariable;
+
+                                    ASTVariable newVar = new ASTVariable(variable.Variable, variable.VarType, inst.Kind);
+                                    newVar.Left = variable.Left;
+                                    newVar.Children = new List<ASTNode>(variable.Children);
+                                    newVar.Children.Add(ind);
+                                    stack.Push(newVar);
+                                }
+                                break;
+                            case -3:
+                                // popaf
+                                {
+                                    ASTNode ind = stack.Pop();
+                                    ASTVariable variable = stack.Pop() as ASTVariable;
+
+                                    ASTVariable newVar = new ASTVariable(variable.Variable, variable.VarType, inst.Kind);
+                                    newVar.Left = variable.Left;
+                                    newVar.Children = new List<ASTNode>(variable.Children);
+                                    newVar.Children.Add(ind);
+
+                                    current.Children.Add(new ASTAssign(newVar, stack.Pop()));
+                                }
+                                break;
+                            case -5: 
+                                // setowner
+                                // Used for a unique ID for array copy-on-write functionality
+                                stack.Pop();
+                                break;
+                        }
                         break;
                 }
             }
