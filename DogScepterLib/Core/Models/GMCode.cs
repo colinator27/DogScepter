@@ -57,8 +57,12 @@ namespace DogScepterLib.Core.Models
                 int relativeBytecodeAddr = reader.ReadInt32();
                 int absoluteBytecodeAddr = (reader.Offset - 4) + relativeBytecodeAddr;
                 if (reader.PointerOffsets.ContainsKey(absoluteBytecodeAddr))
-                    BytecodeEntry = (Bytecode)reader.PointerOffsets[absoluteBytecodeAddr];
-                else
+                {
+                    GMSerializable s = reader.PointerOffsets[absoluteBytecodeAddr];
+                    if (s is Bytecode b)
+                        BytecodeEntry = b;
+                }
+                if (BytecodeEntry == null)
                 {
                     BytecodeEntry = new Bytecode();
                     if (Length != 0) // prevent pointer overlap of entries with 0 instructions
