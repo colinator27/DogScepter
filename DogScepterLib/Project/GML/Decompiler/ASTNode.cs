@@ -74,6 +74,20 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             StringBuilder sb = new StringBuilder();
 
+            if (ctx.RemainingLocals.Count != 0)
+            {
+                sb.Append("var ");
+                string[] locals = ctx.RemainingLocals.ToArray();
+                for (int i = 0; i < locals.Length - 1; i++)
+                {
+                    sb.Append(locals[i]);
+                    sb.Append(", ");
+                }
+                sb.Append(locals[^1]);
+                sb.Append(';');
+                Newline(ctx, sb);
+            }
+
             ASTBlock block = ctx.BaseASTBlock;
             foreach (var child in block.Children)
             {
@@ -129,41 +143,45 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public static void WhileForConversion(DecompileContext ctx, List<ASTNode> nodes)
         {
-            for (int i = nodes.Count - 1; i >= 0; i--)
+            if (nodes.Count != 0)
             {
-                nodes[i] = nodes[i].Clean(ctx);
-                if (i > 0 && nodes[i - 1].Kind == ASTNode.StatementKind.Assign)
+                nodes[0] = nodes[0].Clean(ctx);
+                for (int i = 1; i < nodes.Count; i++)
                 {
-                    // Check for while/for loop conversions
-                    if (nodes[i].Kind == ASTNode.StatementKind.WhileLoop)
+                    nodes[i] = nodes[i].Clean(ctx);
+                    if (nodes[i - 1].Kind == ASTNode.StatementKind.Assign)
                     {
-                        ASTWhileLoop loop = nodes[i] as ASTWhileLoop;
-                        if (!loop.ContinueUsed && loop.Children[0].Kind == ASTNode.StatementKind.Block)
+                        // Check for while/for loop conversions
+                        if (nodes[i].Kind == ASTNode.StatementKind.WhileLoop)
                         {
-                            ASTBlock block = loop.Children[0] as ASTBlock;
-                            if (block.Children.Count >= 1 && block.Children[^1].Kind == ASTNode.StatementKind.Assign)
+                            ASTWhileLoop loop = nodes[i] as ASTWhileLoop;
+                            if (!loop.ContinueUsed && loop.Children[0].Kind == ASTNode.StatementKind.Block)
                             {
-                                // This while loop can be cleanly turned into a for loop, so do it!
-                                ASTForLoop newLoop = new ASTForLoop();
-                                newLoop.HasInitializer = true;
-                                newLoop.Children.Add(block.Children[^1]);
-                                newLoop.Children.Add(block);
-                                block.Children.RemoveAt(block.Children.Count - 1);
-                                newLoop.Children.Add(loop.Children[1]);
-                                newLoop.Children.Add(nodes[i - 1].Clean(ctx));
-                                nodes[i - 1] = newLoop.Clean(ctx);
-                                nodes.RemoveAt(i--);
+                                ASTBlock block = loop.Children[0] as ASTBlock;
+                                if (block.Children.Count >= 1 && block.Children[^1].Kind == ASTNode.StatementKind.Assign)
+                                {
+                                    // This while loop can be cleanly turned into a for loop, so do it!
+                                    ASTForLoop newLoop = new ASTForLoop();
+                                    newLoop.HasInitializer = true;
+                                    newLoop.Children.Add(block.Children[^1]);
+                                    newLoop.Children.Add(block);
+                                    block.Children.RemoveAt(block.Children.Count - 1);
+                                    newLoop.Children.Add(loop.Children[1]);
+                                    newLoop.Children.Add(nodes[i - 1].Clean(ctx));
+                                    nodes[i - 1] = newLoop.Clean(ctx);
+                                    nodes.RemoveAt(i--);
+                                }
                             }
                         }
-                    }
-                    else if (nodes[i].Kind == ASTNode.StatementKind.ForLoop)
-                    {
-                        // This for loop should have the intialization added to it
-                        ASTForLoop loop = nodes[i] as ASTForLoop;
-                        loop.HasInitializer = true;
-                        loop.Children.Add(nodes[i - 1].Clean(ctx));
-                        nodes.RemoveAt(--i);
-                        loop.Clean(ctx);
+                        else if (nodes[i].Kind == ASTNode.StatementKind.ForLoop)
+                        {
+                            // This for loop should have the intialization added to it
+                            ASTForLoop loop = nodes[i] as ASTForLoop;
+                            loop.HasInitializer = true;
+                            loop.Children.Add(nodes[i - 1].Clean(ctx));
+                            nodes.RemoveAt(--i);
+                            loop.Clean(ctx);
+                        }
                     }
                 }
             }
@@ -686,6 +704,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                 return false;
             if (Left.Kind != other.Left.Kind)
                 return false;
+            if (Left.Kind == ASTNode.StatementKind.Variable)
+                if (!(Left as ASTVariable).IsSameAs(other.Left as ASTVariable))
+                    return false;
             if (Children != null)
             {
                 if (Children.Count != other.Children.Count)
@@ -826,13 +847,19 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<ASTNode> Children { get; set; }
         public Instruction Compound;
         public CompoundType CompoundKind = CompoundType.None;
+        public ModifierType ModifierKind = ModifierType.None;
         public enum CompoundType
         {
             None,
             Normal,
             Prefix,
             Postfix
-        }    
+        }
+        public enum ModifierType
+        {
+            None,
+            Local
+        }
 
         public ASTAssign(ASTVariable var, ASTNode node, Instruction compound = null)
         {
@@ -883,6 +910,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                         sb.Append("--");
                     break;
                 default:
+                    if (ModifierKind == ModifierType.Local)
+                        sb.Append("var ");
                     Children[0].Write(ctx, sb);
                     sb.Append(" = ");
                     Children[1].Write(ctx, sb);
@@ -917,12 +946,27 @@ namespace DogScepterLib.Project.GML.Decompiler
                             }
                         }
 
-                        if (ctx.Data.VersionInfo.FormatID >= 15 && var.Opcode != Instruction.Opcode.Push && var.Variable.VariableType != Instruction.InstanceType.Self)
-                            return this; // Actually, this is a false positive (uses a different instruction in bytecode)
+                        // Make sure that this isn't a false positive (uses a different instruction in bytecode)
+                        if (ctx.Data.VersionInfo.FormatID < 15 || var.Opcode == Instruction.Opcode.Push || var.Variable.VariableType == Instruction.InstanceType.Self)
+                        {
+                            CompoundKind = CompoundType.Normal;
+                            Compound = bin.Instruction;
+                            Children[1] = bin.Children[1];
+                            return this;
+                        }
+                    }
+                }
+            }
 
-                        CompoundKind = CompoundType.Normal;
-                        Compound = bin.Instruction;
-                        Children[1] = bin.Children[1];
+            if (CompoundKind == CompoundType.None && Children[0].Kind == ASTNode.StatementKind.Variable)
+            {
+                ASTVariable variable = Children[0] as ASTVariable;
+                if (variable.Variable.VariableType == Instruction.InstanceType.Local)
+                {
+                    if (ctx.RemainingLocals.Contains(variable.Variable.Name.Content))
+                    {
+                        ModifierKind = ModifierType.Local;
+                        ctx.RemainingLocals.Remove(variable.Variable.Name.Content);
                     }
                 }
             }

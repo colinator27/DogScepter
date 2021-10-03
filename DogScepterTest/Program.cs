@@ -34,6 +34,7 @@ namespace DogScepterTest
 
                 DecompileContext ctx = new DecompileContext(pf);
                 var list = reader.Data.GetChunk<GMChunkCODE>().List;
+                string result = ctx.DecompileSegment(list[0]);
                 Directory.CreateDirectory("Decomp");
                 foreach (var elem in list)
                 {
@@ -46,7 +47,6 @@ namespace DogScepterTest
                         Console.WriteLine($"Failed on {elem.Name.Content}");
                     }
                 }
-                //string result = ctx.DecompileSegment(list[0]);
 
                 //foreach (var group in pf.Textures.TextureGroups)
                 //    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));

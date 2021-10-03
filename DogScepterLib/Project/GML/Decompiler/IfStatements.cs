@@ -95,32 +95,63 @@ namespace DogScepterLib.Project.GML.Decompiler
                                             break;
                                         }
                                     }
-                                }
 
-                                foreach (var branch in curr.Branches)
-                                {
-                                    if (ignoreFirst)
+                                    foreach (var branch in curr.Branches)
                                     {
-                                        // This is b.Branches[0], and we don't want to process it yet
-                                        ignoreFirst = false;
-                                    }
-                                    else if (branch.Address > b.Address && !otherVisited.Contains(branch))
-                                    {
-                                        if (visited.Contains(branch) || branch.Address >= specialEndPoint)
+                                        if (ignoreFirst)
                                         {
-                                            if (endTruthy == null || (curr.Unreachable && curr.Address > endTruthy.Address &&
-                                                                      curr.Address < b.Branches[0].Address))
-                                            {
-                                                // `curr` is the end of the true branch
-                                                endTruthy = curr;
-                                            }
-                                            if (after == null || (curr == endTruthy && branch.Address > after.Address) || branch.Address < after.Address)
-                                            {
-                                                // `branch` is the meetpoint
-                                                after = branch;
-                                            }
+                                            // This is b.Branches[0], and we don't want to process it yet
+                                            ignoreFirst = false;
                                         }
-                                        work.Push(branch);
+                                        else if (branch.Address > b.Address && !otherVisited.Contains(branch))
+                                        {
+                                            if (visited.Contains(branch) || branch.Address >= specialEndPoint)
+                                            {
+                                                if (endTruthy == null || (curr.Unreachable && curr.Address > endTruthy.Address &&
+                                                                          curr.Address < b.Branches[0].Address))
+                                                {
+                                                    // `curr` is the end of the true branch
+                                                    endTruthy = curr;
+                                                }
+                                                if (after == null || (curr == endTruthy && branch.Address > after.Address) || branch.Address < after.Address)
+                                                {
+                                                    // `branch` is the meetpoint
+                                                    after = branch;
+                                                }
+                                            }
+                                            work.Push(branch);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    // Alternative version for other control flow types; don't mess with their internals, skip past
+                                    if (curr.Branches.Count != 0)
+                                    {
+                                        Node branch = curr.Branches[0];
+                                        if (ignoreFirst)
+                                        {
+                                            // This is b.Branches[0], and we don't want to process it yet
+                                            ignoreFirst = false;
+                                        }
+                                        else if (branch.Address > b.Address && !otherVisited.Contains(branch))
+                                        {
+                                            if (visited.Contains(branch) || branch.Address >= specialEndPoint)
+                                            {
+                                                if (endTruthy == null || (curr.Unreachable && curr.Address > endTruthy.Address &&
+                                                                          curr.Address < b.Branches[0].Address))
+                                                {
+                                                    // `curr` is the end of the true branch
+                                                    endTruthy = curr;
+                                                }
+                                                if (after == null || (curr == endTruthy && branch.Address > after.Address) || branch.Address < after.Address)
+                                                {
+                                                    // `branch` is the meetpoint
+                                                    after = branch;
+                                                }
+                                            }
+                                            work.Push(branch);
+                                        }
                                     }
                                 }
                             }

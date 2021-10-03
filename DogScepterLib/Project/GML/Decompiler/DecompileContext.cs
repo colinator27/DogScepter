@@ -9,10 +9,16 @@ using System.Threading.Tasks;
 
 namespace DogScepterLib.Project.GML.Decompiler
 {
+    public class DecompileSettings
+    {
+        public string Indent { get; set; } = "    ";
+    }
+
     public class DecompileContext
     {
         public ProjectFile Project { get; set; }
         public GMData Data { get; set; }
+        public DecompileSettings Settings { get; set; }
         public IList<GMString> Strings { get; set; }
         public BlockList Blocks { get; set; }
         public List<Loop> LoopNodes { get; set; }
@@ -22,21 +28,22 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<Node> PredecessorsToClear { get; set; }
         public Node BaseNode { get; set; }
         public ASTBlock BaseASTBlock { get; set; }
+        public HashSet<string> RemainingLocals { get; set; }
 
         private int indentationLevel = 0;
         public int IndentationLevel
         {
             get => indentationLevel;
-            set { indentationLevel = value; Indentation = new StringBuilder().Insert(0, Indent, indentationLevel).ToString(); }
+            set { indentationLevel = value; Indentation = new StringBuilder().Insert(0, Settings.Indent, indentationLevel).ToString(); }
         }
-        public const string Indent = "    ";
         public string Indentation = "";
 
-        public DecompileContext(ProjectFile pf)
+        public DecompileContext(ProjectFile pf, DecompileSettings settings = null)
         {
             Project = pf;
             Data = pf.DataHandle;
             Strings = Data.GetChunk<GMChunkSTRG>().List;
+            Settings = settings ?? new DecompileSettings();
         }
 
         public string DecompileWholeEntry(GMCode codeEntry)
@@ -68,6 +75,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             BranchStatements.InsertNodes(this);
 
             // Now build the AST, clean it, and write it to a string
+            RemainingLocals = new HashSet<string>();
             BaseASTBlock = ASTBuilder.FromContext(this);
             BaseASTBlock.Clean(this);
             return ASTNode.WriteFromContext(this);

@@ -256,6 +256,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     else
                                         variable.Left = new ASTTypeInst((int)inst.TypeInst);
 
+                                    if (variable.Variable.VariableType == Instruction.InstanceType.Local)
+                                        ctx.RemainingLocals.Add(variable.Variable.Name?.Content);
+
                                     stack.Push(variable);
                                 }
                                 break;
@@ -388,6 +391,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 variable.Left = new ASTTypeInst((int)inst.TypeInst);
                             if (inst.Type1 == Instruction.DataType.Variable)
                                 value = stack.Pop();
+
+                            if (variable.Variable.VariableType == Instruction.InstanceType.Local)
+                                ctx.RemainingLocals.Add(variable.Variable.Name?.Content);
 
                             // Check for compound operators
                             if (variable.Left.Duplicated &&
