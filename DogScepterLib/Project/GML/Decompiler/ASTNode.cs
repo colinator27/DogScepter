@@ -144,7 +144,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             sb.Append('}');
         }
 
-        public static void WhileForConversion(DecompileContext ctx, List<ASTNode> nodes)
+        public static void BlockCleanup(DecompileContext ctx, List<ASTNode> nodes)
         {
             if (nodes.Count != 0)
             {
@@ -185,6 +185,27 @@ namespace DogScepterLib.Project.GML.Decompiler
                             nodes.RemoveAt(--i);
                             loop.Clean(ctx);
                         }
+                        else
+                        {
+                            // Check for $$$$temp$$$$
+                            ASTAssign assign = nodes[i - 1] as ASTAssign;
+                            if (assign.Children[0].Kind == ASTNode.StatementKind.Variable &&
+                                (assign.Children[0] as ASTVariable).Variable.Name?.Content == "$$$$temp$$$$")
+                            {
+                                if (nodes[i].Kind == ASTNode.StatementKind.Return)
+                                {
+                                    ASTReturn ret = nodes[i] as ASTReturn;
+                                    if (ret.Children[0].Kind == ASTNode.StatementKind.Variable && 
+                                        (ret.Children[0] as ASTVariable).Variable.Name?.Content == "$$$$temp$$$$")
+                                    {
+                                        // Change   $$$$temp$$$$ = <value>; return $$$$temp$$$$;
+                                        // into     return <value>;
+                                        nodes[i - 1] = new ASTReturn(assign.Children[1]);
+                                        nodes.RemoveAt(i--);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -212,7 +233,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 }
             }
             else
-                WhileForConversion(ctx, Children);
+                BlockCleanup(ctx, Children);
             return this;
         }
     }
@@ -718,7 +739,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
     public class ASTReturn : ASTNode
     {
-        public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Exit;
+        public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Return;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -768,8 +789,17 @@ namespace DogScepterLib.Project.GML.Decompiler
             if (Left.Kind != other.Left.Kind)
                 return false;
             if (Left.Kind == ASTNode.StatementKind.Variable)
+            {
                 if (!(Left as ASTVariable).IsSameAs(other.Left as ASTVariable))
                     return false;
+            }
+            else if (Left.Kind == ASTNode.StatementKind.TypeInst)
+            {
+                if ((Left as ASTTypeInst).Value != (other.Left as ASTTypeInst).Value)
+                    return false;
+            }
+            else if (Left != other.Left)
+                return false;
             if (Children != null)
             {
                 if (Children.Count != other.Children.Count)
@@ -1441,7 +1471,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public ASTNode Clean(DecompileContext ctx)
         {
-            ASTBlock.WhileForConversion(ctx, Children);
+            ASTBlock.BlockCleanup(ctx, Children);
             return this;
         }
     }

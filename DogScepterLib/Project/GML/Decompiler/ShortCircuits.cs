@@ -38,6 +38,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             foreach (var s in ctx.ShortCircuitNodes)
             {
                 Node header = ctx.Blocks.AddressToBlock[s.Address];
+                (header as Block).BelongingTo = s;
                 if ((header as Block).Instructions.Count == 1)
                 {
                     // The header is actually another short circuit, need to adjust up

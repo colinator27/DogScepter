@@ -37,13 +37,14 @@ namespace DogScepterTest
                 /*int ind = -1;
                 for (int i = 0; i < list.Count; i++)
                 {
-                    if (list[i].Name.Content.Contains("obj_mainchara_Step_0"))
+                    if (list[i].Name.Content.Contains("gml_Object_obj_musical_controller_Other_10"))
                     {
                         ind = i;
                         break;
                     }
                 }
                 string result = ctx.DecompileSegment(list[ind]);*/
+                string result = ctx.DecompileSegment(list[0]);
                 Directory.CreateDirectory("Decomp");
                 foreach (var elem in list)
                 {

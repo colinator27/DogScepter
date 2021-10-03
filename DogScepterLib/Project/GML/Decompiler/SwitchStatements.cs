@@ -114,7 +114,12 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             // Transfer predecessors and branches
             s.Predecessors.AddRange(s.Header.Predecessors);
-            s.Branches.Add(s.Tail);
+            Node tail;
+            if (s.Tail.BelongingTo != null)
+                tail = s.Tail.BelongingTo;
+            else
+                tail = s.Tail;
+            s.Branches.Add(tail);
 
             // Change header predecessors to point to this node instead
             foreach (var node in s.Header.Predecessors)
@@ -127,8 +132,8 @@ namespace DogScepterLib.Project.GML.Decompiler
             }
 
             // Change Tail predecessor to be this statement
-            s.Tail.Predecessors.Clear();
-            s.Tail.Predecessors.Add(s);
+            tail.Predecessors.Clear();
+            tail.Predecessors.Add(s);
 
             s.Tail.Instructions.RemoveAt(0); // Remove `popz` in tail
 

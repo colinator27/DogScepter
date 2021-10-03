@@ -141,8 +141,13 @@ namespace DogScepterLib.Project.GML.Decompiler
                 else
                 {
                     foreach (var branch in loop.Tail.Branches)
+                    {
                         if ((branch.Address < loop.Address && branch.EndAddress <= loop.Address) || branch.Address >= loop.EndAddress)
-                            loop.Branches.Add(branch);
+                        {
+                            if (!loop.Branches.Contains(branch))
+                                loop.Branches.Add(branch);
+                        }
+                    }
                 }
 
                 // Change any nodes jumped outbound to be marked as jumped from this loop
@@ -160,7 +165,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         {
                             // This node branches outside of the loop.
                             if (curr.Kind == Node.NodeType.Block && (curr as Block).LastInstr?.Kind == Instruction.Opcode.B && 
-                                branch.Address >= loop.EndAddress)
+                                branch.Address >= loop.EndAddress && curr.EndAddress < loop.EndAddress)
                             {
                                 // This is actually a break statement
 
@@ -280,8 +285,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                     case Loop.LoopType.With:
                         {
                             // Mark block before loop as a with expression (pushenv and popenv don't need to be removed; they're unique)
-                            Block prev = loop.Predecessors[0] as Block;
-                            prev.ControlFlow = Block.ControlFlowType.WithExpression; // Mark this for later reference
+                            Node prev = loop.Predecessors[0];
+                            if (prev.Kind == Node.NodeType.Block)
+                                (prev as Block).ControlFlow = Block.ControlFlowType.WithExpression; // Mark this for later reference
 
                             // Remove unnecessary branches from the block before
                             for (int i = prev.Branches.Count - 1; i >= 0; i--)

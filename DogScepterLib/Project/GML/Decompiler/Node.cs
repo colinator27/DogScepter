@@ -63,6 +63,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<GMCode.Bytecode.Instruction> Instructions = new List<GMCode.Bytecode.Instruction>();
         public ControlFlowType ControlFlow { get; set; } = ControlFlowType.None;
         public bool Unreachable { get; set; } = false;
+        public Node BelongingTo { get; set; } // Somewhat hacky field to mark a block as belonging to another node, as some control flow use blocks directly for detection
 
         public enum ControlFlowType
         {

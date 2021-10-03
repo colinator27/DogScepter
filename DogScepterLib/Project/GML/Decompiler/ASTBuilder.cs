@@ -160,12 +160,6 @@ namespace DogScepterLib.Project.GML.Decompiler
                             {
                                 Stack<ASTNode> returnedStack = BuildFromNode(dctx, context.Current, cond, stack);
                                 astStatement.Children.Add(returnedStack.Pop());
-
-                                // The stack remains need to be moved to the main stack
-                                ASTNode[] remaining = returnedStack.ToArray();
-                                for (int j = remaining.Length - 1; j >= 0; j--)
-                                    stack.Push(remaining[j]);
-
                             }
                             stack.Push(astStatement);
                         }
@@ -218,8 +212,14 @@ namespace DogScepterLib.Project.GML.Decompiler
                             context.Current.Children.Add(astStatement);
 
                             if (s.LoopKind != Loop.LoopType.For)
-                                statementStack.Push(new(context.Current, s.Branches[0], astStatement, context.IfStatement));
-                            statementStack.Push(new(subBlock, s.Branches[1], astStatement, context.IfStatement));
+                                statementStack.Push(new(context.Current, s.Branches[0], context.Loop, context.IfStatement));
+                            if (s.Branches.Count >= 2)
+                                statementStack.Push(new(subBlock, s.Branches[1], astStatement, context.IfStatement));
+                            else if (s.LoopKind == Loop.LoopType.With)
+                            {
+                                // This is an empty with statement, so we need to simulate its Header block first
+                                ExecuteBlock(dctx, s.Header, context.Current, stack);
+                            }
                         }
                         break;
                     case Node.NodeType.SwitchStatement:
@@ -347,7 +347,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     else if (i + 2 < block.Instructions.Count)
                                     {
                                         Instruction next1 = block.Instructions[i + 1];
-                                        Instruction next2 = block.Instructions[i + 1];
+                                        Instruction next2 = block.Instructions[i + 2];
 
                                         // Check for add/sub, then `dup.v`
                                         if ((next1.Kind == Instruction.Opcode.Add || next1.Kind == Instruction.Opcode.Sub) &&

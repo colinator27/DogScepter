@@ -187,9 +187,13 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                 // First deal with continues being wonky
                 Block endTruthyBlock = null;
-                if (s.EndTruthy.Kind == Node.NodeType.Block)
+                bool withSpecialCase = (s.EndTruthy.Kind == Node.NodeType.Loop && (s.EndTruthy as Loop).LoopKind == Loop.LoopType.With);
+                if (s.EndTruthy.Kind == Node.NodeType.Block || withSpecialCase)
                 {
-                    endTruthyBlock = s.EndTruthy as Block;
+                    if (withSpecialCase)
+                        endTruthyBlock = (s.EndTruthy as Loop).Tail;
+                    else
+                        endTruthyBlock = s.EndTruthy as Block;
                     if (endTruthyBlock.ControlFlow == Block.ControlFlowType.Continue)
                     {
                         // First check if this is actually an impossible goto
@@ -268,6 +272,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                     {
                         // This is the end of the else clause
                         endTruthyBlock.Instructions.RemoveAt(endTruthyBlock.Instructions.Count - 1); // Remove `b`
+
+                        if (withSpecialCase)
+                            endTruthyBlock.Branches.Clear();
 
                         Node falsey = s.Header.Branches[0];
                         s.Branches.Add(falsey);
