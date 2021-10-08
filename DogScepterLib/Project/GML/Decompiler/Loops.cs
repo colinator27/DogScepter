@@ -103,8 +103,21 @@ namespace DogScepterLib.Project.GML.Decompiler
                     {
                         if (node.Branches[i] != node && node.Branches[i] == loop.Header)
                         {
-                            node.Branches[i] = loop;
-                            break;
+                            if (loop.LoopKind == Loop.LoopType.With)
+                            {
+                                if (node.Kind != Node.NodeType.Loop ||
+                                    (node.Branches[i].Kind == Node.NodeType.Loop &&
+                                     node.Branches[i].Address != loop.Address)) // Special case when a with statement starts with a loop
+                                {
+                                    node.Branches[i] = loop; 
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                node.Branches[i] = loop;
+                                break;
+                            }
                         }
                     }
                 }
@@ -224,10 +237,17 @@ namespace DogScepterLib.Project.GML.Decompiler
                     }
                 }
 
-                // Set it up so that the last branch signifies REAL header/body (not just the block)
-                loop.Header.Predecessors.Clear();
-                loop.Branches.Add(loop.Header);
+                // Remove unnecessary predecessors from the header (inside the loop)
+                for (int i = loop.Header.Predecessors.Count - 1; i >= 0; i--)
+                {
+                    var pred = loop.Header.Predecessors[i];
+                    if (pred.Address >= loop.Address || pred.EndAddress > loop.Address)
+                        loop.Header.Predecessors.RemoveAt(i);
+                }
                 loop.Header.Predecessors.Add(loop);
+
+                // Set it up so that the last branch signifies REAL header/body (not just the block)
+                loop.Branches.Add(loop.Header);
 
                 // Remove unnecessary instructions and deal with references for the loop
                 switch (loop.LoopKind)
@@ -294,8 +314,43 @@ namespace DogScepterLib.Project.GML.Decompiler
                             {
                                 if (prev.Branches[i] != loop)
                                 {
-                                    prev.Branches[i].Predecessors.Remove(prev.Branches[i]);
-                                    prev.Branches.RemoveAt(i);
+                                    if (prev.Branches[i].Kind == Node.NodeType.Loop &&
+                                        prev.Branches[i].Address == loop.Address)
+                                    {
+                                        // Edge case when a loop begins a with statement
+                                        Node innerLoop = prev.Branches[i];
+                                        prev.Branches[i] = loop;
+                                        foreach (var pred2 in innerLoop.Predecessors)
+                                        {
+                                            for (int j = pred2.Branches.Count - 1; j >= 0; j--)
+                                                if (pred2.Branches[j] == innerLoop)
+                                                    pred2.Branches[j] = loop;
+                                        }
+                                        innerLoop.Predecessors.Clear();
+                                        innerLoop.Predecessors.Add(loop);
+                                        loop.Branches[1] = innerLoop;
+                                        loop.Header.Predecessors[1] = innerLoop;
+                                    }
+                                    else
+                                    {
+                                        prev.Branches[i].Predecessors.Remove(prev.Branches[i]);
+                                        prev.Branches.RemoveAt(i);
+                                    }
+                                }
+                            }
+
+                            // Check for a "break"/popenv drop block at the end, and remove the `b` instruction
+                            if (loop.Tail.Instructions.Count == 2 &&
+                                loop.Tail.Instructions[1].Kind == Instruction.Opcode.B &&
+                                loop.Tail.Index + 1 < ctx.Blocks.List.Count)
+                            {
+                                Block nextBlock = ctx.Blocks.List[loop.Tail.Index + 1];
+                                if (loop.Tail.Branches[0].Address == nextBlock.EndAddress &&
+                                    nextBlock.Instructions.Count == 1 && 
+                                    nextBlock.Instructions[0].Kind == Instruction.Opcode.PopEnv &&
+                                    nextBlock.Instructions[0].PopenvExitMagic)
+                                {
+                                    loop.Tail.Instructions.RemoveAt(1);
                                 }
                             }
                         }

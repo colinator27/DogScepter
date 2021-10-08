@@ -270,16 +270,24 @@ namespace DogScepterLib.Project.GML.Decompiler
                     var lastInstr = endTruthyBlock.Instructions[^1];
                     if (lastInstr.Kind == Instruction.Opcode.B)
                     {
-                        // This is the end of the else clause
-                        endTruthyBlock.Instructions.RemoveAt(endTruthyBlock.Instructions.Count - 1); // Remove `b`
+                        // Hacky check: make sure that this branch isn't a "break" in a switch statement
+                        SwitchStatement surroundingSwitch = null;
+                        foreach (var sw in ctx.SwitchStatementNodes)
+                            if (sw.Address <= s.Address && sw.EndAddress > s.Address && (surroundingSwitch == null || s.Address > surroundingSwitch.Address))
+                                surroundingSwitch = sw;
+                        if (surroundingSwitch == null || endTruthyBlock.Branches[0].Address < surroundingSwitch.Tail.Address)
+                        {
+                            // This is the end of the else clause
+                            endTruthyBlock.Instructions.RemoveAt(endTruthyBlock.Instructions.Count - 1); // Remove `b`
 
-                        if (withSpecialCase)
-                            endTruthyBlock.Branches.Clear();
+                            if (withSpecialCase)
+                                endTruthyBlock.Branches.Clear();
 
-                        Node falsey = s.Header.Branches[0];
-                        s.Branches.Add(falsey);
-                        falsey.Predecessors.Clear();
-                        falsey.Predecessors.Add(s);
+                            Node falsey = s.Header.Branches[0];
+                            s.Branches.Add(falsey);
+                            falsey.Predecessors.Clear();
+                            falsey.Predecessors.Add(s);
+                        }
                     }
                 }
 

@@ -143,7 +143,10 @@ namespace DogScepterLib.Project.GML.Decompiler
                             {
                                 // Main/true block
                                 var block = new ASTBlock();
-                                statementStack.Push(new(block, s.Branches[1], context.Loop, astStatement));
+                                if (s.Branches.Count == 1)
+                                    statementStack.Peek().Current = block;
+                                else
+                                    statementStack.Push(new(block, s.Branches[1], context.Loop, astStatement));
                                 astStatement.Children.Add(block);
                             }
                         }

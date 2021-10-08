@@ -20,9 +20,10 @@ namespace DogScepterLib.Project.GML.Decompiler
                 if (b.Instructions.Count >= 1)
                 {
                     var instr = b.Instructions[0];
-                    if (instr.Kind == Instruction.Opcode.Popz && b.ControlFlow != Block.ControlFlowType.Continue)
+                    if (instr.Kind == Instruction.Opcode.Popz)
                     {
-                        // This is the end of a switch statement (repeat loops already abstracted out anyway)
+                        // This is most likely the end of a switch statement (repeat loops already abstracted out anyway)
+                        // It only can't be if this is inside another switch and we exit the script
                         Block header = null;
                         Block continueBlock = null;
                         Block endCasesBranch = null;
@@ -33,6 +34,13 @@ namespace DogScepterLib.Project.GML.Decompiler
                         {
                             header = (Block)b.Predecessors[0];
                             empty = true;
+
+                            // Do check for exit
+                            if (b.Instructions.Count == 2 && b.Instructions[1].Kind == Instruction.Opcode.Exit)
+                            {
+                                // Abort. This isn't a switch statement; it's an exit inside of another switch
+                                continue;
+                            }
                         }
                         else
                         {
@@ -211,34 +219,32 @@ namespace DogScepterLib.Project.GML.Decompiler
                         s.Branches.Add(curr);
                         lastBranchAddress = curr.Branches[0].Address;
                         if (curr.Branches[0].Address < endAddress) // Prevent adding unnecessary blocks at the end
-                        {
                             s.Branches.Add(curr.Branches[0]); // todo? maybe wire up predecessors here
+                    }
 
-                            // Cut off branches that go into the next case, if necessary
-                            if (curr.Branches[0].Address != next.Address)
+                    // Cut off branches that go into the next case, if necessary
+                    if (curr.Branches[0].Address != next.Address)
+                    {
+                        Stack<Node> work = new Stack<Node>();
+                        List<Node> visited = new List<Node>();
+                        work.Push(curr.Branches[0]);
+                        while (work.Count != 0)
+                        {
+                            Node n = work.Pop();
+                            for (int i = n.Branches.Count - 1; i >= 0; i--)
                             {
-                                Stack<Node> work = new Stack<Node>();
-                                List<Node> visited = new List<Node>();
-                                work.Push(curr.Branches[0]);
-                                while (work.Count != 0)
+                                Node jump = n.Branches[i];
+                                if (n.Branches[i].Address >= next.Address)
+                                    n.Branches.RemoveAt(i);
+                                else if (!visited.Contains(jump))
                                 {
-                                    Node n = work.Pop();
-                                    for (int i = n.Branches.Count - 1; i >= 0; i--)
-                                    {
-                                        Node jump = n.Branches[i];
-                                        if (n.Branches[i].Address >= next.Address)
-                                            n.Branches.RemoveAt(i);
-                                        else if (!visited.Contains(jump))
-                                        {
-                                            work.Push(n.Branches[i]);
-                                            visited.Add(jump);
-                                        }
-                                    }
+                                    work.Push(n.Branches[i]);
+                                    visited.Add(jump);
                                 }
                             }
                         }
-                        curr.Branches.Clear();
                     }
+                    curr.Branches.Clear();
                 }
 
                 for (int i = 0; i < s.CaseBranches.Count; i++)

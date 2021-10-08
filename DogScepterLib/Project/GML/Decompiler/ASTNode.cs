@@ -691,8 +691,9 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
-            if (Children[0].Kind != ASTNode.StatementKind.Instance ||
-                (Children[0] as ASTInstance).InstanceKind != ASTInstance.InstanceType.Self)
+            if ((Children[0].Kind != ASTNode.StatementKind.Instance ||
+                (Children[0] as ASTInstance).InstanceKind != ASTInstance.InstanceType.Self) &&
+                !Children[0].Duplicated)
             {
                 Children[0].Write(ctx, sb);
                 sb.Append('.');
@@ -855,9 +856,12 @@ namespace DogScepterLib.Project.GML.Decompiler
                     sb.Append(").");
                 }
             }
-            else if (Left.Kind == ASTNode.StatementKind.Variable)
+            else if (Left.Kind == ASTNode.StatementKind.Variable ||
+                     Left.Kind == ASTNode.StatementKind.Instance ||
+                     Left.Kind == ASTNode.StatementKind.Function ||
+                     Left.Kind == ASTNode.StatementKind.FunctionVar)
             {
-                // Variable expression
+                // Variable expression, instance type, or function call
                 Left.Write(ctx, sb);
                 sb.Append('.');
             }
@@ -902,6 +906,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public ASTNode Clean(DecompileContext ctx)
         {
+            Left = Left.Clean(ctx);
             for (int i = 0; i < Children?.Count; i++)
                 Children[i] = Children[i].Clean(ctx);
             return this;
