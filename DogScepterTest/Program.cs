@@ -37,7 +37,7 @@ namespace DogScepterTest
                 /*int ind = -1;
                 for (int i = 0; i < list.Count; i++)
                 {
-                    if (list[i].Name.Content.Contains("gml_Object_obj_writer_Other_11"))
+                    if (list[i].Name.Content.Contains("gml_Object_obj_froggit_monster_Other_11"))
                     {
                         ind = i;
                         break;

@@ -46,6 +46,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                         {
                             empty = false;
 
+                            // Do check for exit
+                            if (b.Instructions.Count > 2 && b.Instructions[^1].Kind == Instruction.Opcode.Exit)
+                            {
+                                bool shouldAbort = true;
+                                for (int i = 0; i < b.Instructions.Count - 1; i++)
+                                    if (b.Instructions[i].Kind != Instruction.Opcode.Popz)
+                                        shouldAbort = false;
+                                if (shouldAbort)
+                                {
+                                    // Abort. This isn't a switch statement; it's an exit inside of other switches/repeats
+                                    continue;
+                                }
+                            }
+
                             // Find the end of the chain of cases (using "header" as a temporary variable here)
                             for (int i = 0; i < b.Predecessors.Count; i++)
                             {
@@ -199,7 +213,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 int lastIndex = -1;
                 int endAddress = ctx.Blocks.List[end].Address;
 
-                void insertCaseBranch(Block curr, Node next, int instructionsRequiredForExpression)
+                void insertCaseBranch(Block curr, Node next, int instructionsRequiredForExpression, bool defaultCase = false)
                 {
                     if (lastBranchAddress == -1)
                     {
@@ -210,16 +224,47 @@ namespace DogScepterLib.Project.GML.Decompiler
                         newBlock.ControlFlow = Block.ControlFlowType.SwitchExpression;
                         s.Branches.Insert(1, newBlock);
                     }
+                    else if (defaultCase)
+                    {
+                        int index = s.Branches.IndexOf(curr.Branches[0]);
+                        if (index != -1)
+                        {
+                            // This is branching to an existing case and needs to be placed up there
+                            s.Branches.Insert(index, curr);
+                            curr.Branches.Clear();
+                            return;
+                        }
+                    }
 
                     if (curr.Branches[0].Address == lastBranchAddress)
                         s.Branches.Insert(++lastIndex, curr); // This shares the same node as the previous case
                     else
                     {
-                        lastIndex = s.Branches.Count;
-                        s.Branches.Add(curr);
-                        lastBranchAddress = curr.Branches[0].Address;
-                        if (curr.Branches[0].Address < endAddress) // Prevent adding unnecessary blocks at the end
-                            s.Branches.Add(curr.Branches[0]); // todo? maybe wire up predecessors here
+                        if (defaultCase)
+                        {
+                            int i = 2;
+                            for (; i < s.Branches.Count; i++)
+                            {
+                                if (curr.Branches[0].Address < s.Branches[i].Address)
+                                {
+                                    i--;
+                                    break;
+                                }
+                            }
+                            lastIndex = i;
+                            lastBranchAddress = curr.Branches[0].Address;
+                            if (curr.Branches[0].Address < endAddress) // Prevent adding unnecessary blocks at the end
+                                s.Branches.Insert(i, curr.Branches[0]); // todo? maybe wire up predecessors here
+                            s.Branches.Insert(i, curr);
+                        }
+                        else
+                        {
+                            lastIndex = s.Branches.Count;
+                            s.Branches.Add(curr);
+                            lastBranchAddress = curr.Branches[0].Address;
+                            if (curr.Branches[0].Address < endAddress) // Prevent adding unnecessary blocks at the end
+                                s.Branches.Add(curr.Branches[0]); // todo? maybe wire up predecessors here
+                        }
                     }
 
                     // Cut off branches that go into the next case, if necessary
@@ -234,11 +279,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                             for (int i = n.Branches.Count - 1; i >= 0; i--)
                             {
                                 Node jump = n.Branches[i];
-                                if (n.Branches[i].Address >= next.Address)
+                                if (jump.Address >= next.Address)
                                     n.Branches.RemoveAt(i);
                                 else if (!visited.Contains(jump))
                                 {
-                                    work.Push(n.Branches[i]);
+                                    work.Push(jump);
                                     visited.Add(jump);
                                 }
                             }
@@ -260,7 +305,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                     Node next;
                     if (i + 1 < s.CaseBranches.Count)
                         next = s.CaseBranches[i + 1].Branches[0];
-                    else if (s.DefaultCaseBranch != null)
+                    else if (s.DefaultCaseBranch != null && s.DefaultCaseBranch.Branches[0].Address > curr.Branches[0].Address)
                         next = s.DefaultCaseBranch.Branches[0];
                     else if (s.ContinueBlock != null)
                         next = ctx.Blocks.List[s.ContinueBlock.Index - 1]; // Block that jumps past continue block
@@ -283,7 +328,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         next = ctx.Blocks.List[s.ContinueBlock.Index - 1]; // Block that jumps past continue block
                     else
                         next = s.Tail;
-                    insertCaseBranch(s.DefaultCaseBranch, next, 0);
+                    insertCaseBranch(s.DefaultCaseBranch, next, 0, true);
 
                     s.DefaultCaseBranch.Branches.Clear();
                 }

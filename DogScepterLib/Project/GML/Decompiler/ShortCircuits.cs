@@ -39,7 +39,8 @@ namespace DogScepterLib.Project.GML.Decompiler
             {
                 Node header = ctx.Blocks.AddressToBlock[s.Address];
                 (header as Block).BelongingTo = s;
-                if ((header as Block).Instructions.Count == 1)
+                if ((header as Block).Instructions.Count == 1 ||
+                    header.Predecessors[0].Kind == Node.NodeType.ShortCircuit)
                 {
                     // The header is actually another short circuit, need to adjust up
                     header = header.Predecessors[0];
@@ -124,7 +125,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 {
                     for (int i = cond.Branches.Count - 1; i >= 0; i--)
                     {
-                        if (cond.Kind == Node.NodeType.ShortCircuit && cond.Branches[i].Address >= cond.EndAddress)
+                        if (cond.Kind == Node.NodeType.ShortCircuit && cond.Branches[i].Address >= s.EndAddress)
                             cond.Branches.RemoveAt(i);
                         else if (cond.Branches[i].Address >= s.Tail.Address || s.Conditions.Contains(cond.Branches[i]))
                             cond.Branches.RemoveAt(i);
@@ -138,7 +139,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 Node currBranch = work.Pop();
                                 for (int j = currBranch.Branches.Count - 1; j >= 0; j--)
                                 {
-                                    if (currBranch.Branches[j].Address >= s.Tail.Address)
+                                    if (currBranch.Branches[j].Address >= cond.EndAddress)
                                         currBranch.Branches.RemoveAt(j);
                                     else if (currBranch.Branches[j].Address > s.Address && currBranch.Branches[j] != s.Tail)
                                         work.Push(currBranch.Branches[j]);

@@ -103,11 +103,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                     {
                         if (node.Branches[i] != node && node.Branches[i] == loop.Header)
                         {
-                            if (loop.LoopKind == Loop.LoopType.With)
+                            if (loop.LoopKind == Loop.LoopType.With || loop.LoopKind == Loop.LoopType.Repeat)
                             {
                                 if (node.Kind != Node.NodeType.Loop ||
                                     (node.Branches[i].Kind == Node.NodeType.Loop &&
-                                     node.Branches[i].Address != loop.Address)) // Special case when a with statement starts with a loop
+                                     node.Branches[i].Address != loop.Address)) // Special case when a with or repeat statement starts with a loop
                                 {
                                     node.Branches[i] = loop; 
                                     break;
@@ -289,6 +289,31 @@ namespace DogScepterLib.Project.GML.Decompiler
                             prev.Branches.RemoveAt(0);
                             prev.Instructions.RemoveRange(prev.Instructions.Count - 4, 4);
                             prev.ControlFlow = Block.ControlFlowType.RepeatExpression; // Mark this for later reference
+
+                            // Handle edge cases similar to "with"
+                            for (int i = prev.Branches.Count - 1; i >= 0; i--)
+                            {
+                                if (prev.Branches[i] != loop)
+                                {
+                                    if (prev.Branches[i].Kind == Node.NodeType.Loop &&
+                                        prev.Branches[i].Address == loop.Address)
+                                    {
+                                        // Edge case when a loop begins a with statement
+                                        Node innerLoop = prev.Branches[i];
+                                        prev.Branches[i] = loop;
+                                        foreach (var pred2 in innerLoop.Predecessors)
+                                        {
+                                            for (int j = pred2.Branches.Count - 1; j >= 0; j--)
+                                                if (pred2.Branches[j] == innerLoop)
+                                                    pred2.Branches[j] = loop;
+                                        }
+                                        innerLoop.Predecessors.Clear();
+                                        innerLoop.Predecessors.Add(loop);
+                                        loop.Branches[1] = innerLoop;
+                                        loop.Header.Predecessors[1] = innerLoop;
+                                    }
+                                }
+                            }
                         }
 
                         // Remove decrement and branch

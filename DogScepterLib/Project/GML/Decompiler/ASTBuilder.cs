@@ -98,13 +98,18 @@ namespace DogScepterLib.Project.GML.Decompiler
                                         context.IfStatement.Children.Count >= 3 && !context.IfStatement.EmptyElse && 
                                         context.IfStatement.Children.Count < 5)
                                     {
-                                        // This is a ternary; add the expression
-                                        context.IfStatement.Children.Add(stack.Pop());
-                                        if (context.IfStatement.Children.Count >= 5)
+                                        var last = block.Instructions.Count == 0 ? null : block.Instructions[^1];
+                                        if (last == null || 
+                                            (last.Kind != Instruction.Opcode.Exit && last.Kind != Instruction.Opcode.Ret))
                                         {
-                                            var removeFrom = context.IfStatement.Parent.Children;
-                                            removeFrom.RemoveAt(removeFrom.Count - 1);
-                                            stack.Push(context.IfStatement);
+                                            // This is a ternary; add the expression
+                                            context.IfStatement.Children.Add(stack.Pop());
+                                            if (context.IfStatement.Children.Count >= 5)
+                                            {
+                                                var removeFrom = context.IfStatement.Parent.Children;
+                                                removeFrom.RemoveAt(removeFrom.Count - 1);
+                                                stack.Push(context.IfStatement);
+                                            }
                                         }
                                     }
                                     break;
@@ -347,7 +352,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                             }
                                         }
                                     }
-                                    else if (i + 2 < block.Instructions.Count)
+                                    if (i + 2 < block.Instructions.Count)
                                     {
                                         Instruction next1 = block.Instructions[i + 1];
                                         Instruction next2 = block.Instructions[i + 2];
