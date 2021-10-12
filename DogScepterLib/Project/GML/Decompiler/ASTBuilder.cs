@@ -251,10 +251,13 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public static void ExecuteBlock(DecompileContext ctx, Block block, ASTNode current, Stack<ASTNode> stack)
         {
+            Instruction.Opcode lastOpcodeBinary = Instruction.Opcode.Break;
             for (int i = 0; i < block.Instructions.Count; i++)
             {
                 Instruction inst = block.Instructions[i];
 
+                Instruction.Opcode wasLastOpcodeBinary = lastOpcodeBinary;
+                lastOpcodeBinary = Instruction.Opcode.Break;
                 switch (inst.Kind)
                 {
                     case Instruction.Opcode.Push:
@@ -480,9 +483,14 @@ namespace DogScepterLib.Project.GML.Decompiler
                     case Instruction.Opcode.Shr:
                     case Instruction.Opcode.Cmp:
                         {
+                            lastOpcodeBinary = inst.Kind;
+
                             ASTNode right = stack.Pop();
                             ASTNode left = stack.Pop();
                             stack.Push(new ASTBinary(inst, left, right));
+
+                            if (wasLastOpcodeBinary != inst.Kind && left.Kind == ASTNode.StatementKind.Binary)
+                                (left as ASTBinary).Chained = true;
                         }
                         break;
                     case Instruction.Opcode.Call:

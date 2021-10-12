@@ -29,6 +29,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public Node BaseNode { get; set; }
         public ASTBlock BaseASTBlock { get; set; }
         public HashSet<string> RemainingLocals { get; set; }
+        public HashSet<string> AllLocals { get; set; }
 
         private int indentationLevel = 0;
         public int IndentationLevel
@@ -77,6 +78,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             // Now build the AST, clean it, and write it to a string
             RemainingLocals = new HashSet<string>();
             BaseASTBlock = ASTBuilder.FromContext(this);
+            AllLocals = new HashSet<string>(RemainingLocals);
             BaseASTBlock.Clean(this);
             return ASTNode.WriteFromContext(this);
         }

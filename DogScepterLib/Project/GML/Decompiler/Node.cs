@@ -110,10 +110,13 @@ namespace DogScepterLib.Project.GML.Decompiler
             }
 
             // Fill blocks with instructions, resolve references between blocks
+            int ind = 0;
             foreach (Block b in res.List)
             {
                 int addr = b.Address;
-                int ind = codeEntry.BytecodeEntry.Instructions.FindIndex((instr) => instr.Address == addr);
+                while (ind < codeEntry.BytecodeEntry.Instructions.Count &&
+                       codeEntry.BytecodeEntry.Instructions[ind].Address != addr)
+                    ind++;
                 while (addr < b.EndAddress)
                 {
                     var instr = codeEntry.BytecodeEntry.Instructions[ind++];

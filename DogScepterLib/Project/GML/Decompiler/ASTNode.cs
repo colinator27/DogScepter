@@ -521,6 +521,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<ASTNode> Children { get; set; }
 
         public Instruction Instruction;
+        public bool Chained = false;
         public ASTBinary(Instruction inst, ASTNode left, ASTNode right)
         {
             Instruction = inst;
@@ -602,8 +603,12 @@ namespace DogScepterLib.Project.GML.Decompiler
             for (int i = 0; i < Children.Count; i++)
             {
                 Children[i] = Children[i].Clean(ctx);
-                if ((Children[i].Kind == ASTNode.StatementKind.Binary && !IsTypeTheSame(this, Children[i] as ASTBinary)) || 
-                     Children[i].Kind == ASTNode.StatementKind.ShortCircuit)
+                if (Children[i].Kind == ASTNode.StatementKind.Binary &&
+                        (!IsTypeTheSame(this, Children[i] as ASTBinary) || !(Children[i] as ASTBinary).Chained))
+                {
+                    Children[i].NeedsParentheses = true;
+                }
+                else if (Children[i].Kind == ASTNode.StatementKind.ShortCircuit)
                     Children[i].NeedsParentheses = true;
             }
             return this;
@@ -828,6 +833,10 @@ namespace DogScepterLib.Project.GML.Decompiler
                     // Builtin constants
                     switch (value)
                     {
+                        case -1:
+                            if (ctx.AllLocals.Contains(Variable.Name.Content))
+                                sb.Append("self.");
+                            break;
                         case -5:
                             sb.Append("global.");
                             break;

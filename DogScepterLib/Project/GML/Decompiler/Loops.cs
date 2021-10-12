@@ -124,8 +124,14 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                 // Initialize predecessors/branches if they're outside of the loop bounds
                 foreach (var pred in loop.Header.Predecessors)
+                {
                     if ((pred.Address < loop.Address && pred.EndAddress <= loop.Address) || pred.Address >= loop.EndAddress)
+                    {
                         loop.Predecessors.Add(pred);
+                        if (!pred.Branches.Contains(loop)) // Fix for certain empty with statements followed by another loop
+                            pred.Branches.Insert(0, loop);
+                    }
+                }
                 if (loop.LoopKind != Loop.LoopType.Repeat) // Hacky(?) fix to prevent too many loop branches
                 {
                     foreach (var branch in loop.Header.Branches)

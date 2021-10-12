@@ -37,7 +37,7 @@ namespace DogScepterTest
                 /*int ind = -1;
                 for (int i = 0; i < list.Count; i++)
                 {
-                    if (list[i].Name.Content.Contains("gml_Object_obj_froggit_monster_Other_11"))
+                    if (list[i].Name.Content.Contains("gml_Object_obj_kingcutscene_ch1_Step_0"))
                     {
                         ind = i;
                         break;
@@ -46,17 +46,17 @@ namespace DogScepterTest
                 string result = ctx.DecompileSegment(list[ind]);*/
                 //string result = ctx.DecompileSegment(list[0]);
                 Directory.CreateDirectory("Decomp");
-                foreach (var elem in list)
+                Parallel.ForEach(list, elem =>
                 {
                     try
                     {
-                        File.WriteAllText($"Decomp/{elem.Name.Content}.gml", new DecompileContext(pf).DecompileSegment(elem));
+                        File.WriteAllText($"Decomp/{elem.Name.Content[0..Math.Min(elem.Name.Content.Length, 100)]}.gml", new DecompileContext(pf).DecompileSegment(elem));
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        Console.WriteLine($"Failed on {elem.Name.Content}");
+                        Console.WriteLine($"Failed on {elem.Name.Content}, {e.Message}");
                     }
-                }
+                });
 
                 //foreach (var group in pf.Textures.TextureGroups)
                 //    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));
