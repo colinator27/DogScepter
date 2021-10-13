@@ -419,7 +419,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 // pop.e.v 5/6 - Swap instruction
                                 ASTNode e1 = stack.Pop();
                                 ASTNode e2 = stack.Pop();
-                                for (int j = 0; j < inst.SwapExtra - 4; j++)
+                                for (int j = 0; j < (short)inst.TypeInst - 4; j++)
                                     stack.Pop();
                                 stack.Push(e2);
                                 stack.Push(e1);
@@ -495,8 +495,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                         break;
                     case Instruction.Opcode.Call:
                         {
-                            List<ASTNode> args = new List<ASTNode>(inst.ArgumentCount);
-                            for (int j = 0; j < inst.ArgumentCount; j++)
+                            List<ASTNode> args = new List<ASTNode>((short)inst.Value);
+                            for (int j = 0; j < (short)inst.Value; j++)
                                 args.Add(stack.Pop());
                             stack.Push(new ASTFunction(inst.Function.Target, args));
                         }

@@ -398,9 +398,7 @@ namespace DogScepterLib.Core.Models
                 public object Value { get; set; }
                 public int JumpOffset;
                 public bool PopenvExitMagic;
-                public short ArgumentCount;
                 public byte Extra;
-                public short SwapExtra;
 
                 public Instruction(int address)
                 {
@@ -473,7 +471,7 @@ namespace DogScepterLib.Core.Models
                             {
                                 if (Type1 == DataType.Int16)
                                 {
-                                    writer.Write(SwapExtra);
+                                    writer.Write((short)TypeInst);
                                     writer.Write((byte)((byte)Type2 << 4 | (byte)Type1));
                                     if (writer.VersionInfo.FormatID <= 14)
                                         writer.Write(NewOpcodeToOld((byte)Kind, 0));
@@ -542,7 +540,7 @@ namespace DogScepterLib.Core.Models
                             break;
                         case InstructionType.Call:
                             {
-                                writer.Write(ArgumentCount);
+                                writer.Write((short)Value);
                                 writer.Write((byte)Type1);
                                 if (writer.VersionInfo.FormatID <= 14)
                                     writer.Write(NewOpcodeToOld((byte)Kind, 0));
@@ -640,12 +638,7 @@ namespace DogScepterLib.Core.Models
 
                                 reader.Offset += 1;
 
-                                if (Type1 == DataType.Int16)
-                                {
-                                    SwapExtra = (short)TypeInst;
-                                    TypeInst = 0;
-                                }
-                                else
+                                if (Type1 != DataType.Int16) // ignore swap instructions
                                 {
                                     Variable = new Reference<GMVariable>();
                                     Variable.Unserialize(reader);
@@ -714,7 +707,7 @@ namespace DogScepterLib.Core.Models
                             break;
                         case InstructionType.Call:
                             {
-                                ArgumentCount = reader.ReadInt16();
+                                Value = reader.ReadInt16();
                                 Type1 = (DataType)reader.ReadByte();
 
                                 reader.Offset += 1;

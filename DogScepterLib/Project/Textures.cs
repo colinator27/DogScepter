@@ -75,7 +75,7 @@ namespace DogScepterLib.Project
         public ProjectFile Project;
         public List<Group> TextureGroups = new List<Group>();
         public Dictionary<int, int> PageToGroup = new Dictionary<int, int>();
-        public Bitmap[] CachedTextures = new Bitmap[8192];
+        public Bitmap[] CachedTextures;
 
         public Textures(ProjectFile project)
         {
@@ -86,6 +86,7 @@ namespace DogScepterLib.Project
             // Finds borders and tiled entries to at least somewhat recreate the original texture
             // This isn't totally accurate to every version, but it's hopefully close enough to look normal
             DetermineGroupBorders();
+            ParseAllTextures();
             DetermineTiledEntries();
             FillHashTable();
         }
@@ -471,6 +472,18 @@ namespace DogScepterLib.Project
             }       
         }
 
+        public void ParseAllTextures()
+        {
+            CachedTextures = new Bitmap[8192];
+            Parallel.ForEach(Project.DataHandle.GetChunk<GMChunkTXTR>().List, (elem, _, i) =>
+            {
+                using (MemoryStream ms = new MemoryStream(elem.TextureData.Data))
+                {
+                    CachedTextures[i] = new Bitmap(ms);
+                }
+            });
+        }
+
         public Bitmap GetTextureEntryBitmap(GMTextureItem entry, int? suggestWidth = null, int? suggestHeight = null)
         {
             if (entry.TargetX == 0 && entry.TargetY == 0 &&
@@ -548,16 +561,22 @@ namespace DogScepterLib.Project
 
         public unsafe void DetermineTiledEntries()
         {
+            BitmapData[] allData = new BitmapData[CachedTextures.Length];
+            for (int i = 0; i < CachedTextures.Length; i++)
+            {
+                if (CachedTextures[i] == null)
+                    break;
+                allData[i] = CachedTextures[i].BasicLockBits();
+            }
             foreach (Group group in TextureGroups)
             {
                 // If this group's border is > 0
                 // check each entry to see if it either wraps around or duplicates the current side
                 if (group.Border > 0)
                 {
-                    foreach (GMTextureItem entry in group.Items)
+                    Parallel.ForEach(group.Items, entry =>
                     {
-                        Bitmap texture = GetTexture(entry.TexturePageID);
-                        var data = texture.BasicLockBits();
+                        BitmapData data = allData[entry.TexturePageID];
 
                         int stride = (data.Stride / 4);
                         int* ptr = (int*)data.Scan0 + entry.SourceX + (entry.SourceY * stride);
@@ -627,10 +646,14 @@ namespace DogScepterLib.Project
 
                         entry._TileHorizontally = tileHoriz;
                         entry._TileVertically = tileVert;
-
-                        texture.UnlockBits(data);
-                    }
+                    });
                 }
+            }
+            for (int i = 0; i < allData.Length; i++)
+            {
+                if (allData[i] == null)
+                    break;
+                CachedTextures[i].UnlockBits(allData[i]);
             }
         }
 

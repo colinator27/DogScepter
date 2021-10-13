@@ -101,7 +101,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                     case GMCode.Bytecode.Instruction.InstructionType.Pop:
                         sb.Append($".{DataTypeToChar[i.Type1]}.{DataTypeToChar[i.Type2]} ");
                         if (i.Type1 == GMCode.Bytecode.Instruction.DataType.Int16)
-                            sb.Append(i.SwapExtra.ToString()); // Special swap instruction
+                            sb.Append(((short)i.TypeInst).ToString()); // Special swap instruction
                         else
                         {
                             if (i.Type1 == GMCode.Bytecode.Instruction.DataType.Variable && 
@@ -132,7 +132,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         break;
 
                     case GMCode.Bytecode.Instruction.InstructionType.Call:
-                        sb.Append($".{DataTypeToChar[i.Type1]} {i.Function.Target.Name.Content} {i.ArgumentCount}");
+                        sb.Append($".{DataTypeToChar[i.Type1]} {i.Function.Target.Name.Content} {(short)i.Value}");
                         break;
 
                     case GMCode.Bytecode.Instruction.InstructionType.Break:
