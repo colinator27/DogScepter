@@ -22,7 +22,7 @@ namespace DogScepterLib.Core.Models
         public GMTextureItem TextureItem;
         public float ScaleX, ScaleY;
         public int AscenderOffset;
-        public GMPointerList<GMGlyph> Glyphs;
+        public GMUniquePointerList<GMGlyph> Glyphs;
 
         public void Serialize(GMDataWriter writer)
         {
@@ -66,7 +66,7 @@ namespace DogScepterLib.Core.Models
             ScaleY = reader.ReadSingle();
             if (reader.VersionInfo.FormatID >= 17)
                 AscenderOffset = reader.ReadInt32();
-            Glyphs = new GMPointerList<GMGlyph>() { UsePointerMap = false };
+            Glyphs = new GMUniquePointerList<GMGlyph>();
             Glyphs.Unserialize(reader);
         }
 

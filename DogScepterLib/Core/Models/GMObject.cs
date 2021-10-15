@@ -123,7 +123,7 @@ namespace DogScepterLib.Core.Models
         public class Event : GMSerializable
         {
             public int Subtype;
-            public GMPointerList<Action> Actions;
+            public GMUniquePointerList<Action> Actions;
 
             public void Serialize(GMDataWriter writer)
             {
@@ -134,7 +134,7 @@ namespace DogScepterLib.Core.Models
             public void Unserialize(GMDataReader reader)
             {
                 Subtype = reader.ReadInt32();
-                Actions = new GMPointerList<Action>() { UsePointerMap = false };
+                Actions = new GMUniquePointerList<Action>();
                 Actions.Unserialize(reader);
             }
 
