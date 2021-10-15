@@ -31,11 +31,12 @@ namespace DogScepterLib.Core.Models
         public void Unserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
-            Moments = new List<(int, GMPointerList<GMObject.Event.Action>)>();
-            for (int i = reader.ReadInt32(); i > 0; i--)
+            int count = reader.ReadInt32();
+            Moments = new List<(int, GMPointerList<GMObject.Event.Action>)>(count);
+            for (int i = count; i > 0; i--)
             {
                 int time = reader.ReadInt32();
-                Moments.Add((time, reader.ReadPointerObject<GMPointerList<GMObject.Event.Action>>()));
+                Moments.Add((time, reader.ReadPointerObjectUnique<GMPointerList<GMObject.Event.Action>>()));
             }
         }
 

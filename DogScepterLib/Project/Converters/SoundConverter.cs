@@ -16,10 +16,10 @@ namespace DogScepterLib.Project.Converters
     {
         public class CachedSoundRefData : CachedRefData
         {
-            public byte[] SoundBuffer { get; set; }
+            public BufferRegion SoundBuffer { get; set; }
             public string AudioGroupName { get; set; }
 
-            public CachedSoundRefData(byte[] soundBuffer, string audioGroupName)
+            public CachedSoundRefData(BufferRegion soundBuffer, string audioGroupName)
             {
                 SoundBuffer = soundBuffer;
                 AudioGroupName = audioGroupName;
@@ -53,7 +53,7 @@ namespace DogScepterLib.Project.Converters
 
                 if (File.Exists(soundFilePath))
                 {
-                    projectAsset.SoundFileBuffer = File.ReadAllBytes(soundFilePath);
+                    projectAsset.SoundFileBuffer = new BufferRegion(File.ReadAllBytes(soundFilePath));
                     if (!projectAsset.SoundFile.Contains("."))
                         projectAsset.SoundFile += Path.GetExtension(soundFilePath);
                 }
@@ -72,13 +72,9 @@ namespace DogScepterLib.Project.Converters
                         projectAsset.Attributes = AssetSound.Attribute.CompressedNotStreamed;
                     if (projectAsset.SoundFileBuffer.Length > 4 && !projectAsset.SoundFile.Contains("."))
                     {
-                        if (projectAsset.SoundFileBuffer[0] == 'O' &&
-                            projectAsset.SoundFileBuffer[1] == 'g' &&
-                            projectAsset.SoundFileBuffer[2] == 'g' &&
-                            projectAsset.SoundFileBuffer[3] == 'S')
-                        {
+                        var span = projectAsset.SoundFileBuffer.Memory.Span;
+                        if (span[0] == 'O' && span[1] == 'g' && span[2] == 'g' && span[3] == 'S')
                             projectAsset.SoundFile += ".ogg";
-                        }
                         else
                             projectAsset.SoundFile += ".mp3";
                     }
@@ -100,7 +96,7 @@ namespace DogScepterLib.Project.Converters
             {
                 GMSound sound = (GMSound)asset;
 
-                byte[] buff;
+                BufferRegion buff;
                 if ((sound.Flags & AudioEntryFlags.IsEmbedded) != AudioEntryFlags.IsEmbedded &&
                     (sound.Flags & AudioEntryFlags.IsCompressed) != AudioEntryFlags.IsCompressed)
                 {
@@ -217,7 +213,7 @@ namespace DogScepterLib.Project.Converters
                         if (asset.SoundFileBuffer != null)
                         {
                             pf.DataHandle.Logger?.Invoke($"Writing sound file \"{asset.SoundFile}\"...");
-                            pf.DataHandle.FileWrites.Post(new KeyValuePair<string, byte[]>(Path.Combine(pf.DataHandle.Directory, asset.SoundFile), asset.SoundFileBuffer));
+                            pf.DataHandle.FileWrites.Post(new (Path.Combine(pf.DataHandle.Directory, asset.SoundFile), asset.SoundFileBuffer));
                         }
                         break;
                     case AssetSound.Attribute.UncompressOnLoad:

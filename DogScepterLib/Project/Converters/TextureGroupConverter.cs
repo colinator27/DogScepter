@@ -21,7 +21,11 @@ namespace DogScepterLib.Project.Converters
             settings.Groups = settingsList;
             settings.NewGroups = new List<ProjectJson.TextureGroup>();
             var tgin = pf.DataHandle.GetChunk<GMChunkTGIN>();
-            var list = pf.Textures.TextureGroups;
+            List<Textures.Group> list;
+            if (pf.InternalTextures == null)
+                list = new Textures(pf, true).TextureGroups; // Don't do all the processing if not needed
+            else
+                list = pf.Textures.TextureGroups;
 
             if (tgin != null)
             {

@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkAUDO : GMChunk
     {
-        public GMPointerList<GMAudio> List;
+        public GMUniquePointerList<GMAudio> List;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -24,7 +24,7 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
-            List = new GMPointerList<GMAudio>();
+            List = new GMUniquePointerList<GMAudio>();
             List.Unserialize(reader);
         }
     }

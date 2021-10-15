@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkTGIN : GMChunk
     {
-        public GMPointerList<GMTextureGroupInfo> List;
+        public GMUniquePointerList<GMTextureGroupInfo> List;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -22,10 +22,11 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
-            if (reader.ReadInt32() != 1)
-                reader.Warnings.Add(new GMWarning("Unexpected TGIN version, != 1", GMWarning.WarningLevel.Severe));
+            int chunkVersion = reader.ReadInt32();
+            if (chunkVersion != 1)
+                reader.Warnings.Add(new GMWarning($"TGIN version is {chunkVersion}, expected 1"));
 
-            List = new GMPointerList<GMTextureGroupInfo>();
+            List = new GMUniquePointerList<GMTextureGroupInfo>();
             List.Unserialize(reader);
         }
     }

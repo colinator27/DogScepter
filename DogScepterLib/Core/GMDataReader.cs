@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -20,6 +21,7 @@ namespace DogScepterLib.Core
         public GMDataReader(Stream stream, string path) : base(stream)
         {
             Data = new GMData();
+            Data.WorkingBuffer = Buffer;
             
             // Get hash for comparing later
             using (SHA1Managed sha1 = new SHA1Managed())
@@ -34,12 +36,17 @@ namespace DogScepterLib.Core
             }
 
             Warnings = new List<GMWarning>();
-            PointerOffsets = new Dictionary<int, GMSerializable>();
-            Instructions = new Dictionary<int, GMCode.Bytecode.Instruction>();
+            PointerOffsets = new Dictionary<int, GMSerializable>(65536);
+            Instructions = new Dictionary<int, GMCode.Bytecode.Instruction>(1024 * 1024);
         }
 
         public void Unserialize(bool clearData = true)
         {
+#if DEBUG
+            Stopwatch s = new Stopwatch();
+            s.Start();
+#endif
+
             // Parse the root chunk of the file, FORM
             if (ReadChars(4) != "FORM")
                 throw new GMException("Root chunk is not \"FORM\"; invalid file.");
@@ -51,6 +58,11 @@ namespace DogScepterLib.Core
                 PointerOffsets.Clear();
                 Instructions.Clear();
             }
+
+#if DEBUG
+            s.Stop();
+            Data.Logger?.Invoke($"Finished reading WAD in {s.ElapsedMilliseconds} ms");
+#endif
         }
 
         /// <summary>
@@ -59,7 +71,7 @@ namespace DogScepterLib.Core
         public T ReadPointer<T>(int ptr) where T : GMSerializable, new()
         {
             if (ptr == 0)
-                return default(T);
+                return default;
             if (PointerOffsets.ContainsKey(ptr))
                 return (T)PointerOffsets[ptr];
             T res = new T();
@@ -81,7 +93,7 @@ namespace DogScepterLib.Core
         public T ReadPointerObject<T>(int ptr) where T : GMSerializable, new()
         {
             if (ptr <= 0)
-                return default(T);
+                return default;
 
             T res;
             if (PointerOffsets.ContainsKey(ptr))
@@ -103,13 +115,13 @@ namespace DogScepterLib.Core
         }
 
         /// <summary>
-        /// Follows the specified pointer for an object type, unserializes it and returns it
-        /// Also has helper callbacks for list reading
+        /// Follows the specified pointer for an object type, unserializes it and returns it.
+        /// Also has helper callbacks for list reading.
         /// </summary>
         public T ReadPointerObject<T>(int ptr, bool returnAfter = true) where T : GMSerializable, new()
         {
             if (ptr == 0)
-                return default(T);
+                return default;
 
             T res;
             if (PointerOffsets.ContainsKey(ptr))
@@ -132,11 +144,45 @@ namespace DogScepterLib.Core
         }
 
         /// <summary>
-        /// Follows a pointer (in the file) for an object type, unserializes it and returns it
+        /// Follows the specified pointer for an object type, unserializes it and returns it.
+        /// Also has helper callbacks for list reading.
+        /// 
+        /// This version of the function should only be used when a specific pointer is used *once*, to waste less resources.
+        /// This does not add any information or use any information from the pointer map.
+        /// </summary>
+        public T ReadPointerObjectUnique<T>(int ptr, bool returnAfter = true) where T : GMSerializable, new()
+        {
+            if (ptr == 0)
+                return default;
+
+            T res = new T();
+
+            int returnTo = Offset;
+            Offset = ptr;
+
+            res.Unserialize(this);
+
+            if (returnAfter)
+                Offset = returnTo;
+
+            return res;
+        }
+
+        /// <summary>
+        /// Follows a pointer (in the file) for an object type, unserializes it and returns it.
         /// </summary>
         public T ReadPointerObject<T>() where T : GMSerializable, new()
         {
             return ReadPointerObject<T>(ReadInt32());
+        }
+
+        /// <summary>
+        /// Follows a pointer (in the file) for an object type, unserializes it and returns it.
+        /// Uses the unique variant function internally, which does not get involved with the pointer map at all.
+        /// </summary>
+        public T ReadPointerObjectUnique<T>() where T : GMSerializable, new()
+        {
+            return ReadPointerObjectUnique<T>(ReadInt32());
         }
 
         /// <summary>
@@ -195,6 +241,28 @@ namespace DogScepterLib.Core
         {
             if (Offset % alignment != 0)
                 Offset += alignment - (Offset % 4);
+        }
+    }
+
+    /// <summary>
+    /// Represents a part of a buffer. Keeps a reference to the source array for its lifetime.
+    /// </summary>
+    public class BufferRegion
+    {
+        private readonly byte[] _internalRef;
+        public Memory<byte> Memory;
+        public int Length => Memory.Length;
+
+        public BufferRegion(byte[] data)
+        {
+            _internalRef = data;
+            Memory = _internalRef.AsMemory();
+        }
+
+        public BufferRegion(byte[] source, int start, int count)
+        {
+            _internalRef = source;
+            Memory = _internalRef.AsMemory().Slice(start, count);
         }
     }
 }

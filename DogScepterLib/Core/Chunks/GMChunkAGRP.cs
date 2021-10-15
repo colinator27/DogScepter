@@ -8,7 +8,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkAGRP : GMChunk
     {
-        public GMPointerList<GMAudioGroup> List;
+        public GMUniquePointerList<GMAudioGroup> List;
         public Dictionary<int, GMData> AudioData;
 
         public override void Serialize(GMDataWriter writer)
@@ -48,7 +48,7 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
-            List = new GMPointerList<GMAudioGroup>();
+            List = new GMUniquePointerList<GMAudioGroup>();
             List.Unserialize(reader);
 
             // Now load the audio groups if possible

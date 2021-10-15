@@ -114,7 +114,7 @@ namespace DogScepterLib.Core.Chunks
         public int Major, Minor, Release, Build;
         public int DefaultWindowWidth, DefaultWindowHeight;
         public InfoFlags Info;
-        public byte[] LicenseMD5;
+        public BufferRegion LicenseMD5;
         public int LicenseCRC32;
         public long Timestamp;
         public GMString DisplayName;
@@ -226,7 +226,7 @@ namespace DogScepterLib.Core.Chunks
             LastObjectID = reader.ReadInt32();
             LastTileID = reader.ReadInt32();
             GameID = reader.ReadInt32();
-            LegacyGUID = new Guid(reader.ReadBytes(16));
+            LegacyGUID = new Guid(reader.ReadBytes(16).Memory.ToArray());
             GameName = reader.ReadStringPointerObject();
             Major = reader.ReadInt32();
             Minor = reader.ReadInt32();
@@ -299,7 +299,7 @@ namespace DogScepterLib.Core.Chunks
                 // Other GMS2-specific data
                 GMS2_FPS = reader.ReadSingle();
                 GMS2_AllowStatistics = reader.ReadWideBoolean();
-                GMS2_GameGUID = new Guid(reader.ReadBytes(16));
+                GMS2_GameGUID = new Guid(reader.ReadBytes(16).Memory.ToArray());
             }
         }
     }

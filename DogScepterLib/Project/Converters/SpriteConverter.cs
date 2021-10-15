@@ -78,7 +78,7 @@ namespace DogScepterLib.Project.Converters
             // Determine collision mask info
             List<Bitmap> bitmaps;
             projectAsset.CollisionMask = CollisionMasks.GetInfoForSprite(pf, asset, out bitmaps);
-            List<byte[]> regenerated = CollisionMasks.GetMasksForSprite(pf, projectAsset, out _, bitmaps);
+            List<BufferRegion> regenerated = CollisionMasks.GetMasksForSprite(pf, projectAsset, out _, bitmaps);
             if (!CollisionMasks.CompareMasks(asset.CollisionMasks, regenerated))
             {
                 bool manual = true;

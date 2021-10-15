@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using DogScepterLib.Project.Util;
+using DogScepterLib.Core;
 
 namespace DogScepterLib.Project.Assets
 {
@@ -65,7 +66,7 @@ namespace DogScepterLib.Project.Assets
                     if (File.Exists(path))
                     {
                         byte[] specialBuff = File.ReadAllBytes(path);
-                        res.SpecialInfo.InternalBuffer = specialBuff;
+                        res.SpecialInfo.InternalBuffer = new BufferRegion(specialBuff);
 
                         sha1.TransformBlock(specialBuff, 0, specialBuff.Length, null, 0);
                         res.Length += specialBuff.Length;
@@ -75,7 +76,7 @@ namespace DogScepterLib.Project.Assets
                 // Load raw collision masks
                 if ((int)res.CollisionMask.Mode < 0)
                 {
-                    res.CollisionMask.RawMasks = new List<byte[]>();
+                    res.CollisionMask.RawMasks = new List<BufferRegion>();
 
                     ind = 0;
                     pngPath = basePath + "_mask_" + ind.ToString() + ".png";
@@ -86,7 +87,7 @@ namespace DogScepterLib.Project.Assets
                             imgBitmap = temp.FullCopy();
 
                         byte[] mask = CollisionMasks.GetMaskFromImage(imgBitmap);
-                        res.CollisionMask.RawMasks.Add(mask);
+                        res.CollisionMask.RawMasks.Add(new BufferRegion(mask));
 
                         sha1.TransformBlock(mask, 0, mask.Length, null, 0);
                         res.Length += mask.Length;
@@ -148,14 +149,16 @@ namespace DogScepterLib.Project.Assets
                     if (SpecialInfo.InternalBuffer != null &&
                         SpecialInfo.Buffer != null)
                     {
+                        byte[] internalBufferArray = SpecialInfo.InternalBuffer.Memory.ToArray();
+
                         if (actuallyWrite)
                         {
                             using (FileStream fs = new FileStream(Path.Combine(dir, SpecialInfo.Buffer), FileMode.Create))
-                                fs.Write(SpecialInfo.InternalBuffer, 0, SpecialInfo.InternalBuffer.Length);
+                                fs.Write(internalBufferArray, 0, internalBufferArray.Length);
                         }
 
-                        Length += SpecialInfo.InternalBuffer.Length;
-                        sha1.TransformBlock(SpecialInfo.InternalBuffer, 0, SpecialInfo.InternalBuffer.Length, null, 0);
+                        Length += internalBufferArray.Length;
+                        sha1.TransformBlock(internalBufferArray, 0, internalBufferArray.Length, null, 0);
                     }
                 }
 
@@ -164,7 +167,7 @@ namespace DogScepterLib.Project.Assets
                 {
                     for (int i = 0; i < CollisionMask.RawMasks.Count; i++)
                     {
-                        byte[] mask = CollisionMask.RawMasks[i];
+                        byte[] mask = CollisionMask.RawMasks[i].Memory.ToArray();
 
                         if (actuallyWrite)
                         {
@@ -221,14 +224,14 @@ namespace DogScepterLib.Project.Assets
             public int? Top { get; set; }
             public int? Bottom { get; set; }
 
-            public List<byte[]> RawMasks;
+            public List<BufferRegion> RawMasks;
         }
 
         public class SpriteSpecialInfo
         {
             public GMSprite.SpriteType SpriteType { get; set; }
             public string Buffer { get; set; } = null; // filename of buffer in this asset's folder
-            public byte[] InternalBuffer = null;
+            public BufferRegion InternalBuffer = null;
 
             public float? GMS2PlaybackSpeed { get; set; } = null;
             public GMSprite.AnimSpeedType? GMS2PlaybackSpeedType { get; set; } = null;

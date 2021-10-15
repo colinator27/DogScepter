@@ -16,7 +16,7 @@ namespace DogScepterLib.Core
     /// <summary>
     /// Basic array-like list type in data file
     /// </summary>
-    public class GMList<T> : ObservableCollection<T>, GMSerializable where T : GMSerializable, new()
+    public class GMList<T> : List<T>, GMSerializable where T : GMSerializable, new()
     {
         public virtual void Serialize(GMDataWriter writer, ListSerialize before = null,
                                                            ListSerialize after = null,
@@ -48,6 +48,7 @@ namespace DogScepterLib.Core
         {
             // Read the element count and begin reading elements
             int count = reader.ReadInt32();
+            Capacity = count;
             for (int i = 0; i < count; i++)
             {
                 before?.Invoke(reader, i, count);
@@ -78,6 +79,7 @@ namespace DogScepterLib.Core
     /// </summary>
     public class GMPointerList<T> : GMList<T> where T : GMSerializable, new()
     {
+        public bool UsePointerMap = true;
 
         public void Serialize(GMDataWriter writer, ListSerialize before = null,
                                                    ListSerialize after = null,
@@ -125,27 +127,38 @@ namespace DogScepterLib.Core
             Serialize(writer, null, null, null);
         }
 
+        private static GMSerializable DoReadPointerObject(GMDataReader reader, bool notLast)
+        {
+            return reader.ReadPointerObject<T>(reader.ReadInt32(), notLast);
+        }
+
+        private static GMSerializable DoReadPointerObjectUnique(GMDataReader reader, bool notLast)
+        {
+            return reader.ReadPointerObjectUnique<T>(reader.ReadInt32(), notLast);
+        }
+
         public override void Unserialize(GMDataReader reader, ListUnserialize before = null,
                                                               ListUnserialize after = null,
                                                               ListUnserializeElement elemReader = null)
         {
+            // Define a default pointer reader if none is set
+            if (elemReader == null)
+            {
+                if (UsePointerMap)
+                    elemReader = DoReadPointerObject;
+                else
+                    elemReader = DoReadPointerObjectUnique;
+            }
+
             // Read the element count and begin reading elements
             int count = reader.ReadInt32();
+            Capacity = count;
             for (int i = 0; i < count; i++)
             {
                 before?.Invoke(reader, i, count);
 
                 // Read the current element and add it to the list
-                T elem;
-                if (elemReader == null)
-                {
-                    elem = reader.ReadPointerObject<T>(reader.ReadInt32(), (i + 1 != count));
-                }
-                else
-                {
-                    elem = (T)elemReader(reader, (i + 1 != count));
-                }
-                Add(elem);
+                Add((T)elemReader(reader, i + 1 != count));
 
                 after?.Invoke(reader, i, count);
             }
@@ -183,8 +196,8 @@ namespace DogScepterLib.Core
             }
         }
 
-        public override void Serialize(GMDataWriter writer, ListSerialize before = null, 
-                                                            ListSerialize after = null, 
+        public override void Serialize(GMDataWriter writer, ListSerialize before = null,
+                                                            ListSerialize after = null,
                                                             ListSerializeElement elemWriter = null)
         {
             Serialize(writer, before, after, elemWriter, null);
@@ -224,6 +237,18 @@ namespace DogScepterLib.Core
         public override void Unserialize(GMDataReader reader)
         {
             Unserialize(reader, null, null, null);
+        }
+    }
+
+    /// <summary>
+    /// A list of pointers to objects, forming a list, in the data file.
+    /// This variant automatically sets UsePointerMap in the base class to false. 
+    /// </summary>
+    public class GMUniquePointerList<T> : GMPointerList<T> where T : GMSerializable, new()
+    {
+        public GMUniquePointerList() : base()
+        {
+            UsePointerMap = false;
         }
     }
 }

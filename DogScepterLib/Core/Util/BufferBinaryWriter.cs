@@ -61,6 +61,13 @@ namespace DogScepterLib.Core.Util
             buffer[offset++] = (byte)(value ? 1 : 0);
         }
 
+        public void Write(BufferRegion value)
+        {
+            ResizeToFit(offset + value.Length);
+            value.Memory.CopyTo(buffer.AsMemory().Slice(Offset, value.Length));
+            offset += value.Length;
+        }
+
         public void Write(byte[] value)
         {
             ResizeToFit(offset + value.Length);

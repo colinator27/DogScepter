@@ -9,7 +9,7 @@ namespace DogScepterLib.Core.Models
     /// </summary>
     public class GMAudio : GMSerializable
     {
-        public byte[] Data;
+        public BufferRegion Data;
 
         public void Serialize(GMDataWriter writer)
         {

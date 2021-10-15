@@ -1,5 +1,6 @@
 ﻿using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
+using Microsoft.Toolkit.HighPerformance;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -97,9 +98,11 @@ namespace DogScepterLib.Core
 #endif
 
         // Handles writing miscellaneous files asynchronously
-        public ActionBlock<KeyValuePair<string, byte[]>> FileWrites = new ActionBlock<KeyValuePair<string, byte[]>>(f =>
+        public ActionBlock<KeyValuePair<string, BufferRegion>> FileWrites = new ActionBlock<KeyValuePair<string, BufferRegion>>(f =>
         {
-            File.WriteAllBytes(f.Key, f.Value);
+            using FileStream fs = new FileStream(f.Key, FileMode.Create);
+            using Stream s = f.Value.Memory.AsStream();
+            s.CopyTo(fs);
         }, new ExecutionDataflowBlockOptions()
         {
             MaxDegreeOfParallelism = Environment.ProcessorCount
@@ -111,6 +114,7 @@ namespace DogScepterLib.Core
         public string Directory;
         public string Filename;
         public byte[] Hash;
+        public byte[] WorkingBuffer;
         public int Length = 1024; // just give it a semi-reasonable minimum size
 
         public GMData()

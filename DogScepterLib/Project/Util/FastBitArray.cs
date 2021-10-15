@@ -45,6 +45,31 @@ namespace DogScepterLib.Project.Util
             }
         }
 
+        public unsafe FastBitArray(ReadOnlySpan<byte> data)
+        {
+            Length = data.Length * 8;
+            int arrayLength = ((Length - 1) / 32) + 1;
+            Array = new int[arrayLength];
+
+            if (data.Length == 0)
+                return;
+
+            fixed (int* intPtr = &Array[0])
+            {
+                byte* pos1 = (byte*)intPtr;
+
+                fixed (byte* ptr = &data[0])
+                {
+                    byte* pos2 = ptr;
+
+                    for (int i = 0; i < data.Length; i++)
+                    {
+                        *(pos1++) = *(pos2++);
+                    }
+                }
+            }
+        }
+
         public unsafe byte[] ToByteArray()
         {
             int len = ((Length + 7) & (-8)) / 8;

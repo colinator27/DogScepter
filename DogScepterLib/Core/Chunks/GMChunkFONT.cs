@@ -7,9 +7,9 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkFONT : GMChunk
     {
-        public GMPointerList<GMFont> List;
+        public GMUniquePointerList<GMFont> List;
 
-        public byte[] Padding;
+        public BufferRegion Padding;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -32,7 +32,7 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
-            List = new GMPointerList<GMFont>();
+            List = new GMUniquePointerList<GMFont>();
             List.Unserialize(reader);
 
             Padding = reader.ReadBytes(512);

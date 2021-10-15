@@ -251,7 +251,7 @@ namespace DogScepterLib.Project.Converters
                     PhysicsFriction = projectAsset.PhysicsFriction,
                     PhysicsAwake = projectAsset.PhysicsAwake,
                     PhysicsKinematic = projectAsset.PhysicsKinematic,
-                    Events = new GMPointerList<GMPointerList<GMObject.Event>>()
+                    Events = new GMUniquePointerList<GMUniquePointerList<GMObject.Event>>()
                 };
 
                 foreach (AssetObject.PhysicsVertex v in projectAsset.PhysicsVertices)
@@ -259,13 +259,13 @@ namespace DogScepterLib.Project.Converters
 
                 foreach (var events in projectAsset.Events.Values)
                 {
-                    var newEvents = new GMPointerList<GMObject.Event>();
+                    var newEvents = new GMUniquePointerList<GMObject.Event>();
                     foreach (var ev in events)
                     {
                         GMObject.Event newEv = new GMObject.Event()
                         {
                             Subtype = 0,
-                            Actions = new GMPointerList<GMObject.Event.Action>()
+                            Actions = new GMUniquePointerList<GMObject.Event.Action>()
                             {
                                 new GMObject.Event.Action()
                                 {

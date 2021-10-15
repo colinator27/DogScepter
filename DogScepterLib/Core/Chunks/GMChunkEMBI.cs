@@ -22,8 +22,9 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
-            if (reader.ReadInt32() != 1)
-                reader.Warnings.Add(new GMWarning("Unexpected EMBI version, != 1", GMWarning.WarningLevel.Severe));
+            int chunkVersion = reader.ReadInt32();
+            if (chunkVersion != 1)
+                reader.Warnings.Add(new GMWarning($"EMBI version is {chunkVersion}, expected 1"));
 
             List = new GMList<EmbeddedImage>();
             List.Unserialize(reader);

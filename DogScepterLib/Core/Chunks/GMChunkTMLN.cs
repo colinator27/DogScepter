@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkTMLN : GMChunk
     {
-        public GMPointerList<GMTimeline> List;
+        public GMUniquePointerList<GMTimeline> List;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -20,7 +20,7 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
-            List = new GMPointerList<GMTimeline>();
+            List = new GMUniquePointerList<GMTimeline>();
             List.Unserialize(reader);
         }
     }

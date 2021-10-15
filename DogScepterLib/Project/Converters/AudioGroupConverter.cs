@@ -70,7 +70,7 @@ namespace DogScepterLib.Project.Converters
                             ChunkNames = new List<string>() { "AUDO" },
                             Chunks = new Dictionary<string, GMChunk>()
                         {
-                            { "AUDO", new GMChunkAUDO() { List = new GMPointerList<GMAudio>() } }
+                            { "AUDO", new GMChunkAUDO() { List = new GMUniquePointerList<GMAudio>() } }
                         }
                         };
                         groups.AudioData[ind] = data;
@@ -101,7 +101,7 @@ namespace DogScepterLib.Project.Converters
                         ChunkNames = new List<string>() { "AUDO" },
                         Chunks = new Dictionary<string, GMChunk>()
                         {
-                            { "AUDO", new GMChunkAUDO() { List = new GMPointerList<GMAudio>() } }
+                            { "AUDO", new GMChunkAUDO() { List = new GMUniquePointerList<GMAudio>() } }
                         }
                     };
                     groups.AudioData[ind] = data;

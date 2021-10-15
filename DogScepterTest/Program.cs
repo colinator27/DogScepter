@@ -57,6 +57,15 @@ namespace DogScepterTest
                         Console.WriteLine($"Failed on {elem.Name.Content}, {e.Message}");
                     }
                 });
+                
+                /*var cvt = pf.GetConverter<SpriteConverter>();
+                foreach (var i in Enumerable.Range(0, 100))
+                {
+                    cvt.ConvertData(pf, i);
+                    pf.Sprites[i].Asset.Dirty = true;
+                }
+                pf.AddDirtyAssetsToJSON(pf.Sprites);
+                pf.SaveAll();*/
 
                 //foreach (var group in pf.Textures.TextureGroups)
                 //    group.AddNewEntry(pf.Textures, new GMTextureItem(testImage));

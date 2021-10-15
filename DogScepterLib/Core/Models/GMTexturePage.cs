@@ -27,14 +27,14 @@ namespace DogScepterLib.Core.Models
             Scaled = reader.ReadUInt32();
             if (reader.VersionInfo.Major >= 2) 
                 GeneratedMips = reader.ReadUInt32();
-            TextureData = reader.ReadPointerObject<GMTextureData>();
+            TextureData = reader.ReadPointerObjectUnique<GMTextureData>();
         }
     }
 
     public class GMTextureData : GMSerializable
     {
         // The PNG data
-        public byte[] Data;
+        public BufferRegion Data;
 
         public void Serialize(GMDataWriter writer)
         {
@@ -47,7 +47,7 @@ namespace DogScepterLib.Core.Models
         {
             int startOffset = reader.Offset;
 
-            if (!reader.ReadBytes(8).SequenceEqual(new byte[8] { 137, 80, 78, 71, 13, 10, 26, 10 }))
+            if (!reader.ReadBytes(8).Memory.ToArray().SequenceEqual(new byte[8] { 137, 80, 78, 71, 13, 10, 26, 10 }))
                 reader.Warnings.Add(new GMWarning("PNG header expected.", GMWarning.WarningLevel.Bad));
 
             while (true)

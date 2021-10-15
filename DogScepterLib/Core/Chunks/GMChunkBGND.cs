@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkBGND : GMChunk
     {
-        public GMPointerList<GMBackground> List;
+        public GMUniquePointerList<GMBackground> List;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -25,7 +25,7 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
-            List = new GMPointerList<GMBackground>();
+            List = new GMUniquePointerList<GMBackground>();
             reader.VersionInfo.AlignBackgroundsTo8 = reader.VersionInfo.IsNumberAtLeast(2, 3); // only occurs on newer 2.3.1 versions
             List.Unserialize(reader, null, null, (GMDataReader reader, bool notLast) =>
             {

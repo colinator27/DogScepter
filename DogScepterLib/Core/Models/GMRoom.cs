@@ -26,17 +26,17 @@ namespace DogScepterLib.Core.Models
         public bool DrawBackgroundColor;
         public int CreationCodeID;
         public RoomFlags Flags;
-        public GMPointerList<Background> Backgrounds;
-        public GMPointerList<View> Views;
-        public GMPointerList<GameObject> GameObjects;
-        public GMPointerList<Tile> Tiles;
+        public GMUniquePointerList<Background> Backgrounds;
+        public GMUniquePointerList<View> Views;
+        public GMUniquePointerList<GameObject> GameObjects;
+        public GMUniquePointerList<Tile> Tiles;
         public bool Physics;
         public int Top, Left, Right, Bottom;
         public float GravityX, GravityY;
         public float PixelsToMeters;
 
         // GMS2+ only
-        public GMPointerList<Layer> Layers;
+        public GMUniquePointerList<Layer> Layers;
 
         // GMS2.3+ only
         public List<int> SequenceIDs;
@@ -120,11 +120,11 @@ namespace DogScepterLib.Core.Models
             else if (reader.VersionInfo.IsNumberAtLeast(2))
                 flags &= ~0x20000;
             Flags = (RoomFlags)flags;
-            Backgrounds = reader.ReadPointerObject<GMPointerList<Background>>();
-            Views = reader.ReadPointerObject<GMPointerList<View>>();
+            Backgrounds = reader.ReadPointerObjectUnique<GMUniquePointerList<Background>>();
+            Views = reader.ReadPointerObjectUnique<GMUniquePointerList<View>>();
             int gameObjectListPtr = reader.ReadInt32(); // read this later
             int tilePtr = reader.ReadInt32();
-            Tiles = reader.ReadPointerObject<GMPointerList<Tile>>(tilePtr);
+            Tiles = reader.ReadPointerObjectUnique<GMUniquePointerList<Tile>>(tilePtr);
             Physics = reader.ReadWideBoolean();
             Top = reader.ReadInt32(); Left = reader.ReadInt32();
             Right = reader.ReadInt32(); Bottom = reader.ReadInt32();
@@ -132,13 +132,14 @@ namespace DogScepterLib.Core.Models
             PixelsToMeters = reader.ReadSingle();
             if (reader.VersionInfo.IsNumberAtLeast(2))
             {
-                Layers = reader.ReadPointerObject<GMPointerList<Layer>>();
+                Layers = reader.ReadPointerObjectUnique<GMUniquePointerList<Layer>>();
                 if (reader.VersionInfo.IsNumberAtLeast(2, 3))
                 {
                     // Read sequence ID list
                     reader.Offset = reader.ReadInt32();
-                    SequenceIDs = new List<int>();
-                    for (int i = reader.ReadInt32(); i > 0; i--)
+                    int seqIdCount = reader.ReadInt32();
+                    SequenceIDs = new List<int>(seqIdCount);
+                    for (int i = seqIdCount; i > 0; i--)
                         SequenceIDs.Add(reader.ReadInt32());
                 }
             }
@@ -161,7 +162,7 @@ namespace DogScepterLib.Core.Models
                     reader.VersionInfo.SetNumber(2, 2, 2, 302);
             }
             reader.Offset = gameObjectListPtr;
-            GameObjects = new GMPointerList<GameObject>();
+            GameObjects = new GMUniquePointerList<GameObject>();
             GameObjects.Unserialize(reader);
         }
 
@@ -488,20 +489,21 @@ namespace DogScepterLib.Core.Models
 
                 public void Unserialize(GMDataReader reader)
                 {
-                    Instances = new List<int>();
-                    for (int i = reader.ReadInt32(); i > 0; i--)
+                    int count = reader.ReadInt32();
+                    Instances = new List<int>(count);
+                    for (int i = count; i > 0; i--)
                         Instances.Add(reader.ReadInt32());
                 }
             }
 
             public class LayerAssets : GMSerializable
             {
-                public GMPointerList<Tile> LegacyTiles;
-                public GMPointerList<AssetInstance> Sprites;
+                public GMUniquePointerList<Tile> LegacyTiles;
+                public GMUniquePointerList<AssetInstance> Sprites;
 
                 // GMS 2.3+
-                public GMPointerList<AssetInstance> Sequences;
-                public GMPointerList<AssetInstance> NineSlices; // apparently removed in 2.3.2
+                public GMUniquePointerList<AssetInstance> Sequences;
+                public GMUniquePointerList<AssetInstance> NineSlices; // apparently removed in 2.3.2
 
                 public void Serialize(GMDataWriter writer)
                 {
@@ -537,14 +539,14 @@ namespace DogScepterLib.Core.Models
 
                 public void Unserialize(GMDataReader reader)
                 {
-                    LegacyTiles = reader.ReadPointerObject<GMPointerList<Tile>>();
-                    Sprites = reader.ReadPointerObject<GMPointerList<AssetInstance>>();
+                    LegacyTiles = reader.ReadPointerObjectUnique<GMUniquePointerList<Tile>>();
+                    Sprites = reader.ReadPointerObjectUnique<GMUniquePointerList<AssetInstance>>();
 
                     if (reader.VersionInfo.IsNumberAtLeast(2, 3))
                     {
-                        Sequences = reader.ReadPointerObject<GMPointerList<AssetInstance>>();
+                        Sequences = reader.ReadPointerObjectUnique<GMUniquePointerList<AssetInstance>>();
                         if (!reader.VersionInfo.IsNumberAtLeast(2, 3, 2))
-                            NineSlices = reader.ReadPointerObject<GMPointerList<AssetInstance>>();
+                            NineSlices = reader.ReadPointerObjectUnique<GMUniquePointerList<AssetInstance>>();
                     }
                 }
             }

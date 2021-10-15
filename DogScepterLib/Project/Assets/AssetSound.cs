@@ -1,4 +1,6 @@
-﻿using System;
+﻿using DogScepterLib.Core;
+using Microsoft.Toolkit.HighPerformance;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -22,7 +24,7 @@ namespace DogScepterLib.Project.Assets
         public string SoundFile { get; set; }
         public string Type { get; set; }
         public string AudioGroup { get; set; }
-        public byte[] SoundFileBuffer;
+        public BufferRegion SoundFileBuffer;
 
         public new static Asset Load(string assetPath)
         {
@@ -38,7 +40,7 @@ namespace DogScepterLib.Project.Assets
                 byte[] oldHash = res.Hash;
                 int oldLength = res.Length;
 
-                res.SoundFileBuffer = File.ReadAllBytes(soundFilePath);
+                res.SoundFileBuffer = new BufferRegion(File.ReadAllBytes(soundFilePath));
                 ComputeHash(res, res.SoundFileBuffer);
 
                 buff = new byte[20 + 4 + 20 + 4];
@@ -75,7 +77,10 @@ namespace DogScepterLib.Project.Assets
                 if (SoundFileBuffer != null)
                 {
                     using (FileStream fs = new FileStream(Path.Combine(dir, SoundFile), FileMode.Create))
-                        fs.Write(SoundFileBuffer, 0, SoundFileBuffer.Length);
+                    {
+                        using (Stream s = SoundFileBuffer.Memory.AsStream())
+                            s.CopyTo(fs);
+                    }
                 }
             }
 

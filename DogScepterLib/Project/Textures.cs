@@ -14,10 +14,11 @@ using System.Drawing.Imaging;
 using System.Drawing.Drawing2D;
 using DogScepterLib.Project.Util;
 using System.IO;
+using Microsoft.Toolkit.HighPerformance;
 
 namespace DogScepterLib.Project
 {
-    public class Textures
+    public class Textures : IDisposable
     {
         public class Group
         {
@@ -75,13 +76,16 @@ namespace DogScepterLib.Project
         public ProjectFile Project;
         public List<Group> TextureGroups = new List<Group>();
         public Dictionary<int, int> PageToGroup = new Dictionary<int, int>();
-        public Bitmap[] CachedTextures;
+        public Bitmap[] CachedTextures = null;
 
-        public Textures(ProjectFile project)
+        public Textures(ProjectFile project, bool fast = false)
         {
             Project = project;
 
             FindTextureGroups();
+
+            if (fast)
+                return;
 
             // Finds borders and tiled entries to at least somewhat recreate the original texture
             // This isn't totally accurate to every version, but it's hopefully close enough to look normal
@@ -89,6 +93,9 @@ namespace DogScepterLib.Project
             ParseAllTextures();
             DetermineTiledEntries();
             FillHashTable();
+
+            // Clean up memory now so we're not wasting as much, especially when not even using textures
+            DisposeAllTextures();
         }
 
         public void RegenerateTextures()
@@ -156,7 +163,7 @@ namespace DogScepterLib.Project
 
             void handlePage(int dataIndex, (TexturePacker.Page, byte[]) page)
             {
-                txtrList[dataIndex].TextureData.Data = page.Item2;
+                txtrList[dataIndex].TextureData.Data = new BufferRegion(page.Item2);
                 foreach (TexturePacker.Page.Item item in page.Item1.Items)
                 {
                     if (item.TextureItem.TexturePageID == -1)
@@ -465,10 +472,8 @@ namespace DogScepterLib.Project
             {
                 if (CachedTextures[ind] != null)
                     return CachedTextures[ind];
-                using (MemoryStream ms = new MemoryStream(Project.DataHandle.GetChunk<GMChunkTXTR>().List[ind].TextureData.Data))
-                {
-                    return CachedTextures[ind] = new Bitmap(ms);
-                }
+                using Stream s = Project.DataHandle.GetChunk<GMChunkTXTR>().List[ind].TextureData.Data.Memory.AsStream();
+                return CachedTextures[ind] = new Bitmap(s);
             }       
         }
 
@@ -477,11 +482,23 @@ namespace DogScepterLib.Project
             CachedTextures = new Bitmap[8192];
             Parallel.ForEach(Project.DataHandle.GetChunk<GMChunkTXTR>().List, (elem, _, i) =>
             {
-                using (MemoryStream ms = new MemoryStream(elem.TextureData.Data))
-                {
-                    CachedTextures[i] = new Bitmap(ms);
-                }
+                using Stream s = elem.TextureData.Data.Memory.AsStream();
+                CachedTextures[i] = new Bitmap(s);
             });
+        }
+
+        public void DisposeAllTextures()
+        {
+            if (CachedTextures == null)
+                return;
+            for (int i = 0; i < CachedTextures.Length; i++)
+            {
+                if (CachedTextures[i] != null)
+                {
+                    CachedTextures[i].Dispose();
+                    CachedTextures[i] = null;
+                }
+            }
         }
 
         public Bitmap GetTextureEntryBitmap(GMTextureItem entry, int? suggestWidth = null, int? suggestHeight = null)
@@ -1033,6 +1050,11 @@ namespace DogScepterLib.Project
                     }
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            DisposeAllTextures();
         }
     }
 }

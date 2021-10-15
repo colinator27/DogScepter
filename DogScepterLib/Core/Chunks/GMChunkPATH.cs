@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkPATH : GMChunk
     {
-        public GMPointerList<GMPath> List;
+        public GMUniquePointerList<GMPath> List;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -20,7 +20,7 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
-            List = new GMPointerList<GMPath>();
+            List = new GMUniquePointerList<GMPath>();
             List.Unserialize(reader);
         }
     }

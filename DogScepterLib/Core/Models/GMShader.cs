@@ -159,8 +159,9 @@ namespace DogScepterLib.Core.Models
             int ptr2 = reader.ReadInt32();
             HLSL11_PixelBuffer = reader.ReadPointer<ShaderBuffer>(ptr2);
 
-            VertexAttributes = new List<GMString>();
-            for (int i = reader.ReadInt32(); i > 0; i--)
+            int count = reader.ReadInt32();
+            VertexAttributes = new List<GMString>(count);
+            for (int i = count; i > 0; i--)
                 VertexAttributes.Add(reader.ReadStringPointerObject());
 
             Version = reader.ReadInt32();
@@ -222,7 +223,7 @@ namespace DogScepterLib.Core.Models
         /// </summary>
         public class ShaderBuffer : GMSerializable
         {
-            public byte[] Buffer;
+            public BufferRegion Buffer;
 
             public void Serialize(GMDataWriter writer)
             {

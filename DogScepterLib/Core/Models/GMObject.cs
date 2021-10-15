@@ -36,7 +36,7 @@ namespace DogScepterLib.Core.Models
         public float PhysicsFriction;
         public bool PhysicsAwake;
         public bool PhysicsKinematic;
-        public GMPointerList<GMPointerList<Event>> Events;
+        public GMUniquePointerList<GMUniquePointerList<Event>> Events;
 
         public void Serialize(GMDataWriter writer)
         {
@@ -87,14 +87,14 @@ namespace DogScepterLib.Core.Models
             PhysicsFriction = reader.ReadSingle();
             PhysicsAwake = reader.ReadWideBoolean();
             PhysicsKinematic = reader.ReadWideBoolean();
-            PhysicsVertices = new List<PhysicsVertex>();
+            PhysicsVertices = new List<PhysicsVertex>(vertexCount);
             for (int i = vertexCount; i > 0; i--)
             {
                 PhysicsVertex v = new PhysicsVertex();
                 v.Unserialize(reader);
                 PhysicsVertices.Add(v);
             }
-            Events = new GMPointerList<GMPointerList<Event>>();
+            Events = new GMUniquePointerList<GMUniquePointerList<Event>>();
             Events.Unserialize(reader);
         }
 
@@ -134,7 +134,7 @@ namespace DogScepterLib.Core.Models
             public void Unserialize(GMDataReader reader)
             {
                 Subtype = reader.ReadInt32();
-                Actions = new GMPointerList<Action>();
+                Actions = new GMPointerList<Action>() { UsePointerMap = false };
                 Actions.Unserialize(reader);
             }
 

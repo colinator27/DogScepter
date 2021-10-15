@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkACRV : GMChunk
     {
-        public GMPointerList<GMAnimCurve> List;
+        public GMUniquePointerList<GMAnimCurve> List;
         public override void Serialize(GMDataWriter writer)
         {
             base.Serialize(writer);
@@ -22,9 +22,9 @@ namespace DogScepterLib.Core.Chunks
 
             int chunkVersion = reader.ReadInt32();
             if (chunkVersion != 1)
-                reader.Warnings.Add(new GMWarning(string.Format("ACRV version is {0}, expected 1", chunkVersion)));
+                reader.Warnings.Add(new GMWarning($"ACRV version is {chunkVersion}, expected 1"));
 
-            List = new GMPointerList<GMAnimCurve>();
+            List = new GMUniquePointerList<GMAnimCurve>();
             List.Unserialize(reader);
         }
     }

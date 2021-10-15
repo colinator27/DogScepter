@@ -66,7 +66,7 @@ namespace DogScepterLib.Core.Models
             ScaleY = reader.ReadSingle();
             if (reader.VersionInfo.FormatID >= 17)
                 AscenderOffset = reader.ReadInt32();
-            Glyphs = new GMPointerList<GMGlyph>();
+            Glyphs = new GMPointerList<GMGlyph>() { UsePointerMap = false };
             Glyphs.Unserialize(reader);
         }
 

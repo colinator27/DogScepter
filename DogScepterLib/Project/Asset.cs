@@ -1,8 +1,10 @@
 ﻿using DogScepterLib.Core;
+using Microsoft.Toolkit.HighPerformance;
 using PropertyChanged;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -36,13 +38,25 @@ namespace DogScepterLib.Project
         }
 
         /// <summary>
-        /// Stores and computes the length and hash of a given asset's buffer
+        /// Stores and computes the length and hash of a given asset's buffer.
         /// </summary>
         public static void ComputeHash(Asset asset, byte[] buff)
         {
             asset.Length = buff.Length;
-            using (SHA1Managed sha1 = new SHA1Managed())
-                asset.Hash = sha1.ComputeHash(buff);
+            using SHA1Managed sha1 = new SHA1Managed();
+            asset.Hash = sha1.ComputeHash(buff);
+        }
+
+        /// <summary>
+        /// Stores and computes the length and hash of a given asset's buffer.
+        /// Takes in a BufferRegion instead of a byte[]
+        /// </summary>
+        public static void ComputeHash(Asset asset, BufferRegion buff)
+        {
+            asset.Length = buff.Length;
+            using SHA1Managed sha1 = new SHA1Managed();
+            using Stream s = buff.Memory.AsStream();
+            asset.Hash = sha1.ComputeHash(s);
         }
 
         /// <summary>

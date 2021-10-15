@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 using static DogScepterLib.Project.Assets.AssetSprite.CollisionMaskInfo;
 using System.Drawing.Imaging;
+using DogScepterLib.Core;
 
 namespace DogScepterLib.Project
 {
@@ -119,7 +120,7 @@ namespace DogScepterLib.Project
 
                             int stride = ((spr.Width + 7) / 8) * 8;
 
-                            FastBitArray mask = new FastBitArray(spr.CollisionMasks[0]);
+                            FastBitArray mask = new FastBitArray(spr.CollisionMasks[0].Memory.Span);
                             int strideFactor = boundTop * stride;
 
                             for (int y = boundTop; y <= boundBottom; y++)
@@ -176,7 +177,7 @@ namespace DogScepterLib.Project
                                 for (int i = 0; i < spr.CollisionMasks.Count; i++)
                                 {
                                     BitmapData item = bitmapData[i];
-                                    FastBitArray mask = new FastBitArray(spr.CollisionMasks[i]);
+                                    FastBitArray mask = new FastBitArray(spr.CollisionMasks[i].Memory.Span);
                                     int strideFactor = boundTop * stride;
                                     for (int y = boundTop; y <= boundBottom; y++)
                                     {
@@ -205,7 +206,7 @@ namespace DogScepterLib.Project
                             info.Type = MaskType.Precise;
 
                             // Scan for highest alpha, as well as diamond/ellipses
-                            FastBitArray mask = new FastBitArray(spr.CollisionMasks[0]);
+                            FastBitArray mask = new FastBitArray(spr.CollisionMasks[0].Memory.Span);
 
                             bool isDiamond = true, isEllipse = true;
                             float centerX = ((spr.MarginLeft + spr.MarginRight) / 2);
@@ -613,7 +614,7 @@ namespace DogScepterLib.Project
             return res;
         }
 
-        public static List<byte[]> GetMasksForSprite(ProjectFile pf, AssetSprite spr, out Rect maskbbox, List<Bitmap> bitmaps = null)
+        public static List<BufferRegion> GetMasksForSprite(ProjectFile pf, AssetSprite spr, out Rect maskbbox, List<Bitmap> bitmaps = null)
         {
             if (bitmaps == null)
                 bitmaps = GetBitmaps(pf, spr.Width, spr.Height, spr.TextureItems);
@@ -621,7 +622,7 @@ namespace DogScepterLib.Project
             if (bitmaps.Count == 0)
             {
                 maskbbox = new Rect(0, 0, 0, 0);
-                return new List<byte[]>();
+                return new List<BufferRegion>();
             }
 
             var info = spr.CollisionMask;
@@ -634,9 +635,9 @@ namespace DogScepterLib.Project
             if (spr.CollisionMask.Type == MaskType.PrecisePerFrame)
             {
                 // Get masks for individual frames
-                List<byte[]> res = new List<byte[]>(bitmaps.Count);
+                List<BufferRegion> res = new List<BufferRegion>(bitmaps.Count);
                 for (int i = 0; i < bitmaps.Count; i++)
-                    res.Add(GetMaskForBitmap(bitmaps[i], spr, ref maskbbox).ToByteArray());
+                    res.Add(new BufferRegion(GetMaskForBitmap(bitmaps[i], spr, ref maskbbox).ToByteArray()));
 
                 if (maskbbox != null)
                 {
@@ -661,19 +662,19 @@ namespace DogScepterLib.Project
                     maskbbox.Right = Math.Min(spr.Width - 1, maskbbox.Right);
                     maskbbox.Bottom = Math.Min(spr.Height - 1, maskbbox.Bottom);
                 }
-                return new List<byte[]> { mask.ToByteArray() };
+                return new List<BufferRegion> { new BufferRegion(mask.ToByteArray()) };
             }
         }
 
-        public static unsafe bool CompareMasks(List<byte[]> a, List<byte[]> b)
+        public static unsafe bool CompareMasks(List<BufferRegion> a, List<BufferRegion> b)
         {
             if (a.Count != b.Count)
                 return false;
 
             for (int i = 0; i < a.Count; i++)
             {
-                byte[] arrayA = a[i];
-                byte[] arrayB = b[i];
+                ReadOnlySpan<byte> arrayA = a[i].Memory.Span;
+                ReadOnlySpan<byte> arrayB = b[i].Memory.Span;
 
                 if (arrayA.Length != arrayB.Length)
                     return false;
@@ -699,7 +700,7 @@ namespace DogScepterLib.Project
             return true;
         }
 
-        public static unsafe Bitmap GetImageFromMask(int width, int height, byte[] mask)
+        public static unsafe Bitmap GetImageFromMask(int width, int height, ReadOnlySpan<byte> mask)
         {
             Bitmap bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
 

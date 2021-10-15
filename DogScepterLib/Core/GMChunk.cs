@@ -66,6 +66,7 @@ namespace DogScepterLib.Core
             { "SHDR", typeof(GMChunkSHDR) },
             { "CODE", typeof(GMChunkCODE) },
             { "SEQN", typeof(GMChunkSEQN) },
+            { "FEDS", typeof(GMChunkFEDS) },
         };
         public static readonly Dictionary<Type, string> ChunkMapReverse = ChunkMap.ToDictionary(x => x.Value, x => x.Key);
 
@@ -81,7 +82,7 @@ namespace DogScepterLib.Core
                 GMChunk chunk;
                 if (Chunks.TryGetValue(ChunkNames[i], out chunk))
                 {
-                    writer.Data.Logger?.Invoke($"Writing {ChunkNames[i]} at {writer.Offset.ToString("X")}");
+                    writer.Data.Logger?.Invoke($"Writing {ChunkNames[i]} at {writer.Offset:X}");
 
                     // Write chunk name, length, and content
                     writer.Write(ChunkNames[i].ToCharArray());
@@ -118,6 +119,8 @@ namespace DogScepterLib.Core
                 // Check if this is a GMS 2.3+ file
                 if (name == "SEQN")
                     reader.Data.VersionInfo.SetNumber(2, 3);
+                else if (name == "FEDS")
+                    reader.Data.VersionInfo.SetNumber(2, 3, 6);
 
                 // Update whether this version aligns chunks to 16 bytes
                 if (reader.Offset < EndOffset)
@@ -130,7 +133,7 @@ namespace DogScepterLib.Core
             for (int i = 0; i < ChunkNames.Count; i++)
             {
                 reader.Offset = ChunkOffsets[i];
-                reader.Data.Logger?.Invoke($"Reading {ChunkNames[i]} at {reader.Offset.ToString("X")}");
+                reader.Data.Logger?.Invoke($"Reading {ChunkNames[i]} at {reader.Offset:X}");
 
                 Type type;
                 if (!ChunkMap.TryGetValue(ChunkNames[i], out type))

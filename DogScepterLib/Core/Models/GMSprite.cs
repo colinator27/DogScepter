@@ -26,7 +26,7 @@ namespace DogScepterLib.Core.Models
         public bool SpecialOrGMS2 = false;
 
         public SpriteType S_SpriteType;
-        public byte[] S_Buffer;
+        public BufferRegion S_Buffer;
 
         public float GMS2_PlaybackSpeed;
         public AnimSpeedType GMS2_PlaybackSpeedType;
@@ -35,7 +35,7 @@ namespace DogScepterLib.Core.Models
         public NineSlice GMS2_3_2_NineSlice;
 
         public GMRemotePointerList<GMTextureItem> TextureItems;
-        public List<byte[]> CollisionMasks;
+        public List<BufferRegion> CollisionMasks;
 
         public enum SepMaskType : int
         {
@@ -170,11 +170,11 @@ namespace DogScepterLib.Core.Models
                     GMS2_PlaybackSpeedType = (AnimSpeedType)reader.ReadInt32();
                     if (version >= 2)
                     {
-                        GMS2_3_Sequence = reader.ReadPointerObject<SequenceReference>();
+                        GMS2_3_Sequence = reader.ReadPointerObjectUnique<SequenceReference>();
                         if (version >= 3)
                         {
                             reader.VersionInfo.SetNumber(2, 3, 2);
-                            GMS2_3_2_NineSlice = reader.ReadPointerObject<NineSlice>();
+                            GMS2_3_2_NineSlice = reader.ReadPointerObjectUnique<NineSlice>();
                         }
                     }
                 }
@@ -229,7 +229,7 @@ namespace DogScepterLib.Core.Models
                             reader.ReadUInt32(); // atlas tex height
                             reader.Offset = begin;
 
-                            S_Buffer = reader.ReadBytes((int)(24 + jsonLength + atlasLength + textureLength));
+                            S_Buffer = reader.ReadBytes(24 + jsonLength + atlasLength + textureLength);
                         }
                         break;
                 }
@@ -248,7 +248,7 @@ namespace DogScepterLib.Core.Models
             int MaskCount = reader.ReadInt32();
             int len = ((Width + 7) / 8) * Height;
 
-            CollisionMasks = new List<byte[]>();
+            CollisionMasks = new List<BufferRegion>();
             int total = 0;
             for (uint i = 0; i < MaskCount; i++)
             {

@@ -41,11 +41,11 @@ namespace DogScepterLib.Core.Models
         public void Unserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
-            TexturePageIDs = reader.ReadPointerObject<GMList<ResourceID>>();
-            SpriteIDs = reader.ReadPointerObject<GMList<ResourceID>>();
-            SpineSpriteIDs = reader.ReadPointerObject<GMList<ResourceID>>();
-            FontIDs = reader.ReadPointerObject<GMList<ResourceID>>();
-            TilesetIDs = reader.ReadPointerObject<GMList<ResourceID>>();
+            TexturePageIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
+            SpriteIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
+            SpineSpriteIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
+            FontIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
+            TilesetIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
         }
 
         public override string ToString()

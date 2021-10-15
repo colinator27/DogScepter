@@ -54,14 +54,13 @@ namespace DogScepterLib.Core.Util
             return sb.ToString();
         }
 
-        public byte[] ReadBytes(int count)
+        public BufferRegion ReadBytes(int count)
         {
 #if DEBUG
             if (Offset < 0 || Offset + count > Length)
                 throw new IOException("Reading out of bounds");
 #endif
-            byte[] val = new byte[count];
-            System.Buffer.BlockCopy(buffer, Offset, val, 0, count);
+            BufferRegion val = new BufferRegion(Buffer, Offset, count);
             Offset += count;
             return val;
         }

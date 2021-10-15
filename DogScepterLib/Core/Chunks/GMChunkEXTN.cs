@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkEXTN : GMChunk
     {
-        public GMPointerList<GMExtension> List = new GMPointerList<GMExtension>();
+        public GMUniquePointerList<GMExtension> List;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -26,13 +26,14 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
+            List = new GMUniquePointerList<GMExtension>();
             List.Unserialize(reader);
 
             // Product ID information for each extension
             if (reader.VersionInfo.IsNumberAtLeast(1, 0, 0, 9999))
             {
                 for (int i = 0; i < List.Count; i++)
-                    List[i].ProductID = new Guid(reader.ReadBytes(16));
+                    List[i].ProductID = new Guid(reader.ReadBytes(16).Memory.ToArray());
             }
         }
     }

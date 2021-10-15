@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkTXTR : GMChunk
     {
-        public GMPointerList<GMTexturePage> List;
+        public GMUniquePointerList<GMTexturePage> List;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -24,7 +24,7 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
-            List = new GMPointerList<GMTexturePage>();
+            List = new GMUniquePointerList<GMTexturePage>();
             List.Unserialize(reader);
         }
     }

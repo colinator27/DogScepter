@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkSEQN : GMChunk
     {
-        public GMPointerList<GMSequence> List;
+        public GMUniquePointerList<GMSequence> List;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -29,10 +29,11 @@ namespace DogScepterLib.Core.Chunks
             if (Length == 0)
                 return;
 
-            if (reader.ReadUInt32() != 1)
-                reader.Warnings.Add(new GMWarning("Unknown SEQN version, expected 1."));
+            int chunkVersion = reader.ReadInt32();
+            if (chunkVersion != 1)
+                reader.Warnings.Add(new GMWarning($"SEQN version is {chunkVersion}, expected 1"));
 
-            List = new GMPointerList<GMSequence>();
+            List = new GMUniquePointerList<GMSequence>();
             List.Unserialize(reader);
         }
     }

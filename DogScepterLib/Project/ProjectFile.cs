@@ -7,6 +7,7 @@ using PropertyChanged;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -49,7 +50,31 @@ namespace DogScepterLib.Project
         public AssetRefList<AssetRoom> Rooms { get; set; } = new();
 
         public Dictionary<int, GMChunkAUDO> _CachedAudioChunks;
-        public Textures Textures;
+        public Textures InternalTextures = null;
+        public Textures Textures
+        {
+            get 
+            {
+                if (InternalTextures == null)
+                {
+                    DataHandle.Logger?.Invoke($"Setting up textures...");
+#if DEBUG
+                    Stopwatch s = new Stopwatch();
+                    s.Start();
+#endif
+                    InternalTextures = new Textures(this);
+#if DEBUG
+                    s.Stop();
+                    DataHandle.Logger?.Invoke($"Set up textures in {s.ElapsedMilliseconds} ms");
+#endif
+                }
+                return InternalTextures;
+            }
+            set
+            {
+                InternalTextures = value;
+            }
+        }
 
         // From https://github.com/dotnet/runtime/issues/33112
         [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false)]
@@ -131,9 +156,6 @@ namespace DogScepterLib.Project
         // Sets up textures and converts data to the project format
         public void ConvertFromData()
         {
-            DataHandle.Logger?.Invoke($"Setting up textures...");
-            Textures = new Textures(this);
-
             DataHandle.Logger?.Invoke($"Performing base conversion...");
             foreach (var converter in Converters)
                 converter.ConvertData(this);

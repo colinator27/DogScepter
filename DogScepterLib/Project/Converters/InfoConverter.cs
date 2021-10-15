@@ -1,4 +1,5 @@
-﻿using DogScepterLib.Core.Chunks;
+﻿using DogScepterLib.Core;
+using DogScepterLib.Core.Chunks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -92,7 +93,7 @@ namespace DogScepterLib.Project.Converters
             info.DefaultWindowHeight = pf.Info.GetInt("DefaultWindowHeight");
             info.Info = Enum.Parse<GMChunkGEN8.InfoFlags>(pf.Info.GetString("Info"));
             info.LicenseCRC32 = pf.Info.GetInt("LicenseCRC32");
-            info.LicenseMD5 = pf.Info.GetBytes("LicenseMD5");
+            info.LicenseMD5 = new BufferRegion(pf.Info.GetBytes("LicenseMD5"));
             info.Timestamp = pf.Info.GetLong("Timestamp");
             info.DisplayName = pf.Info.GetString(pf, "DisplayName");
             info.ActiveTargets = pf.Info.GetLong("ActiveTargets");

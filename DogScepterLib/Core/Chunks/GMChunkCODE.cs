@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkCODE : GMChunk
     {
-        public GMPointerList<GMCode> List;
+        public GMUniquePointerList<GMCode> List;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -45,7 +45,7 @@ namespace DogScepterLib.Core.Chunks
             if (Length == 0)
                 return; // In YYC, before bytecode 17, CODE is empty
 
-            List = new GMPointerList<GMCode>();
+            List = new GMUniquePointerList<GMCode>();
             List.Unserialize(reader);
         }
     }
