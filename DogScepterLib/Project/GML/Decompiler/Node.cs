@@ -39,6 +39,18 @@ namespace DogScepterLib.Project.GML.Decompiler
             List = new List<Block>();
         }
 
+        public BlockList(BlockList existing, int start, int end)
+        {
+            AddressToBlock = existing.AddressToBlock;
+            List = new List<Block>((end - start) + 1);
+            for (int i = start; i <= end; i++)
+            {
+                Block curr = existing.List[i];
+                curr.Index -= start;
+                List.Add(curr);
+            }
+        }
+
         public void TryAddBlock(int start, int end)
         {
             var newBlock = new Block(start, end);
@@ -46,6 +58,24 @@ namespace DogScepterLib.Project.GML.Decompiler
             {
                 newBlock.Index = List.Count;
                 List.Add(newBlock);
+            }
+        }
+
+        public void FindUnreachables(List<int> exclude = null)
+        {
+            exclude ??= new List<int>();
+            foreach (Block b in List)
+            {
+                if (b.Predecessors.Count == 0 && !exclude.Contains(b.Index))
+                {
+                    b.Unreachable = true;
+                    if (b.Index > 0)
+                    {
+                        Block prev = List[b.Index - 1];
+                        prev.Branches.Add(b);
+                        b.Predecessors.Add(prev);
+                    }
+                }
             }
         }
     }
@@ -156,20 +186,6 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 other.Predecessors.Add(b);
                                 break;
                             }
-                    }
-                }
-            }
-            
-            foreach (Block b in res.List)
-            {
-                if (b.Predecessors.Count == 0)
-                {
-                    b.Unreachable = true;
-                    if (b.Index > 0)
-                    {
-                        Block prev = res.List[b.Index - 1];
-                        prev.Branches.Add(b);
-                        b.Predecessors.Add(prev);
                     }
                 }
             }

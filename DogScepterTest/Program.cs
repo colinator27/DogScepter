@@ -37,17 +37,19 @@ namespace DogScepterTest
                 /*int ind = -1;
                 for (int i = 0; i < list.Count; i++)
                 {
-                    if (list[i].Name.Content.Contains("gml_Object_obj_kingcutscene_ch1_Step_0"))
+                    if (list[i].Name.Content.Contains(""))
                     {
                         ind = i;
                         break;
                     }
                 }
-                string result = ctx.DecompileSegment(list[ind]);*/
+                string result = ctx.DecompileWholeEntry(list[ind]);*/
                 //string result = ctx.DecompileSegment(list[0]);
                 Directory.CreateDirectory("Decomp");
                 Parallel.ForEach(list, elem =>
                 {
+                    if (elem.ParentEntry != null)
+                        return;
                     try
                     {
                         File.WriteAllText($"Decomp/{elem.Name.Content[0..Math.Min(elem.Name.Content.Length, 100)]}.gml", new DecompileContext(pf).DecompileSegment(elem));

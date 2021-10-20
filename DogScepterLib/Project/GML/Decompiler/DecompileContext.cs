@@ -49,13 +49,27 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public string DecompileWholeEntry(GMCode codeEntry)
         {
-            // TODO: Needs to find GMS2.3 fragments, separate them, then pass them in
-            return null;
+            // Find all fragments
+            List<Fragment> fragments = Fragments.FindAndProcess(codeEntry);
+
+            StringBuilder sb = new StringBuilder();
+
+            foreach (var fragment in fragments)
+            {
+                sb.Append("// New fragment");
+                sb.AppendLine();
+                sb.Append(DecompileSegment(codeEntry, fragment.Blocks));
+                sb.AppendLine();
+                sb.AppendLine();
+            }
+
+            return sb.ToString();
         }
 
-        public string DecompileSegment(GMCode codeEntry, int startAddr = 0, int endAddr = -1)
+        public string DecompileSegment(GMCode codeEntry, BlockList existingList = null)
         {
-            Blocks = Block.GetBlocks(codeEntry, startAddr, endAddr);
+            Blocks = existingList ?? Block.GetBlocks(codeEntry);
+            Blocks.FindUnreachables();
 
             // Add node to beginning
             BaseNode = new Block(-1, -1);

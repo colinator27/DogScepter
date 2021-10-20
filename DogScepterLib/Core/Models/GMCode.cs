@@ -17,6 +17,8 @@ namespace DogScepterLib.Core.Models
         public byte Flags;
         public int BytecodeOffset;
         public Bytecode BytecodeEntry;
+        public GMCode ParentEntry;
+        public List<GMCode> ChildEntries = new List<GMCode>();
 
         public void Serialize(GMDataWriter writer)
         {
@@ -45,7 +47,7 @@ namespace DogScepterLib.Core.Models
 
             if (reader.VersionInfo.FormatID <= 14)
             {
-                BytecodeEntry = new Bytecode();
+                BytecodeEntry = new Bytecode(this);
                 BytecodeEntry.Unserialize(reader, Length);
             }
             else
@@ -56,15 +58,18 @@ namespace DogScepterLib.Core.Models
                 Flags = (byte)(v >> 13);
                 int relativeBytecodeAddr = reader.ReadInt32();
                 int absoluteBytecodeAddr = (reader.Offset - 4) + relativeBytecodeAddr;
-                if (reader.PointerOffsets.ContainsKey(absoluteBytecodeAddr))
+                bool childCandidate = false;
+                if (reader.PointerOffsets.TryGetValue(absoluteBytecodeAddr, out GMSerializable s))
                 {
-                    GMSerializable s = reader.PointerOffsets[absoluteBytecodeAddr];
                     if (s is Bytecode b)
+                    {
                         BytecodeEntry = b;
+                        childCandidate = true;
+                    }
                 }
                 if (BytecodeEntry == null)
                 {
-                    BytecodeEntry = new Bytecode();
+                    BytecodeEntry = new Bytecode(this);
                     if (Length != 0) // prevent pointer overlap of entries with 0 instructions
                         reader.PointerOffsets[absoluteBytecodeAddr] = BytecodeEntry;
 
@@ -76,6 +81,13 @@ namespace DogScepterLib.Core.Models
                     reader.Offset = returnTo;
                 }
                 BytecodeOffset = reader.ReadInt32();
+
+                if (childCandidate && Length != 0 && BytecodeOffset != 0)
+                {
+                    // Assign parents and children of this entry
+                    ParentEntry = BytecodeEntry.Parent;
+                    BytecodeEntry.Parent.ChildEntries.Add(this);
+                }
             }
         }
 
@@ -89,7 +101,13 @@ namespace DogScepterLib.Core.Models
         /// </summary>
         public class Bytecode : GMSerializable
         {
+            public GMCode Parent;
             public List<Instruction> Instructions = new List<Instruction>();
+
+            public Bytecode(GMCode parent)
+            {
+                Parent = parent;
+            }
 
             /// <summary>
             /// Returns length in terms of 32-bit parts of instructions

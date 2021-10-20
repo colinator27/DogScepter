@@ -113,7 +113,7 @@ namespace DogScepterLib.Project.Converters
                     ScaleY = projectAsset.ScaleY,
                     TextureItem = projectAsset.TextureItem,
 
-                    Glyphs = new Core.GMPointerList<GMGlyph>()
+                    Glyphs = new Core.GMUniquePointerList<GMGlyph>()
                 };
 
                 if (projectAsset.Size != null)

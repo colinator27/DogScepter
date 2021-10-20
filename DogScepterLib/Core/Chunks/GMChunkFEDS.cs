@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Chunks
 {
     public class GMChunkFEDS : GMChunk
     {
-        public List<GMString> FilterEffects;
+        public GMUniquePointerList<GMFilterEffect> List;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -16,9 +16,7 @@ namespace DogScepterLib.Core.Chunks
             writer.Pad(4);
             writer.Write(1);
 
-            writer.Write(FilterEffects.Count);
-            foreach (GMString s in FilterEffects)
-                writer.WritePointerString(s);
+            List.Serialize(writer);
         }
 
         public override void Unserialize(GMDataReader reader)
@@ -32,9 +30,8 @@ namespace DogScepterLib.Core.Chunks
                 reader.Warnings.Add(new GMWarning($"FEDS version is {chunkVersion}, expected 1"));
 
             int count = reader.ReadInt32();
-            FilterEffects = new List<GMString>(count);
-            for (int i = count; i > 0; i--)
-                FilterEffects.Add(reader.ReadStringPointerObject());
+            List = new GMUniquePointerList<GMFilterEffect>();
+            List.Unserialize(reader);
         }
     }
 }
