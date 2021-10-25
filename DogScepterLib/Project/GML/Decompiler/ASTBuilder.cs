@@ -269,7 +269,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                             case Instruction.DataType.Int32:
                                 if (inst.Value == null)
                                 {
-                                    if (block.AfterFragment)
+                                    if (i == 0 && block.AfterFragment)
                                     {
                                         // This block should contain some kind of reference to the previous fragment
                                         // Let's detect what exactly it is now, so we don't need to later.
