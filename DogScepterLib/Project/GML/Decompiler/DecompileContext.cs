@@ -39,6 +39,10 @@ namespace DogScepterLib.Project.GML.Decompiler
         }
         public string Indentation = "";
 
+        public DecompileContext ParentContext;
+        public List<DecompileContext> SubContexts;
+        public Fragment Fragment;
+
         public DecompileContext(ProjectFile pf, DecompileSettings settings = null)
         {
             Project = pf;
@@ -47,26 +51,35 @@ namespace DogScepterLib.Project.GML.Decompiler
             Settings = settings ?? new DecompileSettings();
         }
 
+        public DecompileContext(DecompileContext existing, Fragment fragment)
+        {
+            ParentContext = existing;
+            Fragment = fragment;
+
+            Project = existing.Project;
+            Data = existing.Data;
+            Strings = existing.Strings;
+            Settings = existing.Settings;
+            SubContexts = existing.SubContexts; // maintain this reference
+        }
+
         public string DecompileWholeEntry(GMCode codeEntry)
         {
             // Find all fragments
             List<Fragment> fragments = Fragments.FindAndProcess(codeEntry);
 
-            StringBuilder sb = new StringBuilder();
-
-            foreach (var fragment in fragments)
+            SubContexts = new List<DecompileContext>(fragments.Count - 1);
+            for (int i = 0; i < fragments.Count - 1; i++)
             {
-                sb.Append("// New fragment");
-                sb.AppendLine();
-                sb.Append(DecompileSegment(codeEntry, fragment.Blocks));
-                sb.AppendLine();
-                sb.AppendLine();
+                var ctx = new DecompileContext(this, fragments[i]);
+                ctx.DecompileSegment(codeEntry, fragments[i].Blocks);
+                SubContexts.Add(ctx);
             }
 
-            return sb.ToString();
+            return DecompileSegmentString(codeEntry, fragments[^1].Blocks);
         }
 
-        public string DecompileSegment(GMCode codeEntry, BlockList existingList = null)
+        public void DecompileSegment(GMCode codeEntry, BlockList existingList = null)
         {
             Blocks = existingList ?? Block.GetBlocks(codeEntry);
             Blocks.FindUnreachables();
@@ -94,6 +107,11 @@ namespace DogScepterLib.Project.GML.Decompiler
             BaseASTBlock = ASTBuilder.FromContext(this);
             AllLocals = new HashSet<string>(RemainingLocals);
             BaseASTBlock.Clean(this);
+        }
+
+        public string DecompileSegmentString(GMCode codeEntry, BlockList existingList = null)
+        {
+            DecompileSegment(codeEntry, existingList);
             return ASTNode.WriteFromContext(this);
         }
     }

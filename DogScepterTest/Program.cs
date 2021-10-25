@@ -52,7 +52,7 @@ namespace DogScepterTest
                         return;
                     try
                     {
-                        File.WriteAllText($"Decomp/{elem.Name.Content[0..Math.Min(elem.Name.Content.Length, 100)]}.gml", new DecompileContext(pf).DecompileSegment(elem));
+                        File.WriteAllText($"Decomp/{elem.Name.Content[0..Math.Min(elem.Name.Content.Length, 100)]}.gml", new DecompileContext(pf).DecompileWholeEntry(elem));
                     }
                     catch (Exception e)
                     {

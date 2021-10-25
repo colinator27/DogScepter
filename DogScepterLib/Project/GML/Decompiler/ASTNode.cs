@@ -33,6 +33,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
             TypeInst,
             Asset,
+            FunctionRef,
             Instance,
 
             Binary,
@@ -57,6 +58,8 @@ namespace DogScepterLib.Project.GML.Decompiler
             SwitchStatement,
             SwitchCase,
             SwitchDefault,
+
+            FunctionDecl,
         }
 
         public StatementKind Kind { get; set; }
@@ -76,7 +79,12 @@ namespace DogScepterLib.Project.GML.Decompiler
         public static string WriteFromContext(DecompileContext ctx)
         {
             StringBuilder sb = new StringBuilder();
+            WriteFromContext(ctx, sb);
+            return sb.ToString();
+        }
 
+        public static void WriteFromContext(DecompileContext ctx, StringBuilder sb)
+        {
             if (ctx.RemainingLocals.Count != 0)
             {
                 sb.Append("var ");
@@ -91,14 +99,15 @@ namespace DogScepterLib.Project.GML.Decompiler
                 Newline(ctx, sb);
             }
 
-            ASTBlock block = ctx.BaseASTBlock;
-            foreach (var child in block.Children)
+            using var enumerator = ctx.BaseASTBlock.Children.GetEnumerator();
+            bool last = !enumerator.MoveNext();
+            while (!last)
             {
-                child.Write(ctx, sb);
-                Newline(ctx, sb);
+                enumerator.Current.Write(ctx, sb);
+                last = !enumerator.MoveNext();
+                if (!last)
+                    Newline(ctx, sb);
             }
-
-            return sb.ToString();
         }
 
         public static int GetStackLength(ASTNode node)
@@ -1557,6 +1566,31 @@ namespace DogScepterLib.Project.GML.Decompiler
         }
     }
 
+    public class ASTFunctionRef : ASTNode
+    {
+        public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.FunctionRef;
+        public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Int32;
+        public List<ASTNode> Children { get; set; }
+        public string FunctionName { get; set; }
+
+        public ASTFunctionRef(string functionName)
+        {
+            FunctionName = functionName;
+        }
+
+        public void Write(DecompileContext ctx, StringBuilder sb)
+        {
+            sb.Append(FunctionName);
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
+        }
+    }
+
     public class ASTInstance : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Instance;
@@ -1592,6 +1626,50 @@ namespace DogScepterLib.Project.GML.Decompiler
                     sb.Append("global");
                     break;
             }
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            return this;
+        }
+    }
+
+    public class ASTFunctionDecl : ASTNode
+    {
+        public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.FunctionDecl;
+        public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Variable;
+        public List<ASTNode> Children { get; set; }
+        public string FunctionName { get; set; }
+        public DecompileContext SubContext { get; set; }
+
+        public ASTFunctionDecl(DecompileContext subContext, string functionName)
+        {
+            SubContext = subContext;
+            FunctionName = functionName;
+        }
+
+        public void Write(DecompileContext ctx, StringBuilder sb)
+        {
+            sb.Append("function");
+            if (FunctionName != null)
+            {
+                sb.Append(' ');
+                sb.Append(FunctionName);
+            }
+            sb.Append("()"); // TODO, parameters
+            ASTNode.Newline(ctx, sb);
+            sb.Append('{');
+            ctx.IndentationLevel++;
+            ASTNode.Newline(ctx, sb);
+
+            SubContext.IndentationLevel = ctx.IndentationLevel;
+            ASTNode.WriteFromContext(SubContext, sb);
+
+            ctx.IndentationLevel--;
+            ASTNode.Newline(ctx, sb);
+            sb.Append('}');
         }
 
         public ASTNode Clean(DecompileContext ctx)

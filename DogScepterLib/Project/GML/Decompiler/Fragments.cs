@@ -9,12 +9,14 @@ namespace DogScepterLib.Project.GML.Decompiler
 {
     public class Fragment
     {
+        public string Name;
         public Block Start;
         public Block End;
         public BlockList Blocks;
 
-        public Fragment(Block start, Block end)
+        public Fragment(string name, Block start, Block end)
         {
+            Name = name;
             Start = start;
             End = end;
         }
@@ -44,9 +46,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                 end.Instructions.RemoveAt(end.Instructions.Count - 1); // Remove `exit.i` instruction
                 end.Branches.Clear();
 
-                res.Add(new Fragment(start, end));
+                Block after = prev.Branches[0] as Block;
+                after.AfterFragment = true;
+
+                res.Add(new Fragment(child.Name.Content, start, end));
             }
-            res.Add(new Fragment(blockList.List[0], blockList.List[^1]));
 
             // Sort from inner to outer
             res = res.OrderBy(s => s.End.EndAddress).ThenByDescending(s => s.Start.Address).ToList();
@@ -55,10 +59,15 @@ namespace DogScepterLib.Project.GML.Decompiler
             List<int> excludes = new List<int>(blockList.List.Count);
             foreach (var fragment in res)
             {
-                fragment.Blocks = new BlockList(blockList, fragment.Start.Index, fragment.End.Index);
+                int start = fragment.Start.Index, end = fragment.End.Index;
+                fragment.Blocks = new BlockList(blockList, start, end);
                 fragment.Blocks.FindUnreachables(excludes);
-                excludes.AddRange(Enumerable.Range(fragment.Start.Index, (fragment.End.Index - fragment.Start.Index) + 1).ToList());
+                excludes.AddRange(Enumerable.Range(start, (end - start) + 1).ToList());
             }
+
+            var last = new Fragment(null, blockList.List[0], blockList.List[^1]);
+            last.Blocks = new BlockList(blockList, excludes);
+            res.Add(last);
 
             return res;
         }

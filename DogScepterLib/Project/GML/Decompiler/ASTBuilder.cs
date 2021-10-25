@@ -269,7 +269,14 @@ namespace DogScepterLib.Project.GML.Decompiler
                             case Instruction.DataType.Int32:
                                 if (inst.Value == null)
                                 {
-                                    stack.Push(new ASTAsset(inst.Function.Target.Name.Content));
+                                    if (block.AfterFragment)
+                                    {
+                                        // This block should contain some kind of reference to the previous fragment
+                                        // Let's detect what exactly it is now, so we don't need to later.
+                                        ProcessAfterFragment(ctx, block, current, stack, ref i);
+                                        break;
+                                    }
+                                    stack.Push(new ASTFunctionRef(inst.Function.Target.Name.Content));
                                     break;
                                 }
                                 stack.Push(new ASTInt32((int)inst.Value));
@@ -678,6 +685,84 @@ namespace DogScepterLib.Project.GML.Decompiler
             }
 
             return new() { index };
+        }
+
+        public static void ProcessAfterFragment(DecompileContext ctx, Block block, ASTNode current, Stack<ASTNode> stack, ref int i)
+        {
+            // Track the function reference
+            GMFunctionEntry function = block.Instructions[i].Function.Target;
+
+            // Go past conv instruction
+#if DEBUG
+            i++;
+            if (block.Instructions[i].Kind != Instruction.Opcode.Conv)
+                throw new System.Exception("Expected conv after fragment");
+            i++;
+#else
+            i += 2;
+#endif
+
+            switch (block.Instructions[i].Kind)
+            {
+                case Instruction.Opcode.PushI:
+                    {
+                        // This is a normal function, skip past some already-known instructions
+#if DEBUG
+                        if ((short)block.Instructions[i].Value != -1)
+                            throw new System.Exception("Expected -1, got another value");
+                        i++;
+                        if (block.Instructions[i].Kind != Instruction.Opcode.Conv)
+                            throw new System.Exception("Expected conv #2 after fragment");
+                        i++;
+                        if (block.Instructions[i].Kind != Instruction.Opcode.Call)
+                            throw new System.Exception("Expected call after fragment");
+                        if (block.Instructions[i].Function.Target.Name.Content != "method")
+                            throw new System.Exception("Expected method, got another function");
+                        i++;
+#else
+                        i += 3;
+#endif
+
+                        // Now we need to test if this function is anonymous
+                        if (i >= block.Instructions.Count || block.Instructions[i].Kind != Instruction.Opcode.Dup)
+                        {
+                            // This is an anonymous function (it's not duplicated)
+                            stack.Push(new ASTFunctionDecl(
+                                ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content), null));
+                        }
+                        else
+                        {
+                            // This is a function with a given name
+#if DEBUG
+                            i++;
+                            if (block.Instructions[i].Kind != Instruction.Opcode.PushI)
+                                throw new System.Exception("Expected pushi after fragment");
+                            i++;
+                            if (block.Instructions[i].Kind != Instruction.Opcode.Pop)
+                                throw new System.Exception("Expected pop after fragment");
+#else
+                            i += 2;
+#endif
+                            stack.Push(new ASTFunctionDecl(
+                                ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content), 
+                                block.Instructions[i].Variable.Target.Name.Content));
+                        }
+                    }
+                    break;
+                case Instruction.Opcode.Call:
+                    {
+                        // This is a struct or constructor
+#if DEBUG
+                        if (block.Instructions[i].Function.Target.Name.Content != "@@NullObject@@")
+                            throw new System.Exception("Expected @@NullObject@@, got another function");
+#endif
+
+                        // TODO
+                    }
+                    break;
+                default:
+                    throw new System.Exception("Unknown instruction pattern after fragment");
+            }
         }
     }
 }

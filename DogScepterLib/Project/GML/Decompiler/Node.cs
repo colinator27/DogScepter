@@ -46,7 +46,21 @@ namespace DogScepterLib.Project.GML.Decompiler
             for (int i = start; i <= end; i++)
             {
                 Block curr = existing.List[i];
-                curr.Index -= start;
+                curr.Index = List.Count;
+                List.Add(curr);
+            }
+        }
+
+        public BlockList(BlockList existing, List<int> excludes)
+        {
+            AddressToBlock = existing.AddressToBlock;
+            List = new List<Block>();
+            for (int i = 0; i < existing.List.Count; i++)
+            {
+                if (excludes.Contains(i))
+                    continue;
+                Block curr = existing.List[i];
+                curr.Index = List.Count;
                 List.Add(curr);
             }
         }
@@ -94,6 +108,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ControlFlowType ControlFlow { get; set; } = ControlFlowType.None;
         public bool Unreachable { get; set; } = false;
         public Node BelongingTo { get; set; } // Somewhat hacky field to mark a block as belonging to another node, as some control flow use blocks directly for detection
+        public bool AfterFragment { get; set; } = false; // Whether this block was directly after a fragment
 
         public enum ControlFlowType
         {
