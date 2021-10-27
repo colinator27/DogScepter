@@ -60,6 +60,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             SwitchDefault,
 
             FunctionDecl,
+            Struct,
         }
 
         public StatementKind Kind { get; set; }
@@ -855,6 +856,21 @@ namespace DogScepterLib.Project.GML.Decompiler
                         case -3:
                             sb.Append("all.");
                             break;
+                        case -15:
+                            // Arguments: check if this is a struct argument
+                            if (ctx.StructArguments != null &&
+                                Variable.Name.Content == "argument" && 
+                                Children != null && Children.Count == 1 && 
+                                Children[0].Kind == ASTNode.StatementKind.Int16)
+                            {
+                                short index = (Children[0] as ASTInt16).Value;
+                                if (index < ctx.StructArguments.Count)
+                                {
+                                    ctx.StructArguments[index].Write(ctx.ParentContext /* maybe not? */, sb);
+                                    return;
+                                }
+                            }
+                            break;
                         case -16:
                             sb.Append("static.");
                             break;
@@ -1026,11 +1042,21 @@ namespace DogScepterLib.Project.GML.Decompiler
                         sb.Append("--");
                     break;
                 default:
-                    if (ModifierKind == ModifierType.Local)
-                        sb.Append("var ");
-                    Children[0].Write(ctx, sb);
-                    sb.Append(" = ");
-                    Children[1].Write(ctx, sb);
+                    if (ctx.StructArguments != null)
+                    {
+                        Children[0].Write(ctx, sb);
+                        sb.Append(": ");
+                        Children[1].Write(ctx, sb);
+                        sb.Append(',');
+                    }
+                    else
+                    {
+                        if (ModifierKind == ModifierType.Local)
+                            sb.Append("var ");
+                        Children[0].Write(ctx, sb);
+                        sb.Append(" = ");
+                        Children[1].Write(ctx, sb);
+                    }
                     break;
             }
         }
@@ -1643,6 +1669,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<ASTNode> Children { get; set; }
         public string FunctionName { get; set; }
         public DecompileContext SubContext { get; set; }
+        public bool IsConstructor { get; set; } = false;
 
         public ASTFunctionDecl(DecompileContext subContext, string functionName)
         {
@@ -1659,6 +1686,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                 sb.Append(FunctionName);
             }
             sb.Append("()"); // TODO, parameters
+            if (IsConstructor)
+                sb.Append(" constructor");
             ASTNode.Newline(ctx, sb);
             sb.Append('{');
             ctx.IndentationLevel++;
@@ -1674,6 +1703,44 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public ASTNode Clean(DecompileContext ctx)
         {
+            return this;
+        }
+    }
+
+    public class ASTStruct : ASTNode
+    {
+        public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Struct;
+        public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Variable;
+        public List<ASTNode> Children { get; set; }
+        public DecompileContext SubContext { get; set; }
+
+        public ASTStruct(DecompileContext subContext, List<ASTNode> arguments)
+        {
+            SubContext = subContext;
+            Children = arguments;
+        }
+
+        public void Write(DecompileContext ctx, StringBuilder sb)
+        {
+            sb.Append('{');
+            ctx.IndentationLevel++;
+            ASTNode.Newline(ctx, sb);
+
+            SubContext.IndentationLevel = ctx.IndentationLevel;
+            SubContext.StructArguments = Children;
+            ASTNode.WriteFromContext(SubContext, sb);
+
+            ctx.IndentationLevel--;
+            ASTNode.Newline(ctx, sb);
+            sb.Append('}');
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
             return this;
         }
     }

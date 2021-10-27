@@ -280,7 +280,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                             {
                                 Node jump = n.Branches[i];
                                 if (jump.Address >= next.Address)
-                                    n.Branches.RemoveAt(i);
+                                    n.Branches[i] = new Block(-1, -1);
                                 else if (!visited.Contains(jump))
                                 {
                                     work.Push(jump);

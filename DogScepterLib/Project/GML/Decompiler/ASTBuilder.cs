@@ -751,13 +751,56 @@ namespace DogScepterLib.Project.GML.Decompiler
                     break;
                 case Instruction.Opcode.Call:
                     {
-                        // This is a struct or constructor
+                        // This is a struct or constructor function
 #if DEBUG
                         if (block.Instructions[i].Function.Target.Name.Content != "@@NullObject@@")
                             throw new System.Exception("Expected @@NullObject@@, got another function");
+                        i++;
+                        if (block.Instructions[i].Function.Target.Name.Content != "method")
+                            throw new System.Exception("Expected method, got another function");
+                        i++;
+#else
+                        i += 2;
 #endif
 
-                        // TODO
+                        // Now we need to test if this is anonymous
+                        if (i >= block.Instructions.Count || block.Instructions[i].Kind != Instruction.Opcode.Dup)
+                        {
+                            // This is an anonymous function constructor (it's not duplicated)
+                            // TODO: Check for parents, somehow
+                            stack.Push(new ASTFunctionDecl(
+                                ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content), null) { IsConstructor = true });
+                        }
+                        else
+                        {
+                            // This is either a struct or a function constructor with a name
+                            i++;
+                            short num = (short)block.Instructions[i].Value; // should be a pushi.e
+                            if (num == -16)
+                            {
+                                // Struct
+                                i += 2; // skip pop
+
+                                // Get arguments that get passed through
+                                int count = (short)block.Instructions[i].Value - 1;
+                                var args = new List<ASTNode>(count);
+                                for (int j = count; j > 0; j--)
+                                    args.Add(stack.Pop());
+
+                                stack.Push(new ASTStruct(
+                                    ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content), args));
+                            }
+                            else
+                            {
+                                // Function constructor with a name
+                                i++;
+
+                                // TODO: Check for parents, somehow
+                                stack.Push(new ASTFunctionDecl(
+                                    ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content),
+                                    block.Instructions[i].Variable.Target.Name.Content) { IsConstructor = true });
+                            }
+                        }
                     }
                     break;
                 default:

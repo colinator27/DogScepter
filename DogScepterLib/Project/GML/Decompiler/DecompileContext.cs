@@ -42,6 +42,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public DecompileContext ParentContext;
         public List<DecompileContext> SubContexts;
         public Fragment Fragment;
+        public List<ASTNode> StructArguments;
 
         public DecompileContext(ProjectFile pf, DecompileSettings settings = null)
         {
