@@ -12,9 +12,9 @@
 \* (Oh, right, this is just a work-in-progress modding tool geared toward (but not limited to) UNDERTALE/DELTARUNE by Toby Fox.)
 
 ## Features
-* Fully supports serializing/deserializing GameMaker data format ID 13 (an unknown version of GM:S 1) up to the latest GMS 2.3.2 runtime (format ID 17).
+* Fully supports serializing/deserializing GameMaker data format ID 13 (an unknown version of GM:S 1) up to the latest GMS 2.3.6 runtime (format ID 17).
 * Work in progress "abstract" or "project" mode that deals with a custom project format on disk for ease in modding, even with multiple versions of a game.
-* Work in progress GML VM decompilation, for use in re-compiling back for modding purposes.
+* Work in progress (but currently mostly usable) GML VM decompilation, for use in re-compiling back for modding purposes.
 * Planned features
     * A command line interface to deal with the aforementioned "project" mode, to deal with assets and compilation.
     * An actual editor similar to that of UndertaleModTool, but simplified.
