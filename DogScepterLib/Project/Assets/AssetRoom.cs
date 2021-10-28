@@ -154,6 +154,7 @@ namespace DogScepterLib.Project.Assets
             public GMRoom.Layer.LayerInstances Instances { get; set; }
             public LayerAssets Assets { get; set; }
             public LayerTiles Tiles { get; set; }
+            public LayerEffect Effect { get; set; }
 
             public class LayerBackground
             {
@@ -198,6 +199,19 @@ namespace DogScepterLib.Project.Assets
                 public int TilesX { get; set; }
                 public int TilesY { get; set; }
                 public int[][] TileData { get; set; }
+            }
+
+            public class LayerEffect
+            {
+                public string EffectType { get; set; }
+                public List<EffectProperty> Properties { get; set; }
+
+                public struct EffectProperty
+                {
+                    public GMRoom.Layer.EffectProperty.PropertyType Kind { get; set; }
+                    public string Name { get; set; }
+                    public string Value { get; set; }
+                }
             }
         }
     }

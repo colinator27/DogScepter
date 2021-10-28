@@ -350,7 +350,8 @@ namespace DogScepterLib.Core.Models
                 Background = 1,
                 Instances = 2,
                 Assets = 3,
-                Tiles = 4
+                Tiles = 4,
+                Effect = 6,
             }
 
             public GMString Name;
@@ -366,6 +367,7 @@ namespace DogScepterLib.Core.Models
             public LayerInstances Instances;
             public LayerAssets Assets;
             public LayerTiles Tiles;
+            public LayerEffect Effect;
 
             public void Serialize(GMDataWriter writer)
             {
@@ -389,6 +391,9 @@ namespace DogScepterLib.Core.Models
                         break;
                     case LayerKind.Tiles:
                         Tiles.Serialize(writer);
+                        break;
+                    case LayerKind.Effect:
+                        Effect.Serialize(writer);
                         break;
                     default:
                         writer.Warnings.Add(new GMWarning($"Unknown layer kind {Kind}"));
@@ -422,6 +427,10 @@ namespace DogScepterLib.Core.Models
                     case LayerKind.Tiles:
                         Tiles = new LayerTiles();
                         Tiles.Unserialize(reader);
+                        break;
+                    case LayerKind.Effect:
+                        Effect = new LayerEffect();
+                        Effect.Unserialize(reader);
                         break;
                     default:
                         reader.Warnings.Add(new GMWarning($"Unknown layer kind {Kind}"));
@@ -625,6 +634,53 @@ namespace DogScepterLib.Core.Models
                         for (int x = 0; x < TilesX; x++)
                             TileData[y][x] = reader.ReadInt32();
                     }
+                }
+            }
+
+            public class LayerEffect : GMSerializable
+            {
+                public GMString EffectType;
+                public GMList<EffectProperty> Properties;
+
+                public void Serialize(GMDataWriter writer)
+                {
+                    writer.WritePointerString(EffectType);
+                    Properties.Serialize(writer);
+                }
+
+                public void Unserialize(GMDataReader reader)
+                {
+                    EffectType = reader.ReadStringPointerObject();
+                    Properties = new GMList<EffectProperty>();
+                    Properties.Unserialize(reader);
+                }
+            }
+
+            public class EffectProperty : GMSerializable
+            {
+                public enum PropertyType
+                {
+                    Real = 0,
+                    Color = 1,
+                    Sampler = 2
+                }
+
+                public PropertyType Kind;
+                public GMString Name;
+                public GMString Value;
+
+                public void Serialize(GMDataWriter writer)
+                {
+                    writer.Write((int)Kind);
+                    writer.WritePointerString(Name);
+                    writer.WritePointerString(Value);
+                }
+
+                public void Unserialize(GMDataReader reader)
+                {
+                    Kind = (PropertyType)reader.ReadInt32();
+                    Name = reader.ReadStringPointerObject();
+                    Value = reader.ReadStringPointerObject();
                 }
             }
         }

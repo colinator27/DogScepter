@@ -18,6 +18,14 @@ namespace DogScepterLib.Core
     /// </summary>
     public class GMList<T> : List<T>, GMSerializable where T : GMSerializable, new()
     {
+        public GMList()
+        {
+        }
+
+        public GMList(int capacity) : base(capacity)
+        {
+        }
+
         public virtual void Serialize(GMDataWriter writer, ListSerialize before = null,
                                                            ListSerialize after = null,
                                                            ListSerializeElement elemWriter = null)
@@ -80,6 +88,14 @@ namespace DogScepterLib.Core
     public class GMPointerList<T> : GMList<T> where T : GMSerializable, new()
     {
         public bool UsePointerMap = true;
+
+        public GMPointerList()
+        {
+        }
+
+        public GMPointerList(int capacity) : base(capacity)
+        {
+        }
 
         public void Serialize(GMDataWriter writer, ListSerialize before = null,
                                                    ListSerialize after = null,
@@ -247,6 +263,11 @@ namespace DogScepterLib.Core
     public class GMUniquePointerList<T> : GMPointerList<T> where T : GMSerializable, new()
     {
         public GMUniquePointerList() : base()
+        {
+            UsePointerMap = false;
+        }
+
+        public GMUniquePointerList(int capacity) : base(capacity)
         {
             UsePointerMap = false;
         }

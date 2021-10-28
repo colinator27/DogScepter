@@ -72,8 +72,8 @@ namespace DogScepterLib.Core
         {
             if (ptr == 0)
                 return default;
-            if (PointerOffsets.ContainsKey(ptr))
-                return (T)PointerOffsets[ptr];
+            if (PointerOffsets.TryGetValue(ptr, out GMSerializable s))
+                return (T)s;
             T res = new T();
             PointerOffsets[ptr] = res;
             return res;
@@ -96,8 +96,8 @@ namespace DogScepterLib.Core
                 return default;
 
             T res;
-            if (PointerOffsets.ContainsKey(ptr))
-                res = (T)PointerOffsets[ptr];
+            if (PointerOffsets.TryGetValue(ptr, out GMSerializable s))
+                res = (T)s;
             else
             {
                 res = new T();
@@ -124,8 +124,8 @@ namespace DogScepterLib.Core
                 return default;
 
             T res;
-            if (PointerOffsets.ContainsKey(ptr))
-                res = (T)PointerOffsets[ptr];
+            if (PointerOffsets.TryGetValue(ptr, out GMSerializable s))
+                res = (T)s;
             else
             {
                 res = new T();

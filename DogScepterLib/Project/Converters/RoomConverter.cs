@@ -44,10 +44,10 @@ namespace DogScepterLib.Project.Converters
                 EnableViews = (asset.Flags & GMRoom.RoomFlags.EnableViews) == GMRoom.RoomFlags.EnableViews,
                 ShowColor = (asset.Flags & GMRoom.RoomFlags.ShowColor) == GMRoom.RoomFlags.ShowColor,
                 ClearDisplayBuffer = (asset.Flags & GMRoom.RoomFlags.ClearDisplayBuffer) == GMRoom.RoomFlags.ClearDisplayBuffer,
-                Backgrounds = new(),
-                Views = new(),
-                GameObjects = new(),
-                Tiles = new(),
+                Backgrounds = new(asset.Backgrounds.Count),
+                Views = new(asset.Views.Count),
+                GameObjects = new(asset.GameObjects.Count),
+                Tiles = new(asset.Tiles.Count),
                 Physics = new()
                 {
                     Enabled = asset.Physics,
@@ -145,7 +145,7 @@ namespace DogScepterLib.Project.Converters
 
             if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
             {
-                projectAsset.Layers = new List<AssetRoom.Layer>();
+                projectAsset.Layers = new List<AssetRoom.Layer>(asset.Layers.Count);
                 foreach (var layer in asset.Layers)
                 {
                     var newLayer = new AssetRoom.Layer()
@@ -183,8 +183,8 @@ namespace DogScepterLib.Project.Converters
                         case GMRoom.Layer.LayerKind.Assets:
                             newLayer.Assets = new AssetRoom.Layer.LayerAssets()
                             {
-                                LegacyTiles = new(),
-                                Sprites = new()
+                                LegacyTiles = new(layer.Assets.LegacyTiles.Count),
+                                Sprites = new(layer.Assets.Sprites.Count)
                             };
 
                             foreach (var tile in layer.Assets.LegacyTiles)
@@ -227,7 +227,7 @@ namespace DogScepterLib.Project.Converters
 
                             if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3))
                             {
-                                newLayer.Assets.Sequences = new();
+                                newLayer.Assets.Sequences = new(layer.Assets.Sequences.Count);
                                 foreach (var seq in layer.Assets.Sequences)
                                 {
                                     newLayer.Assets.Sequences.Add(new()
@@ -278,6 +278,22 @@ namespace DogScepterLib.Project.Converters
                                 TileData = layer.Tiles.TileData
                             };
                             break;
+                        case GMRoom.Layer.LayerKind.Effect:
+                            newLayer.Effect = new()
+                            {
+                                EffectType = layer.Effect.EffectType?.Content,
+                                Properties = new(layer.Effect.Properties.Count)
+                            };
+                            foreach (var prop in layer.Effect.Properties)
+                            {
+                                newLayer.Effect.Properties.Add(new()
+                                {
+                                    Kind = prop.Kind,
+                                    Name = prop.Name?.Content,
+                                    Value = prop.Value?.Content
+                                });
+                            }
+                            break;
                     }
 
                     projectAsset.Layers.Add(newLayer);
@@ -285,7 +301,7 @@ namespace DogScepterLib.Project.Converters
 
                 if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3))
                 {
-                    projectAsset.Sequences = new();
+                    projectAsset.Sequences = new(asset.SequenceIDs.Count);
                     foreach (int seq in asset.SequenceIDs)
                         projectAsset.Sequences.Add(seq >= 0 ? dataSeqn[seq].Name?.Content : null);
                 }
@@ -443,7 +459,7 @@ namespace DogScepterLib.Project.Converters
 
                 if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
                 {
-                    data.Layers = new();
+                    data.Layers = new(asset.Layers.Count);
                     foreach (var layer in asset.Layers)
                     {
                         var newLayer = new GMRoom.Layer()
@@ -526,7 +542,7 @@ namespace DogScepterLib.Project.Converters
                             
                             if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3))
                             {
-                                newLayer.Assets.Sequences = new();
+                                newLayer.Assets.Sequences = new(layer.Assets.Sequences.Count);
                                 foreach (var seq in layer.Assets.Sequences)
                                 {
                                     newLayer.Assets.Sequences.Add(new()
@@ -547,7 +563,7 @@ namespace DogScepterLib.Project.Converters
 
                                 if (!pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3, 2))
                                 {
-                                    newLayer.Assets.NineSlices = new();
+                                    newLayer.Assets.NineSlices = new(layer.Assets.NineSlices.Count);
                                     foreach (var spr in layer.Assets.NineSlices)
                                     {
                                         newLayer.Assets.NineSlices.Add(new()
@@ -578,6 +594,25 @@ namespace DogScepterLib.Project.Converters
                                 TilesY = layer.Tiles.TilesY,
                                 TileData = layer.Tiles.TileData
                             };
+                        }
+                        else if (layer.Effect != null)
+                        {
+                            newLayer.Kind = GMRoom.Layer.LayerKind.Effect;
+                            newLayer.Effect = new()
+                            {
+                                EffectType = pf.DataHandle.DefineString(layer.Effect.EffectType),
+                                Properties = new(layer.Effect.Properties.Count)
+                            };
+
+                            foreach (var prop in layer.Effect.Properties)
+                            {
+                                newLayer.Effect.Properties.Add(new()
+                                {
+                                    Kind = prop.Kind,
+                                    Name = pf.DataHandle.DefineString(prop.Name),
+                                    Value = pf.DataHandle.DefineString(prop.Value)
+                                });
+                            }
                         }
                         // maybe throw exception if nothing else matched?
                     }
