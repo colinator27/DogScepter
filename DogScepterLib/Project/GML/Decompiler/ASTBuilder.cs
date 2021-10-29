@@ -276,7 +276,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                         ProcessAfterFragment(ctx, block, current, stack, ref i);
                                         break;
                                     }
-                                    stack.Push(new ASTFunctionRef(inst.Function.Target.Name.Content));
+                                    stack.Push(new ASTFunctionRef(inst.Function.Target));
                                     break;
                                 }
                                 stack.Push(new ASTInt32((int)inst.Value));
@@ -744,7 +744,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                             i += 2;
 #endif
                             stack.Push(new ASTFunctionDecl(
-                                ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content), 
+                                ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content),
                                 block.Instructions[i].Variable.Target.Name.Content));
                         }
                     }
@@ -769,7 +769,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                             // This is an anonymous function constructor (it's not duplicated)
                             // TODO: Check for parents, somehow
                             stack.Push(new ASTFunctionDecl(
-                                ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content), null) { IsConstructor = true });
+                                ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content), null)
+                            { IsConstructor = true });
                         }
                         else
                         {
@@ -798,7 +799,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 // TODO: Check for parents, somehow
                                 stack.Push(new ASTFunctionDecl(
                                     ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content),
-                                    block.Instructions[i].Variable.Target.Name.Content) { IsConstructor = true });
+                                    block.Instructions[i].Variable.Target.Name.Content)
+                                { IsConstructor = true });
                             }
                         }
                     }
@@ -806,6 +808,98 @@ namespace DogScepterLib.Project.GML.Decompiler
                 default:
                     throw new System.Exception("Unknown instruction pattern after fragment");
             }
+        }
+
+        public static string GetNameAfterFragment(Block block)
+        {
+            int i = 0;
+
+            // Track the function reference
+            GMFunctionEntry function = block.Instructions[i].Function.Target;
+
+            // Go past conv instruction
+#if DEBUG
+            i++;
+            if (block.Instructions[i].Kind != Instruction.Opcode.Conv)
+                throw new System.Exception("Expected conv after fragment");
+            i++;
+#else
+            i += 2;
+#endif
+
+            switch (block.Instructions[i].Kind)
+            {
+                case Instruction.Opcode.PushI:
+                    {
+                        // This is a normal function, skip past some already-known instructions
+#if DEBUG
+                        if ((short)block.Instructions[i].Value != -1)
+                            throw new System.Exception("Expected -1, got another value");
+                        i++;
+                        if (block.Instructions[i].Kind != Instruction.Opcode.Conv)
+                            throw new System.Exception("Expected conv #2 after fragment");
+                        i++;
+                        if (block.Instructions[i].Kind != Instruction.Opcode.Call)
+                            throw new System.Exception("Expected call after fragment");
+                        if (block.Instructions[i].Function.Target.Name.Content != "method")
+                            throw new System.Exception("Expected method, got another function");
+                        i++;
+#else
+                        i += 3;
+#endif
+
+                        // Now we need to ensure this function isn't anonymous
+                        if (i < block.Instructions.Count && block.Instructions[i].Kind == Instruction.Opcode.Dup)
+                        {
+                            // This is a function with a given name
+#if DEBUG
+                            i++;
+                            if (block.Instructions[i].Kind != Instruction.Opcode.PushI)
+                                throw new System.Exception("Expected pushi after fragment");
+                            i++;
+                            if (block.Instructions[i].Kind != Instruction.Opcode.Pop)
+                                throw new System.Exception("Expected pop after fragment");
+#else
+                            i += 2;
+#endif
+                            return block.Instructions[i].Variable.Target.Name.Content;
+                        }
+                    }
+                    break;
+                case Instruction.Opcode.Call:
+                    {
+                        // This is a struct or constructor function
+#if DEBUG
+                        if (block.Instructions[i].Function.Target.Name.Content != "@@NullObject@@")
+                            throw new System.Exception("Expected @@NullObject@@, got another function");
+                        i++;
+                        if (block.Instructions[i].Function.Target.Name.Content != "method")
+                            throw new System.Exception("Expected method, got another function");
+                        i++;
+#else
+                        i += 2;
+#endif
+
+                        // Now we need to ensure that this isn't anonymous
+                        if (i < block.Instructions.Count && block.Instructions[i].Kind == Instruction.Opcode.Dup)
+                        {
+                            // This is either a struct or a function constructor with a name
+                            i++;
+                            short num = (short)block.Instructions[i].Value; // should be a pushi.e
+                            if (num != -16)
+                            {
+                                // Function constructor with a name
+                                i++;
+                                return block.Instructions[i].Variable.Target.Name.Content;
+                            }
+                        }
+                    }
+                    break;
+                default:
+                    throw new System.Exception("Unknown instruction pattern after fragment");
+            }
+
+            return null;
         }
     }
 }

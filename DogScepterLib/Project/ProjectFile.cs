@@ -3,6 +3,7 @@ using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
 using DogScepterLib.Project.Assets;
 using DogScepterLib.Project.Converters;
+using DogScepterLib.Project.GML.Decompiler;
 using PropertyChanged;
 using System;
 using System.Collections.Generic;
@@ -75,6 +76,7 @@ namespace DogScepterLib.Project
                 InternalTextures = value;
             }
         }
+        public DecompileCache DecompileCache;
 
         // From https://github.com/dotnet/runtime/issues/33112
         [AttributeUsage(AttributeTargets.Interface, AllowMultiple = false)]

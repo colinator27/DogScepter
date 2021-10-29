@@ -31,8 +31,8 @@ namespace DogScepterTest
                     {
                         Console.WriteLine($"Project warn: {type} {info ?? ""}");
                     });
+                pf.DecompileCache = new DecompileCache(pf);
 
-                DecompileContext ctx = new DecompileContext(pf);
                 var list = reader.Data.GetChunk<GMChunkCODE>().List;
                 /*int ind = -1;
                 for (int i = 0; i < list.Count; i++)

@@ -621,6 +621,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 else if (Children[i].Kind == ASTNode.StatementKind.ShortCircuit)
                     Children[i].NeedsParentheses = true;
             }
+            AssetResolver.ResolveBinary(ctx, this);
             return this;
         }
     }
@@ -648,7 +649,10 @@ namespace DogScepterLib.Project.GML.Decompiler
                 sb.Append('[');
             else
             {
-                sb.Append(Function.Name.Content);
+                if (ctx.Cache.GlobalFunctionNames.TryGetValue(Function, out string name))
+                    sb.Append(name);
+                else
+                    sb.Append(Function.Name.Content);
                 sb.Append('(');
             }
 
@@ -1599,16 +1603,19 @@ namespace DogScepterLib.Project.GML.Decompiler
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Int32;
         public List<ASTNode> Children { get; set; }
-        public string FunctionName { get; set; }
+        public GMFunctionEntry Function { get; set; }
 
-        public ASTFunctionRef(string functionName)
+        public ASTFunctionRef(GMFunctionEntry function)
         {
-            FunctionName = functionName;
+            Function = function;
         }
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
-            sb.Append(FunctionName);
+            if (ctx.Cache.GlobalFunctionNames.TryGetValue(Function, out string name))
+                sb.Append(name);
+            else
+                sb.Append(Function.Name.Content);
         }
 
         public ASTNode Clean(DecompileContext ctx)

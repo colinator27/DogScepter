@@ -14,11 +14,54 @@ namespace DogScepterLib.Project.GML.Decompiler
         public string Indent { get; set; } = "    ";
     }
 
+    public class DecompileCache
+    {
+        public AssetResolverBuiltins Builtins;
+        public Dictionary<GMFunctionEntry, string> GlobalFunctionNames;
+
+        public DecompileCache(ProjectFile pf)
+        {
+            Builtins = new AssetResolverBuiltins();
+            GlobalFunctionNames = new Dictionary<GMFunctionEntry, string>();
+            if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3))
+            {
+                // Find all function names in global scripts
+                GMChunkCODE code = pf.DataHandle.GetChunk<GMChunkCODE>();
+                Parallel.ForEach(pf.DataHandle.GetChunk<GMChunkGLOB>().List, scr =>
+                {
+                    GMCode entry = code.List[scr];
+
+                    // Find fragments
+                    List<Fragment> fragments = Fragments.FindAndProcess(entry);
+
+                    // Find blocks in the main fragment that come after another fagment
+                    foreach (Block b in fragments[^1].Blocks.List)
+                    {
+                        if (b.AfterFragment && b.Instructions.Count > 2 &&
+                            b.Instructions[0].Kind == GMCode.Bytecode.Instruction.Opcode.Push &&
+                            b.Instructions[0].Type1 == GMCode.Bytecode.Instruction.DataType.Int32 &&
+                            b.Instructions[0].Value == null)
+                        {
+                            string name = ASTBuilder.GetNameAfterFragment(b);
+                            if (name != null)
+                            {
+                                GMFunctionEntry func = b.Instructions[0].Function.Target;
+                                lock (GlobalFunctionNames)
+                                    GlobalFunctionNames[func] = name;
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
+
     public class DecompileContext
     {
         public ProjectFile Project { get; set; }
         public GMData Data { get; set; }
         public DecompileSettings Settings { get; set; }
+        public DecompileCache Cache => Project.DecompileCache;
         public IList<GMString> Strings { get; set; }
         public BlockList Blocks { get; set; }
         public List<Loop> LoopNodes { get; set; }
@@ -69,6 +112,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             // Find all fragments
             List<Fragment> fragments = Fragments.FindAndProcess(codeEntry);
 
+            // Decompile each individual fragment
             SubContexts = new List<DecompileContext>(fragments.Count - 1);
             for (int i = 0; i < fragments.Count - 1; i++)
             {
@@ -77,11 +121,17 @@ namespace DogScepterLib.Project.GML.Decompiler
                 SubContexts.Add(ctx);
             }
 
+            // Then decompile the main fragment
             return DecompileSegmentString(codeEntry, fragments[^1].Blocks);
         }
 
         public void DecompileSegment(GMCode codeEntry, BlockList existingList = null)
         {
+#if DEBUG
+            if (Project.DecompileCache == null)
+                throw new Exception("Missing decompile cache! Needs to be initialized.");
+#endif
+
             Blocks = existingList ?? Block.GetBlocks(codeEntry);
             Blocks.FindUnreachables();
 
