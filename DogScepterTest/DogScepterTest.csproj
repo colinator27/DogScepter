@@ -9,4 +9,10 @@
     <ProjectReference Include="..\DogScepterLib\DogScepterLib.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="DR Chapter 2.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

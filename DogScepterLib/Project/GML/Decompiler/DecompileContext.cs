@@ -16,12 +16,12 @@ namespace DogScepterLib.Project.GML.Decompiler
 
     public class DecompileCache
     {
-        public AssetResolverBuiltins Builtins;
+        public AssetResolverTypes Types;
         public Dictionary<GMFunctionEntry, string> GlobalFunctionNames;
 
         public DecompileCache(ProjectFile pf)
         {
-            Builtins = new AssetResolverBuiltins();
+            Types = new AssetResolverTypes(pf);
             GlobalFunctionNames = new Dictionary<GMFunctionEntry, string>();
             if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3))
             {
@@ -60,6 +60,21 @@ namespace DogScepterLib.Project.GML.Decompiler
     {
         public ProjectFile Project { get; set; }
         public GMData Data { get; set; }
+        private string _codeName;
+        public string CodeName
+        {
+            get => _codeName; 
+            set
+            {
+                _codeName = value;
+                if (Cache.Types.CodeEntries != null &&
+                    Cache.Types.CodeEntries.TryGetValue(_codeName, out var data))
+                    CodeAssetTypes = data;
+                else
+                    CodeAssetTypes = null;
+            }
+        }
+        public AssetResolverTypes.AssetResolverTypeJson? CodeAssetTypes;
         public DecompileSettings Settings { get; set; }
         public DecompileCache Cache => Project.DecompileCache;
         public IList<GMString> Strings { get; set; }
@@ -89,6 +104,11 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public DecompileContext(ProjectFile pf, DecompileSettings settings = null)
         {
+#if DEBUG
+            if (pf.DecompileCache == null)
+                throw new Exception("Missing decompile cache! Needs to be initialized.");
+#endif
+
             Project = pf;
             Data = pf.DataHandle;
             Strings = Data.GetChunk<GMChunkSTRG>().List;
@@ -105,10 +125,20 @@ namespace DogScepterLib.Project.GML.Decompiler
             Strings = existing.Strings;
             Settings = existing.Settings;
             SubContexts = existing.SubContexts; // maintain this reference
+
+#if DEBUG
+            if (Project.DecompileCache == null)
+                throw new Exception("Missing decompile cache! Needs to be initialized.");
+#endif
+
+
+            CodeName = fragment.Name;
         }
 
         public string DecompileWholeEntry(GMCode codeEntry)
         {
+            CodeName = codeEntry.Name?.Content;
+
             // Find all fragments
             List<Fragment> fragments = Fragments.FindAndProcess(codeEntry);
 
@@ -127,11 +157,6 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public void DecompileSegment(GMCode codeEntry, BlockList existingList = null)
         {
-#if DEBUG
-            if (Project.DecompileCache == null)
-                throw new Exception("Missing decompile cache! Needs to be initialized.");
-#endif
-
             Blocks = existingList ?? Block.GetBlocks(codeEntry);
             Blocks.FindUnreachables();
 

@@ -276,13 +276,13 @@ namespace DogScepterLib.Project.GML.Decompiler
                                         ProcessAfterFragment(ctx, block, current, stack, ref i);
                                         break;
                                     }
-                                    stack.Push(new ASTFunctionRef(inst.Function.Target));
+                                    stack.Push(new ASTFunctionRef(ctx, inst.Function.Target));
                                     break;
                                 }
                                 stack.Push(new ASTInt32((int)inst.Value));
                                 break;
                             case Instruction.DataType.String:
-                                stack.Push(new ASTString((int)inst.Value));
+                                stack.Push(new ASTString(ctx.Strings[(int)inst.Value].Content));
                                 break;
                             case Instruction.DataType.Variable:
                                 {

@@ -32,6 +32,8 @@ namespace DogScepterTest
                         Console.WriteLine($"Project warn: {type} {info ?? ""}");
                     });
                 pf.DecompileCache = new DecompileCache(pf);
+                if (reader.Data.GetChunk<GMChunkGEN8>().DisplayName.Content.ToLower().Contains("deltarune"))
+                    pf.DecompileCache.Types.AddFromFile("DR Chapter 2.json");
 
                 var list = reader.Data.GetChunk<GMChunkCODE>().List;
                 /*int ind = -1;

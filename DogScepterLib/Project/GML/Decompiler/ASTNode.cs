@@ -309,6 +309,12 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             return this;
         }
+
+        // Used for JSON comparisons
+        public override string ToString()
+        {
+            return Value.ToString();
+        }
     }
 
     public class ASTInt32 : ASTNode
@@ -330,6 +336,12 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode Clean(DecompileContext ctx)
         {
             return this;
+        }
+
+        // Used for JSON comparisons
+        public override string ToString()
+        {
+            return Value.ToString();
         }
     }
 
@@ -353,6 +365,12 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             return this;
         }
+
+        // Used for JSON comparisons
+        public override string ToString()
+        {
+            return Value.ToString();
+        }
     }
 
     public class ASTFloat : ASTNode
@@ -374,6 +392,12 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode Clean(DecompileContext ctx)
         {
             return this;
+        }
+
+        // Used for JSON comparisons
+        public override string ToString()
+        {
+            return Value.ToString("R", CultureInfo.InvariantCulture);
         }
     }
 
@@ -397,6 +421,12 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             return this;
         }
+
+        // Used for JSON comparisons
+        public override string ToString()
+        {
+            return RoundTripDouble.ToRoundTrip(Value);
+        }
     }
 
     public class ASTString : ASTNode
@@ -407,12 +437,12 @@ namespace DogScepterLib.Project.GML.Decompiler
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
         public List<ASTNode> Children { get; set; }
 
-        public int Value;
-        public ASTString(int value) => Value = value;
+        public string Value;
+        public ASTString(string value) => Value = value;
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
-            string val = ctx.Strings[Value].Content;
+            string val = Value;
 
             if (ctx.Data.VersionInfo.IsNumberAtLeast(2))
                 val = "\"" + val.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\"", "\\\"") + "\"";
@@ -453,6 +483,12 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             return this;
         }
+        
+        // Used for JSON comparisons
+        public override string ToString()
+        {
+            return Value;
+        }
     }
 
     public class ASTBoolean : ASTNode
@@ -474,6 +510,12 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode Clean(DecompileContext ctx)
         {
             return this;
+        }
+        
+        // Used for JSON comparisons
+        public override string ToString()
+        {
+            return Value ? "true" : "false";
         }
     }
 
@@ -1606,23 +1648,30 @@ namespace DogScepterLib.Project.GML.Decompiler
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Int32;
         public List<ASTNode> Children { get; set; }
         public GMFunctionEntry Function { get; set; }
+        public string Name { get; set; }
 
-        public ASTFunctionRef(GMFunctionEntry function)
+        public ASTFunctionRef(DecompileContext ctx, GMFunctionEntry function)
         {
             Function = function;
+            if (ctx.Cache.GlobalFunctionNames.TryGetValue(Function, out string name))
+                Name = name;
+            else
+                Name = Function.Name.Content;
         }
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
-            if (ctx.Cache.GlobalFunctionNames.TryGetValue(Function, out string name))
-                sb.Append(name);
-            else
-                sb.Append(Function.Name.Content);
+            sb.Append(Name);
         }
 
         public ASTNode Clean(DecompileContext ctx)
         {
             return this;
+        }
+
+        public override string ToString()
+        {
+            return Name;
         }
     }
 

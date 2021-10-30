@@ -1,0 +1,326 @@
+{
+  "FunctionArgs": {
+    "gml_Script_i_ex": [ "Object" ],
+    "gml_Script_safe_delete": [ "Object" ],
+    "gml_Script_instance_create": [ "None", "None", "Object" ],
+    "gml_Script_snd_play": [ "Sound" ],
+    "gml_Script_snd_play_x": [ "Sound" ],
+    "gml_Script_snd_stop": [ "Sound" ],
+    "gml_Script_snd_is_playing": [ "Sound" ],
+    "gml_Script_c_soundplay": [ "Sound" ],
+    "gml_Script_c_soundplay_x": [ "Sound" ],
+    "gml_Script_c_soundplay_wait": [ "Sound" ],
+    "gml_Script_c_sprite": [ "Sprite" ],
+    "gml_Script_c_jump_sprite": [ "None", "None", "None", "None", "Sprite", "Sprite" ],
+    "gml_Script_scr_marker": [ "None", "None", "Sprite" ],
+    "gml_Script_scr_dark_marker": [ "None", "None", "Sprite" ],
+    "gml_Script_scr_dark_marker_depth": [ "None", "None", "None", "Sprite" ],
+    "gml_Script_scr_battle_marker": [ "None", "None", "Sprite" ],
+    "gml_Script_scr_act_charsprite": [ "None", "Sprite" ],
+    "gml_Script_hexcolor": [ "Color" ],
+
+    "gml_Script_instance_create_ch1": [ "None", "None", "Object" ],
+    "gml_Script_snd_play_ch1": [ "Sound" ],
+    "gml_Script_snd_stop_ch1": [ "Sound" ],
+    "gml_Script_snd_is_playing_ch1": [ "Sound" ],
+    "gml_Script_scr_marker_ch1": [ "None", "None", "Sprite" ],
+    "gml_Script_scr_dark_marker_ch1": [ "None", "None", "Sprite" ]
+  },
+  "FunctionArgsCond": {
+    "gml_Script_c_var_instance": [
+      {
+        "Kind": "None"
+      },
+      {
+        "Kind": "None"
+      },
+      {
+        "Kind": "Sprite",
+        "Condition": {
+          "Kind": "Any",
+          "Conditions": [
+            {
+              "Kind": "FunctionArg",
+              "Index": 1,
+              "NodeKind": "String",
+              "NodeValue": "character_sprite"
+            },
+            {
+              "Kind": "FunctionArg",
+              "Index": 1,
+              "NodeKind": "String",
+              "NodeValue": "sprite_index"
+            }
+          ]
+        },
+        "Alternatives": [
+          {
+            "Kind": "Boolean",
+            "Conditions": [
+              {
+                "Kind": "FunctionArg",
+                "Index": 1,
+                "NodeKind": "String",
+                "NodeValue": "visible"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "gml_Script_c_delaycmd": [
+      {
+        "Kind": "None"
+      },
+      {
+        "Kind": "None"
+      },
+      {
+        "Kind": "Sprite",
+        "Condition": {
+          "Kind": "FunctionArg",
+          "Index": 1,
+          "NodeKind": "String",
+          "NodeValue": "sprite"
+        },
+        "Alternatives": [
+          {
+            "Kind": "Sound",
+            "Condition": {
+              "Kind": "FunctionArg",
+              "Index": 1,
+              "NodeKind": "String",
+              "NodeValue": "soundplay"
+            }
+          }
+        ]
+      }
+    ],
+    "gml_Script_scr_script_delayed": [
+      {
+        "Kind": "None"
+      },
+      {
+        "Kind": "None"
+      },
+      {
+        "Kind": "Sound",
+        "Condition": {
+          "Kind": "Any",
+          "Conditions": [
+            {
+              "Kind": "FunctionArg",
+              "Index": 0,
+              "NodeKind": "FunctionRef",
+              "NodeValue": "snd_play"
+            },
+            {
+              "Kind": "FunctionArg",
+              "Index": 0,
+              "NodeKind": "FunctionRef",
+              "NodeValue": "snd_volume"
+            }
+          ]
+        }
+      },
+      {
+        "Kind": "Sprite",
+        "Condition": {
+          "Kind": "All",
+          "Conditions": [
+            {
+              "Kind": "FunctionArg",
+              "Index": 0,
+              "NodeKind": "FunctionRef",
+              "NodeValue": "scr_var"
+            },
+            {
+              "Kind": "FunctionArg",
+              "Index": 2,
+              "NodeKind": "String",
+              "NodeValue": "sprite_index"
+            }
+          ]
+        },
+        "Alternatives": [
+          {
+            "Kind": "Boolean",
+            "Condition": {
+              "Kind": "All",
+              "Conditions": [
+                {
+                  "Kind": "FunctionArg",
+                  "Index": 0,
+                  "NodeKind": "FunctionRef",
+                  "NodeValue": "scr_var"
+                },
+                {
+                  "Kind": "FunctionArg",
+                  "Index": 2,
+                  "NodeKind": "String",
+                  "NodeValue": "visible"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "gml_Script_c_actorsetsprites": [
+      {
+        "Kind": "None"
+      },
+      {
+        "Kind": "Sprite",
+        "Condition": {
+          "Kind": "Nonzero"
+        }
+      },
+      {
+        "Kind": "Sprite",
+        "Condition": {
+          "Kind": "Nonzero"
+        }
+      },
+      {
+        "Kind": "Sprite",
+        "Condition": {
+          "Kind": "Nonzero"
+        }
+      },
+      {
+        "Kind": "Sprite",
+        "Condition": {
+          "Kind": "Nonzero"
+        }
+      }
+    ]
+  },
+  "VariableTypes": {
+    "actor": "Object",
+    "attachedobj": "Object",
+    "usprite": "Sprite",
+    "rsprite": "Sprite",
+    "dsprite": "Sprite",
+    "lsprite": "Sprite",
+    "utsprite": "Sprite",
+    "rtsprite": "Sprite",
+    "dtsprite": "Sprite",
+    "ltsprite": "Sprite",
+    "idlesprite": "Sprite",
+    "hurtsprite": "Sprite",
+    "sparedsprite": "Sprite",
+    "sprite_palette": "Sprite",
+    "smsprite": "Sprite",
+    "menuSprite": "Sprite",
+    "chsprite": "Sprite",
+    "character_sprite": "Sprite",
+    "landsprite": "Sprite",
+    "jumpsprite": "Sprite",
+    "button_sprite": "Sprite",
+    "_sprite": "Sprite",
+    "doorSound": "Sound",
+    "doorSound2": "Sound",
+    "writersnd": "Sound",
+    "batmusic": "Sound",
+    "currentsong": "Sound",
+    "color": "Color",
+    "targetColor": "Color",
+    "startColor": "Color",
+    "basecolor": "Color",
+    "override_color": "Color",
+    "text_color": "Color",
+    "mycolor": "Color",
+    "xcolor": "Color",
+    "chosencolor": "Color",
+    "flashcolor": "Color",
+    "acidColor": "Color",
+    "linecolor": "Color",
+    "_itemTextColor": "Color",
+    "dcolor": "Color",
+    "particlecolor": "Color",
+    "bcolor": "Color",
+    "startcolor": "Color",
+    "start_color": "Color",
+    "end_color": "Color",
+    "play_color": "Color",
+    "not_color": "Color",
+    "floorShadowColor": "Color",
+    "frontShadowColor": "Color",
+    "nowcolor": "Color",
+    "reccolor": "Color",
+    "arrowcolor": "Color",
+    "housecolor": "Color",
+    "wincolor": "Color",
+    "poisoncolor": "Color",
+    "circle1color": "Color",
+    "smcolor": "Color",
+    "blend": "Color",
+    "menuTextColor": "Color",
+    "menuTextColorUnselectable": "Color",
+    "menuTextColorHover": "Color",
+    "menuTextColorInactive": "Color",
+    "menuTextColorSelected": "Color",
+    "optionCommentAColor": "Color",
+    "optionCommentBColor": "Color",
+    "optionCommentCColor": "Color",
+    "menuHeaderColor": "Color"
+  },
+  "VariableTypesCond": {
+    "sprite": {
+      "Kind": "Sprite",
+      "Condition": {
+        "Kind": "Nonzero"
+      }
+    },
+    "victorySprite": {
+      "Kind": "Sprite",
+      "Condition": {
+        "Kind": "Nonzero"
+      }
+    },
+    "monsterinstancetype": {
+      "Kind": "Object",
+      "Condition": {
+        "Kind": "Nonzero"
+      }
+    }
+  },
+  "CodeEntries": {
+    "object: obj_ch2_sceneex2_special": {
+      "VariableTypes": {
+        "color": "None"
+      }
+    },
+    "gml_Object_obj_dbulletcontroller_Step_0": {
+      "VariableTypes": {
+        "color": "None"
+      }
+    },
+    "object: obj_heart": {
+      "VariableTypes": {
+        "color": "None"
+      }
+    },
+    "object: obj_sneo_fakeheart": {
+      "VariableTypes": {
+        "color": "None"
+      }
+    },
+    "gml_GlobalScript_scr_heartcolor": {
+      "VariableTypes": {
+        "color": "None"
+      }
+    },
+    "gml_Object_obj_cybercity_balloon_cheese_Create_0": {
+      "VariableTypes": {
+        "blend": "None"
+      }
+    },
+    "gml_Object_obj_cybercity_balloon_Create_0": {
+      "VariableTypes": {
+        "blend": "None"
+      }
+    }
+  }
+}

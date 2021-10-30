@@ -95,6 +95,11 @@ namespace DogScepterLib.Project
 
     public class AssetRefList<T> : List<AssetRef<T>> where T : Asset
     {
+        public AssetRef<T> Find(string name)
+        {
+            return Find(a => a.Name == name);
+        }
+
         public int FindIndex(string name)
         {
             return FindIndex(a => a.Name == name);
