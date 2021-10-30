@@ -1117,6 +1117,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                 }
             }
 
+            AssetResolver.ResolveAssign(ctx, this);
+
             return this;
         }
     }
