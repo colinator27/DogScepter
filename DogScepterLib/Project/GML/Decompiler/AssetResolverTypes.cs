@@ -117,7 +117,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         // Evaluates to true if the node is not an int16 zero. Evaluates multiple times.
         public class ConditionNonzero : Condition
         {
-            public Condition.ConditionType Kind { get; set; } = Condition.ConditionType.All;
+            public Condition.ConditionType Kind { get; set; } = Condition.ConditionType.Nonzero;
             public bool EvaluateOnce { get; set; } = false;
 
             public bool Evaluate(DecompileContext ctx, ASTNode node, ASTNode parent)
@@ -133,7 +133,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         // Evaluates to true if the node is not a given node. Evaluates multiple times.
         public class ConditionNonNode : Condition
         {
-            public Condition.ConditionType Kind { get; set; } = Condition.ConditionType.All;
+            public Condition.ConditionType Kind { get; set; } = Condition.ConditionType.NonNode;
             public bool EvaluateOnce { get; set; } = false;
 
             public ASTNode.StatementKind NodeKind { get; set; }
