@@ -36,10 +36,16 @@ namespace DogScepterLib.Project.GML.Decompiler
                             empty = true;
 
                             // Do check for exit
-                            if (b.Instructions.Count == 2 && b.Instructions[1].Kind == Instruction.Opcode.Exit)
+                            if (b.Instructions.Count >= 2 && b.Instructions[^1].Kind == Instruction.Opcode.Exit)
                             {
-                                // Abort. This isn't a switch statement; it's an exit inside of another switch
-                                continue;
+                                bool allPopz = true;
+                                for (int i = 1; i < b.Instructions.Count - 1; i++)
+                                    allPopz &= b.Instructions[i].Kind == Instruction.Opcode.Popz;
+                                if (allPopz)
+                                {
+                                    // Abort. This isn't a switch statement; it's an exit inside of another switch
+                                    continue;
+                                }
                             }
                         }
                         else

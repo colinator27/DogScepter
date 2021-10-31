@@ -39,13 +39,13 @@ namespace DogScepterTest
                 /*int ind = -1;
                 for (int i = 0; i < list.Count; i++)
                 {
-                    if (list[i].Name.Content.Contains("rotatevector"))
+                    if (list[i].Name.Content.Contains(""))
                     {
                         ind = i;
                         break;
                     }
                 }
-                string result = ctx.DecompileWholeEntry(list[ind]);*/
+                string result = new DecompileContext(pf).DecompileWholeEntry(list[ind]);*/
                 Directory.CreateDirectory("Decomp");
                 Parallel.ForEach(list, elem =>
                 {

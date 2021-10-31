@@ -40,6 +40,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 Block start = blockList.AddressToBlock[child.BytecodeOffset];
 
                 Block prev = blockList.List[start.Index - 1];
+                prev.ControlFlow = Block.ControlFlowType.PreFragment;
                 prev.Instructions.RemoveAt(prev.Instructions.Count - 1); // Remove `b` instruction
 
                 Block end = blockList.List[(prev.Branches[0] as Block).Index - 1];
@@ -60,7 +61,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             foreach (var fragment in res)
             {
                 int start = fragment.Start.Index, end = fragment.End.Index;
-                fragment.Blocks = new BlockList(blockList, start, end);
+                fragment.Blocks = new BlockList(blockList, start, end, excludes);
                 fragment.Blocks.FindUnreachables(excludes);
                 excludes.AddRange(Enumerable.Range(start, (end - start) + 1).ToList());
             }

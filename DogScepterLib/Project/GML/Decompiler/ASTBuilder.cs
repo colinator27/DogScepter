@@ -91,6 +91,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 case Block.ControlFlowType.IfCondition:
                                 case Block.ControlFlowType.WithExpression:
                                 case Block.ControlFlowType.RepeatExpression:
+                                case Block.ControlFlowType.PreFragment:
                                     // Nothing special to do here
                                     break;
                                 default:
@@ -542,11 +543,12 @@ namespace DogScepterLib.Project.GML.Decompiler
                         {
                             // This is a GMS2.3 "swap" instruction
 
-                            // Variable type seems to do literally nothing
-                            if (inst.Type1 == Instruction.DataType.Variable)
+                            // Variable type seems to do literally nothing in this case
+                            if (inst.Type1 == Instruction.DataType.Variable && inst.Extra == 0)
                                 break;
 
-                            int sourceBytes = inst.Extra * 4;
+                            int typeSize = ((inst.Type1 == Instruction.DataType.Variable) ? 16 : 4);
+                            int sourceBytes = inst.Extra * typeSize;
                             Stack<ASTNode> source = new Stack<ASTNode>();
                             while (sourceBytes > 0)
                             {
@@ -559,7 +561,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 #endif
                             }
 
-                            int moveBytes = (((byte)inst.ComparisonKind & 0x7F) >> 3) * 4;
+                            int moveBytes = (((byte)inst.ComparisonKind & 0x7F) >> 3) * typeSize;
                             Stack<ASTNode> moved = new Stack<ASTNode>();
                             while (moveBytes > 0)
                             {
@@ -724,9 +726,11 @@ namespace DogScepterLib.Project.GML.Decompiler
 #endif
 
                         // Now we need to test if this function is anonymous
-                        if (i >= block.Instructions.Count || block.Instructions[i].Kind != Instruction.Opcode.Dup)
+                        if (i >= block.Instructions.Count || block.Instructions[i].Kind != Instruction.Opcode.Dup ||
+                            block.Instructions[i].ComparisonKind != 0)
                         {
                             // This is an anonymous function (it's not duplicated)
+                            i--;
                             stack.Push(new ASTFunctionDecl(
                                 ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content), null));
                         }
@@ -764,10 +768,12 @@ namespace DogScepterLib.Project.GML.Decompiler
 #endif
 
                         // Now we need to test if this is anonymous
-                        if (i >= block.Instructions.Count || block.Instructions[i].Kind != Instruction.Opcode.Dup)
+                        if (i >= block.Instructions.Count || block.Instructions[i].Kind != Instruction.Opcode.Dup ||
+                            block.Instructions[i].ComparisonKind != 0)
                         {
                             // This is an anonymous function constructor (it's not duplicated)
                             // TODO: Check for parents, somehow
+                            i--;
                             stack.Push(new ASTFunctionDecl(
                                 ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content), null)
                             { IsConstructor = true });
@@ -849,7 +855,8 @@ namespace DogScepterLib.Project.GML.Decompiler
 #endif
 
                         // Now we need to ensure this function isn't anonymous
-                        if (i < block.Instructions.Count && block.Instructions[i].Kind == Instruction.Opcode.Dup)
+                        if (i < block.Instructions.Count && block.Instructions[i].Kind == Instruction.Opcode.Dup && 
+                            block.Instructions[i].ComparisonKind == 0)
                         {
                             // This is a function with a given name
 #if DEBUG

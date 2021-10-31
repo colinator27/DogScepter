@@ -304,7 +304,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     if (prev.Branches[i].Kind == Node.NodeType.Loop &&
                                         prev.Branches[i].Address == loop.Address)
                                     {
-                                        // Edge case when a loop begins a with statement
+                                        // Edge case when a loop begins with another loop
                                         Node innerLoop = prev.Branches[i];
                                         prev.Branches[i] = loop;
                                         foreach (var pred2 in innerLoop.Predecessors)
@@ -320,13 +320,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     }
                                 }
                             }
+
+                            // Remove unnecessary branches from block previous to this loop
+                            for (int i = prev.Branches.Count - 1; i >= 0; i--)
+                            {
+                                if (prev.Branches[i] != loop)
+                                    prev.Branches.RemoveAt(i);
+                            }
+
+                            // Remove decrement and branch
+                            loop.Tail.Instructions.RemoveRange(loop.Tail.Instructions.Count - 5, 5);
+
+                            // Remove popz in branch
+                            (loop.Branches[0] as Block).Instructions.RemoveAt(0);
                         }
-
-                        // Remove decrement and branch
-                        loop.Tail.Instructions.RemoveRange(loop.Tail.Instructions.Count - 5, 5);
-
-                        // Remove popz in branch
-                        (loop.Branches[0] as Block).Instructions.RemoveAt(0);
                         break;
                     case Loop.LoopType.DoUntil:
                         // Remove `bf`

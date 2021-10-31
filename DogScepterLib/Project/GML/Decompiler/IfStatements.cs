@@ -15,6 +15,11 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             List<IfStatement> res = new List<IfStatement>();
 
+            // Reusable data structures for later
+            List<Node> visited = new List<Node>();
+            Stack<Node> work = new Stack<Node>();
+            List<Node> otherVisited = new List<Node>();
+
             foreach (Block b in ctx.Blocks.List)
             {
                 if (b.Instructions.Count >= 1)
@@ -39,8 +44,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                             after = b.Branches[0]; // Empty if statement
                         else
                         {
-                            List<Node> visited = new List<Node>();
-                            Stack<Node> work = new Stack<Node>();
+                            visited.Clear();
+                            work.Clear();
                             work.Push(b.Branches[0]);
                             int specialEndPoint = int.MaxValue;
                             while (work.Count != 0)
@@ -55,6 +60,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                          currBlock.Branches[0].Address < currBlock.Address))
                                     {
                                         specialEndPoint = currBlock.Address; // TODO? This is pretty hacky, but seems to work. Seen with break/continue in an else clause
+                                        work.Clear();
                                         break;
                                     }
 
@@ -72,7 +78,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 }
                             }
 
-                            List<Node> otherVisited = new List<Node>();
+                            otherVisited.Clear();
                             bool ignoreFirst = true;
                             work.Push(b);
                             while (work.Count != 0)
@@ -83,21 +89,28 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 if (curr.Kind == Node.NodeType.Block)
                                 {
                                     Block currBlock = curr as Block;
-                                    if (currBlock.ControlFlow == Block.ControlFlowType.Break ||
-                                        (currBlock.ControlFlow == Block.ControlFlowType.Continue &&
-                                         currBlock.Branches[0].Address < currBlock.Address))
+                                    if (endTruthy == null)
                                     {
-                                        if (currBlock.Branches.Count == 1)
+                                        if (currBlock.ControlFlow == Block.ControlFlowType.Break ||
+                                            (currBlock.ControlFlow == Block.ControlFlowType.Continue &&
+                                             currBlock.Branches[0].Address < currBlock.Address))
                                         {
-                                            // There's no unreachable block, so there's no "else" here.
-                                            endTruthy = currBlock;
-                                            after = b.Branches[0];
-                                            break;
+                                            if (currBlock.Branches.Count == 1)
+                                            {
+                                                // There's no unreachable block, so there's no "else" here.
+                                                endTruthy = currBlock;
+                                                after = b.Branches[0];
+                                                break;
+                                            }
                                         }
                                     }
 
-                                    foreach (var branch in curr.Branches)
+                                    foreach (var originalBranch in curr.Branches)
                                     {
+                                        var branch = originalBranch;
+                                        if (branch.Kind == Node.NodeType.Block && (branch as Block).BelongingTo != null)
+                                            branch = (branch as Block).BelongingTo; // Short circuits can mess things up, so do this hack
+
                                         if (ignoreFirst)
                                         {
                                             // This is b.Branches[0], and we don't want to process it yet
@@ -129,6 +142,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     if (curr.Branches.Count != 0)
                                     {
                                         Node branch = curr.Branches[0];
+                                        if (branch.Kind == Node.NodeType.Block && (branch as Block).BelongingTo != null)
+                                            branch = (branch as Block).BelongingTo; // Short circuits can mess things up, so do this hack
                                         if (ignoreFirst)
                                         {
                                             // This is b.Branches[0], and we don't want to process it yet

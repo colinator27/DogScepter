@@ -39,12 +39,14 @@ namespace DogScepterLib.Project.GML.Decompiler
             List = new List<Block>();
         }
 
-        public BlockList(BlockList existing, int start, int end)
+        public BlockList(BlockList existing, int start, int end, List<int> excludes)
         {
             AddressToBlock = existing.AddressToBlock;
             List = new List<Block>((end - start) + 1);
             for (int i = start; i <= end; i++)
             {
+                if (excludes.Contains(i))
+                    continue;
                 Block curr = existing.List[i];
                 curr.Index = List.Count;
                 List.Add(curr);
@@ -127,6 +129,8 @@ namespace DogScepterLib.Project.GML.Decompiler
 
             SwitchCase, // Block that represents a switch case entry
             SwitchDefault, // Block that represents a switch default entry
+
+            PreFragment, // Block that jumps past a fragment
         }
 
         public Block(int startAddress, int endAddress)

@@ -222,6 +222,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                 bin.Children[0] = ResolveAny(ctx, bin.Children[0], bin, right);
         }
 
+        public static void ResolveSwitch(DecompileContext ctx, ASTSwitchStatement sw)
+        {
+            ConditionalAssetType expr = GetExpressionType(ctx, sw.Children[0]);
+            if (expr.Kind != AssetType.None)
+            {
+                for (int i = 1; i < sw.Children.Count; i++)
+                {
+                    var curr = sw.Children[i];
+                    if (curr.Kind == ASTNode.StatementKind.SwitchCase)
+                        curr.Children[0] = ResolveAny(ctx, curr.Children[0], sw, expr);
+                }
+            }
+        }
+
         public static ConditionalAssetType GetExpressionType(DecompileContext ctx, ASTNode node)
         {
             switch (node.Kind)

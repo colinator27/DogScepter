@@ -673,7 +673,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Function;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
-        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Variable;
         public List<ASTNode> Children { get; set; }
 
         public GMFunctionEntry Function;
@@ -721,13 +721,17 @@ namespace DogScepterLib.Project.GML.Decompiler
             switch (Function.Name.Content)
             {
                 case "@@This@@":
-                    return new ASTInstance(ASTInstance.InstanceType.Self);
+                    return new ASTInstance(ASTInstance.InstanceType.Self) { Duplicated = Duplicated };
                 case "@@Other@@":
-                    return new ASTInstance(ASTInstance.InstanceType.Other);
+                    return new ASTInstance(ASTInstance.InstanceType.Other) { Duplicated = Duplicated };
                 case "@@Global@@":
-                    return new ASTInstance(ASTInstance.InstanceType.Global);
+                    return new ASTInstance(ASTInstance.InstanceType.Global) { Duplicated = Duplicated };
                 case "@@GetInstance@@":
-                    return AssetResolver.ResolveObject(ctx, Children[0] as ASTInt16);
+                    {
+                        ASTNode res = AssetResolver.ResolveObject(ctx, Children[0] as ASTInt16);
+                        res.Duplicated = Duplicated;
+                        return res;
+                    }
             }
 
             AssetResolver.ResolveFunction(ctx, this);
@@ -937,11 +941,12 @@ namespace DogScepterLib.Project.GML.Decompiler
                 }
             }
             else if (Left.Kind == ASTNode.StatementKind.Variable ||
+                     Left.Kind == ASTNode.StatementKind.Asset ||
                      Left.Kind == ASTNode.StatementKind.Instance ||
                      Left.Kind == ASTNode.StatementKind.Function ||
                      Left.Kind == ASTNode.StatementKind.FunctionVar)
             {
-                // Variable expression, instance type, or function call
+                // Variable expression, asset/instance type, or function call
                 Left.Write(ctx, sb);
                 sb.Append('.');
             }
@@ -1569,6 +1574,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode Clean(DecompileContext ctx)
         {
             ASTBlock.BlockCleanup(ctx, Children);
+            AssetResolver.ResolveSwitch(ctx, this);
             return this;
         }
     }
