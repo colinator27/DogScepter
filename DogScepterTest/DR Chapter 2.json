@@ -3,6 +3,7 @@
     "gml_Script_i_ex": [ "Object" ],
     "gml_Script_safe_delete": [ "Object" ],
     "gml_Script_instance_create": [ "None", "None", "Object" ],
+    "gml_Script_scr_bulletspawner": [ "None", "None", "Object" ],
     "gml_Script_snd_play": [ "Sound" ],
     "gml_Script_snd_play_x": [ "Sound" ],
     "gml_Script_snd_stop": [ "Sound" ],
@@ -50,20 +51,24 @@
               "Index": 1,
               "NodeKind": "String",
               "NodeValue": "sprite_index"
+            },
+            {
+              "Kind": "FunctionArg",
+              "Index": 1,
+              "NodeKind": "String",
+              "NodeValue": "head_sprite"
             }
           ]
         },
         "Alternatives": [
           {
             "Kind": "Boolean",
-            "Conditions": [
-              {
-                "Kind": "FunctionArg",
-                "Index": 1,
-                "NodeKind": "String",
-                "NodeValue": "visible"
-              }
-            ]
+            "Condition": {
+              "Kind": "FunctionArg",
+              "Index": 1,
+              "NodeKind": "String",
+              "NodeValue": "visible"
+            }
           }
         ]
       }
@@ -215,10 +220,58 @@
     "menuSprite": "Sprite",
     "chsprite": "Sprite",
     "character_sprite": "Sprite",
-    "landsprite": "Sprite",
-    "jumpsprite": "Sprite",
     "button_sprite": "Sprite",
     "_sprite": "Sprite",
+    "thissprite": "Sprite",
+    "slidesprite": "Sprite",
+    "contentsprite": "Sprite",
+    "timer_sprite": "Sprite",
+    "head_sprite": "Sprite",
+    "pilot_sprite": "Sprite",
+    "kr_sprite": "Sprite",
+    "su_sprite": "Sprite",
+    "ra_sprite": "Sprite",
+    "kris_sprite": "Sprite",
+    "ral_sprite": "Sprite",
+    "sussprite": "Sprite",
+    "hand_sprite": "Sprite",
+    "touchsprite": "Sprite",
+    "car_sprite": "Sprite",
+    "hsprite": "Sprite",
+    "vsprite": "Sprite",
+    "normalsprite": "Sprite",
+    "actreadysprite": "Sprite",
+    "actsprite": "Sprite",
+    "defendsprite": "Sprite",
+    "attackreadysprite": "Sprite",
+    "attacksprite": "Sprite",
+    "itemsprite": "Sprite",
+    "itemreadysprite": "Sprite",
+    "spellreadysprite": "Sprite",
+    "spellsprite": "Sprite",
+    "defeatsprite": "Sprite",
+    "victorysprite": "Sprite",
+    "handSprite": "Sprite",
+    "_headsprite": "Sprite",
+    "headsprite": "Sprite",
+    "onionsprite": "Sprite",
+    "leftTurnSprite": "Sprite",
+    "rightTurnSprite": "Sprite",
+    "hurt_character_sprite": "Sprite",
+    "lastSprite": "Sprite",
+    "mySprite": "Sprite",
+    "particlesprite": "Sprite",
+    "second_sprite": "Sprite",
+    "shopkeepsprite": "Sprite",
+    "heartsprite": "Sprite",
+    "sabersprite": "Sprite",
+    "rimsprite": "Sprite",
+    "cursor_sprite": "Sprite",
+    "s_sprite": "Sprite",
+    "queen_sprite": "Sprite",
+    "customSprite": "Sprite",
+    "indsprite": "Sprite",
+    "writerimg": "Sprite",
     "doorSound": "Sound",
     "doorSound2": "Sound",
     "writersnd": "Sound",
@@ -279,10 +332,67 @@
         "Kind": "Nonzero"
       }
     },
+    "topsprite": {
+      "Kind": "Sprite",
+      "Condition": {
+        "Kind": "Nonzero"
+      }
+    },
+    "frozensprite": {
+      "Kind": "Sprite",
+      "Condition": {
+        "Kind": "Nonzero"
+      }
+    },
     "monsterinstancetype": {
       "Kind": "Object",
       "Condition": {
         "Kind": "Nonzero"
+      }
+    },
+    "mask_index": {
+      "Kind": "Sprite",
+      "Condition": {
+        "Kind": "NonNode",
+        "NodeKind": "Int16",
+        "NodeValue": "1"
+      }
+    },
+    "sus_sprite": {
+      "Kind": "Sprite",
+      "Condition": {
+        "Kind": "Nonzero"
+      }
+    },
+    "landsprite": {
+      "Kind": "Sprite",
+      "Condition": {
+        "Kind": "Nonzero"
+      }
+    },
+    "jumpsprite": {
+      "Kind": "Sprite",
+      "Condition": {
+        "Kind": "Nonzero"
+      }
+    },
+    "myLastSprite": {
+      "Kind": "Sprite",
+      "Condition": {
+        "Kind": "All",
+        "EvaluateOnce": false,
+        "Conditions": [
+          {
+            "Kind": "NonNode",
+            "NodeKind": "Int16",
+            "NodeValue": "1"
+          },
+          {
+            "Kind": "NonNode",
+            "NodeKind": "Int16",
+            "NodeValue": "2"
+          }
+        ]
       }
     }
   },
@@ -320,6 +430,18 @@
     "gml_Object_obj_cybercity_balloon_Create_0": {
       "VariableTypes": {
         "blend": "None"
+      }
+    },
+    "object: obj_shadowMaker": {
+      "VariableTypesCond": {
+        "sprite_index": {
+          "Kind": "Sprite",
+          "Condition": {
+            "Kind": "NonNode",
+            "NodeKind": "Int16",
+            "NodeValue": "1"
+          }
+        }
       }
     }
   }

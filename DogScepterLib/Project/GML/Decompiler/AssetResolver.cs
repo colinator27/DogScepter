@@ -111,22 +111,32 @@ namespace DogScepterLib.Project.GML.Decompiler
                 case AssetType.Sprite:
                     if (value >= 0 && value < ctx.Project.Sprites.Count)
                         return new ASTAsset(ctx.Project.Sprites[value].Name);
+                    else if (value == -4)
+                        return new ASTAsset("noone");
                     break;
                 case AssetType.Room:
                     if (value >= 0 && value < ctx.Project.Rooms.Count)
                         return new ASTAsset(ctx.Project.Rooms[value].Name);
+                    else if (value == -4)
+                        return new ASTAsset("noone");
                     break;
                 case AssetType.Font:
                     if (value >= 0 && value < ctx.Project.Fonts.Count)
                         return new ASTAsset(ctx.Project.Fonts[value].Name);
+                    else if (value == -4)
+                        return new ASTAsset("noone");
                     break;
                 case AssetType.Sound:
                     if (value >= 0 && value < ctx.Project.Sounds.Count)
                         return new ASTAsset(ctx.Project.Sounds[value].Name);
+                    else if (value == -4)
+                        return new ASTAsset("noone");
                     break;
                 case AssetType.Path:
                     if (value >= 0 && value < ctx.Project.Paths.Count)
                         return new ASTAsset(ctx.Project.Paths[value].Name);
+                    else if (value == -4)
+                        return new ASTAsset("noone");
                     break;
                 case AssetType.Color:
                     if (value >= 0)
@@ -231,19 +241,19 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 return cond;
                         }
 
-                        if (variable.Variable.VariableID == -6)
-                        {
-                            // This is a builtin variable; check for builtin list
-                            if (ctx.Cache.Types.VariableTypesBuiltin.TryGetValue(variable.Variable.Name.Content, out AssetType type))
-                                return new(type);
-                        }
-
-                        // Handle all other global types
+                        // Handle global types
                         {
                             if (ctx.Cache.Types.VariableTypes.TryGetValue(variable.Variable.Name.Content, out AssetType type))
                                 return new(type);
                             if (ctx.Cache.Types.VariableTypesCond.TryGetValue(variable.Variable.Name.Content, out var cond))
                                 return cond;
+                        }
+
+                        if (variable.Variable.VariableID == -6)
+                        {
+                            // This is a builtin variable; check for builtin list
+                            if (ctx.Cache.Types.VariableTypesBuiltin.TryGetValue(variable.Variable.Name.Content, out AssetType type))
+                                return new(type);
                         }
                     }
                     break;

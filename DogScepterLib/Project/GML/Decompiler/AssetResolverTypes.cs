@@ -45,6 +45,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 All,
                 FunctionArg,
                 Nonzero,
+                NonNode,
             }
 
             public ConditionType Kind { get; set; }
@@ -53,6 +54,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             public bool Evaluate(DecompileContext ctx, ASTNode node, ASTNode parent);
         }
 
+        // Evaluates to true if at least one sub-condition evaluates to true. Evaluates once by default, but can be changed.
         public class ConditionAny : Condition
         {
             public Condition.ConditionType Kind { get; set; } = Condition.ConditionType.Any;
@@ -68,7 +70,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                 return false;
             }
         }
-
+        
+        // Evaluates to true if every sub-condition evaluates to true. Evaluates once by default, but can be changed.
         public class ConditionAll : Condition
         {
             public Condition.ConditionType Kind { get; set; } = Condition.ConditionType.All;
@@ -85,6 +88,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             }
         }
 
+        // Evaluates to true if this node is the child of a function, which has a specific node argument. Evaluates once.
         public class ConditionFunctionArg : Condition
         {
             public Condition.ConditionType Kind { get; set; } = Condition.ConditionType.FunctionArg;
@@ -110,12 +114,11 @@ namespace DogScepterLib.Project.GML.Decompiler
             }
         }
 
+        // Evaluates to true if the node is not an int16 zero. Evaluates multiple times.
         public class ConditionNonzero : Condition
         {
             public Condition.ConditionType Kind { get; set; } = Condition.ConditionType.All;
             public bool EvaluateOnce { get; set; } = false;
-
-            public Condition[] Conditions { get; set; }
 
             public bool Evaluate(DecompileContext ctx, ASTNode node, ASTNode parent)
             {
@@ -124,6 +127,25 @@ namespace DogScepterLib.Project.GML.Decompiler
                         return false;
                 // todo? other types like int32/64?
                 return true;
+            }
+        }
+
+        // Evaluates to true if the node is not a given node. Evaluates multiple times.
+        public class ConditionNonNode : Condition
+        {
+            public Condition.ConditionType Kind { get; set; } = Condition.ConditionType.All;
+            public bool EvaluateOnce { get; set; } = false;
+
+            public ASTNode.StatementKind NodeKind { get; set; }
+            public string NodeValue { get; set; }
+
+            public bool Evaluate(DecompileContext ctx, ASTNode node, ASTNode parent)
+            {
+                if (node.Kind != NodeKind)
+                    return true;
+                if (node.ToString() != NodeValue)
+                    return true;
+                return false;
             }
         }
 
@@ -153,6 +175,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         Condition.ConditionType.All => JsonSerializer.Deserialize<ConditionAll>(ref reader, options),
                         Condition.ConditionType.FunctionArg => JsonSerializer.Deserialize<ConditionFunctionArg>(ref reader, options),
                         Condition.ConditionType.Nonzero => JsonSerializer.Deserialize<ConditionNonzero>(ref reader, options),
+                        Condition.ConditionType.NonNode => JsonSerializer.Deserialize<ConditionNonNode>(ref reader, options),
                         _ => throw new JsonException()
                     };
                 }
