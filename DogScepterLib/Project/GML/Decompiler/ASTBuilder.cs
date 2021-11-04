@@ -687,7 +687,30 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     newVar.Children = new List<ASTNode>(variable.Children);
                                     newVar.Children.Add(ind);
 
-                                    stack.Push(new ASTAssign(newVar, stack.Pop()));
+                                    ASTAssign assign = new ASTAssign(newVar, stack.Pop());
+                                    bool isNormal = true;
+                                    if (variable.Duplicated && stack.Count != 0)
+                                    {
+                                        if (assign.Children[1].Kind == ASTNode.StatementKind.Binary)
+                                        {
+                                            ASTBinary bin = (assign.Children[1] as ASTBinary);
+                                            if (bin.Children[1].Kind == ASTNode.StatementKind.Int16)
+                                            {
+                                                ASTInt16 i16 = bin.Children[1] as ASTInt16;
+                                                if (i16.Value == 1 && i16.PotentialContext != ASTInt16.Context.None)
+                                                    isNormal = false;
+                                            }
+                                        }
+                                    }
+
+                                    if (isNormal)
+                                        current.Children.Add(assign);
+                                    else
+                                    {
+                                        // This is pre/post-fix, potentially inside an expression
+                                        stack.Pop(); // get rid of unused variable
+                                        stack.Push(assign);
+                                    }
                                 }
                                 break;
                             case 65531: 
