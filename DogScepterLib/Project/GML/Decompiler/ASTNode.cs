@@ -65,6 +65,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         }
 
         public StatementKind Kind { get; set; }
+        public bool NeedsSemicolon { get; set; }
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public List<ASTNode> Children { get; set; }
@@ -105,14 +106,19 @@ namespace DogScepterLib.Project.GML.Decompiler
             bool last = !enumerator.MoveNext();
             while (!last)
             {
-                enumerator.Current.Write(ctx, sb);
+                var curr = enumerator.Current;
+                curr.Write(ctx, sb);
                 last = !enumerator.MoveNext();
                 if (!last)
                 {
                     if (ctx.StructArguments != null)
                         sb.Append(',');
+                    else if (curr.NeedsSemicolon)
+                        sb.Append(';');
                     Newline(ctx, sb);
                 }
+                else if (curr.NeedsSemicolon && ctx.StructArguments == null)
+                    sb.Append(';');
             }
         }
 
@@ -140,6 +146,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTBlock : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Block;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -153,6 +160,8 @@ namespace DogScepterLib.Project.GML.Decompiler
             {
                 ASTNode.Newline(ctx, sb);
                 child.Write(ctx, sb);
+                if (child.NeedsSemicolon)
+                    sb.Append(';');
             }
             ctx.IndentationLevel--;
             ASTNode.Newline(ctx, sb);
@@ -256,6 +265,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTBreak : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Break;
+        public bool NeedsSemicolon { get; set; } = true;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -274,6 +284,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTContinue : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Continue;
+        public bool NeedsSemicolon { get; set; } = true;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -292,6 +303,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTInt16 : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Int16;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -333,6 +345,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTInt32 : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Int32;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -361,6 +374,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTInt64 : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Int64;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -389,6 +403,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTFloat : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Float;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -417,6 +432,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTDouble : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Double;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -445,6 +461,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTString : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.String;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -507,6 +524,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTBoolean : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Boolean;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -535,6 +553,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTUnary : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Unary;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -580,6 +599,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTBinary : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Binary;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -684,6 +704,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTFunction : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Function;
+        public bool NeedsSemicolon { get; set; } = true;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Variable;
@@ -755,6 +776,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTFunctionVar : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.FunctionVar;
+        public bool NeedsSemicolon { get; set; } = true;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -801,6 +823,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTExit : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Exit;
+        public bool NeedsSemicolon { get; set; } = true;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -819,6 +842,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTReturn : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Return;
+        public bool NeedsSemicolon { get; set; } = true;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -842,6 +866,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTVariable : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Variable;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1014,6 +1039,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTTypeInst : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.TypeInst;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1037,6 +1063,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTAssign : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Assign;
+        public bool NeedsSemicolon { get; set; } = true;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1194,6 +1221,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTIfStatement : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.IfStatement;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1238,12 +1266,16 @@ namespace DogScepterLib.Project.GML.Decompiler
                 ctx.IndentationLevel++;
                 ASTNode.Newline(ctx, sb);
                 Children[1].Write(ctx, sb);
+                if (Children[1].NeedsSemicolon)
+                    sb.Append(';');
                 ctx.IndentationLevel--;
             }
             else
             {
                 ASTNode.Newline(ctx, sb);
                 Children[1].Write(ctx, sb);
+                if (Children[1].NeedsSemicolon)
+                    sb.Append(';');
             }
 
             // Else block
@@ -1262,6 +1294,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                     ctx.IndentationLevel++;
                     ASTNode.Newline(ctx, sb);
                     Children[2].Write(ctx, sb);
+                    if (Children[2].NeedsSemicolon)
+                        sb.Append(';');
                     ctx.IndentationLevel--;
                 }
                 else
@@ -1305,6 +1339,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTShortCircuit : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.ShortCircuit;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1349,6 +1384,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTWhileLoop : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.WhileLoop;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1366,6 +1402,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                 ctx.IndentationLevel++;
                 ASTNode.Newline(ctx, sb);
                 Children[0].Write(ctx, sb);
+                if (Children[0].NeedsSemicolon)
+                    sb.Append(';');
                 ctx.IndentationLevel--;
             }
             else
@@ -1386,6 +1424,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTForLoop : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.ForLoop;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1408,6 +1447,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                 ctx.IndentationLevel++;
                 ASTNode.Newline(ctx, sb);
                 Children[1].Write(ctx, sb);
+                if (Children[1].NeedsSemicolon)
+                    sb.Append(';');
                 ctx.IndentationLevel--;
             }
             else
@@ -1428,6 +1469,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTDoUntilLoop : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.DoUntilLoop;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1442,6 +1484,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                 ctx.IndentationLevel++;
                 ASTNode.Newline(ctx, sb);
                 Children[0].Write(ctx, sb);
+                if (Children[0].NeedsSemicolon)
+                    sb.Append(';');
                 ctx.IndentationLevel--;
             }
             else
@@ -1467,6 +1511,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTRepeatLoop : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.RepeatLoop;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1485,6 +1530,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                 ctx.IndentationLevel++;
                 ASTNode.Newline(ctx, sb);
                 Children[1].Write(ctx, sb);
+                if (Children[1].NeedsSemicolon)
+                    sb.Append(';');
                 ctx.IndentationLevel--;
             }
             else
@@ -1505,6 +1552,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTWithLoop : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.WithLoop;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1523,6 +1571,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                 ctx.IndentationLevel++;
                 ASTNode.Newline(ctx, sb);
                 Children[1].Write(ctx, sb);
+                if (Children[1].NeedsSemicolon)
+                    sb.Append(';');
                 ctx.IndentationLevel--;
             }
             else
@@ -1545,6 +1595,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTSwitchStatement : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.SwitchStatement;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1560,6 +1611,8 @@ namespace DogScepterLib.Project.GML.Decompiler
             for (int i = 1; i < startCases; i++)
             {
                 Children[i].Write(ctx, sb);
+                if (Children[i].NeedsSemicolon)
+                    sb.Append(';');
                 ASTNode.Newline(ctx, sb);
             }
 
@@ -1585,6 +1638,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                 {
                     ASTNode.Newline(ctx, sb);
                     child.Write(ctx, sb);
+                    if (child.NeedsSemicolon)
+                        sb.Append(';');
                 }
             }
             ctx.IndentationLevel -= 2;
@@ -1603,6 +1658,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTSwitchCase : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.SwitchCase;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1627,6 +1683,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTSwitchDefault : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.SwitchDefault;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
@@ -1645,6 +1702,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTAsset : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Asset;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Int32;
@@ -1670,6 +1728,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTFunctionRef : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.FunctionRef;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Int32;
@@ -1705,6 +1764,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTInstance : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Instance;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Variable;
@@ -1748,6 +1808,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTFunctionDecl : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.FunctionDecl;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Variable;
@@ -1802,6 +1863,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTStruct : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Struct;
+        public bool NeedsSemicolon { get; set; } = false;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Variable;
@@ -1841,6 +1903,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public class ASTNew : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.New;
+        public bool NeedsSemicolon { get; set; } = true;
         public bool Duplicated { get; set; }
         public bool NeedsParentheses { get; set; }
         public Instruction.DataType DataType { get; set; } = Instruction.DataType.Variable;
