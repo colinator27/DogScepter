@@ -338,7 +338,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                             // Check for `dup.v`
                                             (prev1.Kind == Instruction.Opcode.Dup && prev1.Type1 == Instruction.DataType.Variable) ||
 
-                                            // Check for `dup.v`, then `pop.e.v` (TODO: Only works before 2.3)
+                                            // Check for `dup.v`, then `pop.e.v`
                                             (prev2.Kind == Instruction.Opcode.Dup && prev2.Type1 == Instruction.DataType.Variable &&
                                              prev1.Kind == Instruction.Opcode.Pop && prev1.Type1 == Instruction.DataType.Int16 && prev1.Type1 == Instruction.DataType.Variable))
                                         {
@@ -373,6 +373,18 @@ namespace DogScepterLib.Project.GML.Decompiler
                                         if ((next1.Kind == Instruction.Opcode.Add || next1.Kind == Instruction.Opcode.Sub) &&
                                             (next2.Kind == Instruction.Opcode.Dup && next2.Type1 == Instruction.DataType.Variable))
                                         {
+                                            if (i + 3 < block.Instructions.Count)
+                                            {
+                                                Instruction next3 = block.Instructions[i + 3];
+                                                if (next3.Kind == Instruction.Opcode.Dup && next3.ComparisonKind != 0)
+                                                {
+                                                    // Seen in GMS 2.3; this is an array prefix, which we don't want to fully process here
+                                                    // Just mark it for later on this ASTInt16
+                                                    stack.Push(new ASTInt16((short)inst.Value, ASTInt16.Context.Prefix));
+                                                    break;
+                                                }
+                                            }
+
                                             // This is a prefix ++/--
                                             stack.Push(new ASTAssign(next1, stack.Pop(), true));
 
@@ -381,7 +393,6 @@ namespace DogScepterLib.Project.GML.Decompiler
                                                 i++;
 
                                             // If the end is a pop.e.v, then deal with it properly
-                                            // TODO: deal with this in 2.3
                                             if (block.Instructions[i].Type1 == Instruction.DataType.Int16 && block.Instructions[i].Type2 == Instruction.DataType.Variable)
                                             {
                                                 ASTNode e = stack.Pop();
@@ -389,12 +400,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                                                 stack.Push(e);
                                                 i++;
                                             }
-
                                             break;
                                         }
                                     }
                                 }
-                                stack.Push(new ASTInt16((short)inst.Value, Instruction.Opcode.Push));
+                                stack.Push(new ASTInt16((short)inst.Value, ASTInt16.Context.Postfix));
                                 break;
                             case Instruction.DataType.Int64:
                                 stack.Push(new ASTInt64((long)inst.Value));
@@ -411,7 +421,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         switch (inst.Type1)
                         {
                             case Instruction.DataType.Int16:
-                                stack.Push(new ASTInt16((short)inst.Value, Instruction.Opcode.PushI));
+                                stack.Push(new ASTInt16((short)inst.Value, ASTInt16.Context.None));
                                 break;
                             case Instruction.DataType.Int32:
                                 stack.Push(new ASTInt32((int)inst.Value));
@@ -653,7 +663,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                         switch ((ushort)inst.Value)
                         {
                             case 65534:
-                                // pushaf
+                            case 65532:
+                                // pushaf / pushac
                                 {
                                     ASTNode ind = stack.Pop();
                                     ASTVariable variable = stack.Pop() as ASTVariable;
@@ -676,7 +687,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     newVar.Children = new List<ASTNode>(variable.Children);
                                     newVar.Children.Add(ind);
 
-                                    current.Children.Add(new ASTAssign(newVar, stack.Pop()));
+                                    stack.Push(new ASTAssign(newVar, stack.Pop()));
                                 }
                                 break;
                             case 65531: 

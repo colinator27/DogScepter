@@ -298,11 +298,19 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<ASTNode> Children { get; set; }
 
         public short Value;
-        public Instruction.Opcode Opcode;
-        public ASTInt16(short value, Instruction.Opcode opcode)
+        public Context PotentialContext;
+
+        public enum Context
+        {
+            None,
+            Postfix,
+            Prefix
+        }
+
+        public ASTInt16(short value, Context potentialContext)
         {
             Value = value;
-            Opcode = opcode;
+            PotentialContext = potentialContext;
         }
 
         public void Write(DecompileContext ctx, StringBuilder sb)
@@ -1135,11 +1143,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                         if (bin.Children[1].Kind == ASTNode.StatementKind.Int16)
                         {
                             ASTInt16 i16 = bin.Children[1] as ASTInt16;
-                            if (i16.Opcode == Instruction.Opcode.Push && i16.Value == 1)
+                            if (i16.Value == 1)
                             {
-                                CompoundKind = CompoundType.Postfix;
-                                Compound = bin.Instruction;
-                                return this;
+                                if (i16.PotentialContext == ASTInt16.Context.Postfix)
+                                {
+                                    CompoundKind = CompoundType.Postfix;
+                                    Compound = bin.Instruction;
+                                    return this;
+                                }
+                                if (i16.PotentialContext == ASTInt16.Context.Prefix)
+                                {
+                                    CompoundKind = CompoundType.Prefix;
+                                    Compound = bin.Instruction;
+                                    return this;
+                                }
                             }
                         }
 
