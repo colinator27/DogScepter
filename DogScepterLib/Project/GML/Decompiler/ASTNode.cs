@@ -61,6 +61,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
             FunctionDecl,
             Struct,
+            New,
         }
 
         public StatementKind Kind { get; set; }
@@ -107,7 +108,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                 enumerator.Current.Write(ctx, sb);
                 last = !enumerator.MoveNext();
                 if (!last)
+                {
+                    if (ctx.StructArguments != null)
+                        sb.Append(',');
                     Newline(ctx, sb);
+                }
             }
         }
 
@@ -922,7 +927,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                             }
                             break;
                         case -16:
-                            sb.Append("static.");
+                            sb.Append("static ");
                             break;
                     }
                 }
@@ -1098,7 +1103,6 @@ namespace DogScepterLib.Project.GML.Decompiler
                         Children[0].Write(ctx, sb);
                         sb.Append(": ");
                         Children[1].Write(ctx, sb);
-                        sb.Append(',');
                     }
                     else
                     {
@@ -1751,7 +1755,14 @@ namespace DogScepterLib.Project.GML.Decompiler
             }
             sb.Append("()"); // TODO, parameters
             if (IsConstructor)
+            {
+                if (SubContext.ParentCall != null)
+                {
+                    sb.Append(" : ");
+                    SubContext.ParentCall.Write(SubContext, sb);
+                }
                 sb.Append(" constructor");
+            }
             ASTNode.Newline(ctx, sb);
             sb.Append('{');
             ctx.IndentationLevel++;
@@ -1788,6 +1799,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
+            ASTNode.Newline(ctx, sb);
             sb.Append('{');
             ctx.IndentationLevel++;
             ASTNode.Newline(ctx, sb);
@@ -1799,6 +1811,44 @@ namespace DogScepterLib.Project.GML.Decompiler
             ctx.IndentationLevel--;
             ASTNode.Newline(ctx, sb);
             sb.Append('}');
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
+            return this;
+        }
+    }
+
+    public class ASTNew : ASTNode
+    {
+        public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.New;
+        public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Variable;
+        public List<ASTNode> Children { get; set; }
+
+        public ASTNew(List<ASTNode> args)
+        {
+            Children = args;
+        }
+
+        public void Write(DecompileContext ctx, StringBuilder sb)
+        {
+            sb.Append("new ");
+            Children[0].Write(ctx, sb);
+            sb.Append('(');
+
+            if (Children.Count >= 2)
+                Children[1].Write(ctx, sb);
+            for (int i = 2; i < Children.Count; i++)
+            {
+                sb.Append(", ");
+                Children[i].Write(ctx, sb);
+            }
+
+            sb.Append(')');
         }
 
         public ASTNode Clean(DecompileContext ctx)

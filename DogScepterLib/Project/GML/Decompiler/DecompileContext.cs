@@ -84,10 +84,11 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<IfStatement> IfStatementNodes { get; set; }
         public List<SwitchStatement> SwitchStatementNodes { get; set; }
         public List<Node> PredecessorsToClear { get; set; }
-        public Node BaseNode { get; set; }
-        public ASTBlock BaseASTBlock { get; set; }
-        public HashSet<string> RemainingLocals { get; set; }
-        public HashSet<string> AllLocals { get; set; }
+        public Node BaseNode { get; set; } // Represents the starting node of the control flow graph
+        public ASTBlock BaseASTBlock { get; set; } // Represents the root AST node of the decompilation
+        public ASTNode ParentCall { get; set; } // If applicable, this is the function call to the parent object
+        public HashSet<string> RemainingLocals { get; set; } // Locals that haven't been used yet in decompilation
+        public HashSet<string> AllLocals { get; set; } // All detected locals that exist
 
         private int indentationLevel = 0;
         public int IndentationLevel
@@ -173,6 +174,10 @@ namespace DogScepterLib.Project.GML.Decompiler
             Loops.InsertNodes(this);
             ShortCircuits.InsertNodes(this);
 
+            // Remove static jumps (not needed for decompilation)
+            if (Data.VersionInfo.IsNumberAtLeast(2, 3))
+                BranchStatements.ProcessStatic(this);
+
             // Find all of the switch/if statements, then insert them in nested order together
             SwitchStatementNodes = SwitchStatements.Find(this);
             IfStatementNodes = IfStatements.Find(this);
@@ -183,6 +188,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             BaseASTBlock = ASTBuilder.FromContext(this);
             AllLocals = new HashSet<string>(RemainingLocals);
             BaseASTBlock.Clean(this);
+            ParentCall?.Clean(this);
         }
 
         public string DecompileSegmentString(GMCode codeEntry, BlockList existingList = null)

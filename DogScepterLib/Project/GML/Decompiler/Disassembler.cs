@@ -33,17 +33,18 @@ namespace DogScepterLib.Project.GML.Decompiler
             { 's', GMCode.Bytecode.Instruction.DataType.String },
             { 'e', GMCode.Bytecode.Instruction.DataType.Int16}
         };
-        public static Dictionary<short, string> BreakIDToName = new Dictionary<short, string>()
+        public static Dictionary<ushort, string> BreakIDToName = new Dictionary<ushort, string>()
         {
-            { -1, "chkindex" },
-            { -2, "pushaf" },
-            { -3, "popaf" },
-            { -4, "pushac" },
-            { -5, "setowner" },
-            { -6, "isstaticok" },
-            { -7, "setstatic" },
-            { -8, "savearef" },
-            { -9, "restorearef" },
+            { 65535, "chkindex" },
+            { 65534, "pushaf" },
+            { 65533, "popaf" },
+            { 65532, "pushac" },
+            { 65531, "setowner" },
+            { 65530, "isstaticok" },
+            { 65529, "setstatic" },
+            { 65528, "savearef" },
+            { 65527, "restorearef" },
+            { 65526, "isnullish" }
         };
 
         public static string Disassemble(GMCode codeEntry, GMData data)
@@ -136,7 +137,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         break;
 
                     case GMCode.Bytecode.Instruction.InstructionType.Break:
-                        sb.Append($"{BreakIDToName[(short)i.Value]}.{DataTypeToChar[i.Type1]}");
+                        sb.Append($"{BreakIDToName[(ushort)i.Value]}.{DataTypeToChar[i.Type1]}");
                         break;
                 }
                 sb.AppendLine();

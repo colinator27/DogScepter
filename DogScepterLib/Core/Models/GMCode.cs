@@ -569,7 +569,7 @@ namespace DogScepterLib.Core.Models
                             break;
                         case InstructionType.Break:
                             {
-                                writer.Write((short)Value);
+                                writer.Write((ushort)Value);
                                 writer.Write((byte)Type1);
                                 if (writer.VersionInfo.FormatID <= 14)
                                     writer.Write(NewOpcodeToOld((byte)Kind, 0));
@@ -736,7 +736,7 @@ namespace DogScepterLib.Core.Models
                             break;
                         case InstructionType.Break:
                             {
-                                Value = reader.ReadInt16();
+                                Value = reader.ReadUInt16();
                                 Type1 = (DataType)reader.ReadByte();
 
                                 reader.Offset += 1;

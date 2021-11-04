@@ -92,6 +92,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 case Block.ControlFlowType.WithExpression:
                                 case Block.ControlFlowType.RepeatExpression:
                                 case Block.ControlFlowType.PreFragment:
+                                case Block.ControlFlowType.PreStatic:
                                     // Nothing special to do here
                                     break;
                                 default:
@@ -503,10 +504,36 @@ namespace DogScepterLib.Project.GML.Decompiler
                         break;
                     case Instruction.Opcode.Call:
                         {
-                            List<ASTNode> args = new List<ASTNode>((short)inst.Value);
-                            for (int j = 0; j < (short)inst.Value; j++)
-                                args.Add(stack.Pop());
-                            stack.Push(new ASTFunction(inst.Function.Target, args));
+                            bool normal = true;
+                            switch (inst.Function.Target?.Name.Content)
+                            {
+                                case "@@CopyStatic@@":
+                                    normal = false;
+
+                                    // This should be a call to a parent function
+                                    stack.Pop(); // (unnecessary value)
+                                    ctx.ParentCall = stack.Pop();
+                                    break;
+                                case "@@NewGMLObject@@":
+                                    normal = false;
+
+                                    // This should be a "new" operator
+                                    {
+                                        List<ASTNode> args = new List<ASTNode>((short)inst.Value);
+                                        for (int j = 0; j < (short)inst.Value; j++)
+                                            args.Add(stack.Pop());
+                                        stack.Push(new ASTNew(args));
+                                    }
+                                    break;
+                            }
+
+                            if (normal)
+                            {
+                                List<ASTNode> args = new List<ASTNode>((short)inst.Value);
+                                for (int j = 0; j < (short)inst.Value; j++)
+                                    args.Add(stack.Pop());
+                                stack.Push(new ASTFunction(inst.Function.Target, args));
+                            }
                         }
                         break;
                     case Instruction.Opcode.CallV:
@@ -623,9 +650,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                         stack.Peek().DataType = inst.Type2;
                         break;
                     case Instruction.Opcode.Break:
-                        switch ((short)inst.Value)
+                        switch ((ushort)inst.Value)
                         {
-                            case -2:
+                            case 65534:
                                 // pushaf
                                 {
                                     ASTNode ind = stack.Pop();
@@ -638,7 +665,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     stack.Push(newVar);
                                 }
                                 break;
-                            case -3:
+                            case 65533:
                                 // popaf
                                 {
                                     ASTNode ind = stack.Pop();
@@ -652,7 +679,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     current.Children.Add(new ASTAssign(newVar, stack.Pop()));
                                 }
                                 break;
-                            case -5: 
+                            case 65531: 
                                 // setowner
                                 // Used for a unique ID for array copy-on-write functionality
                                 stack.Pop();
@@ -710,8 +737,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                     {
                         // This is a normal function, skip past some already-known instructions
 #if DEBUG
-                        if ((short)block.Instructions[i].Value != -1)
-                            throw new System.Exception("Expected -1, got another value");
+                        {
+                            short val = (short)block.Instructions[i].Value;
+                            if (val != -1 && val != -16)
+                                throw new System.Exception("Expected -1 or -16, got another value");
+                        }
                         i++;
                         if (block.Instructions[i].Kind != Instruction.Opcode.Conv)
                             throw new System.Exception("Expected conv #2 after fragment");
@@ -772,7 +802,6 @@ namespace DogScepterLib.Project.GML.Decompiler
                             block.Instructions[i].ComparisonKind != 0)
                         {
                             // This is an anonymous function constructor (it's not duplicated)
-                            // TODO: Check for parents, somehow
                             i--;
                             stack.Push(new ASTFunctionDecl(
                                 ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content), null)
@@ -802,7 +831,6 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 // Function constructor with a name
                                 i++;
 
-                                // TODO: Check for parents, somehow
                                 stack.Push(new ASTFunctionDecl(
                                     ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content),
                                     block.Instructions[i].Variable.Target.Name.Content)
@@ -839,8 +867,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                     {
                         // This is a normal function, skip past some already-known instructions
 #if DEBUG
-                        if ((short)block.Instructions[i].Value != -1)
-                            throw new System.Exception("Expected -1, got another value");
+                        {
+                            short val = (short)block.Instructions[i].Value;
+                            if (val != -1 && val != -16)
+                                throw new System.Exception("Expected -1 or -16, got another value");
+                        }
                         i++;
                         if (block.Instructions[i].Kind != Instruction.Opcode.Conv)
                             throw new System.Exception("Expected conv #2 after fragment");

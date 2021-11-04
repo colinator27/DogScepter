@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static DogScepterLib.Core.Models.GMCode.Bytecode;
 
 namespace DogScepterLib.Project.GML.Decompiler
 {
@@ -34,6 +35,29 @@ namespace DogScepterLib.Project.GML.Decompiler
                     {
                         if (pred.Branches[i] == node)
                             pred.Branches[i] = new Block(-1, -1); // Don't actually remove: causes problems writing AST
+                    }
+                }
+            }
+        }
+
+        // Processes "isstaticok" jumps (by removing them), and marks the block
+        public static void ProcessStatic(DecompileContext ctx)
+        {
+            foreach (Block b in ctx.Blocks.List)
+            {
+                if (b.Instructions.Count >= 2)
+                {
+                    if (b.Instructions[^1].Kind == Instruction.Opcode.Bt)
+                    {
+                        var instr = b.Instructions[^2];
+                        if (instr.Kind == Instruction.Opcode.Break &&
+                            (ushort)instr.Value == 65530 /* isstaticok */)
+                        {
+                            // Remove these instructions and the true branch
+                            b.Instructions.RemoveRange(b.Instructions.Count - 2, 2);
+                            b.Branches.RemoveAt(0);
+                            b.ControlFlow = Block.ControlFlowType.PreStatic;
+                        }
                     }
                 }
             }

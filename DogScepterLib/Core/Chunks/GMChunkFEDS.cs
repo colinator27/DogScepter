@@ -29,7 +29,6 @@ namespace DogScepterLib.Core.Chunks
             if (chunkVersion != 1)
                 reader.Warnings.Add(new GMWarning($"FEDS version is {chunkVersion}, expected 1"));
 
-            int count = reader.ReadInt32();
             List = new GMUniquePointerList<GMFilterEffect>();
             List.Unserialize(reader);
         }

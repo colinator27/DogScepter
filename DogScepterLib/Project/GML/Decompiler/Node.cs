@@ -131,6 +131,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             SwitchDefault, // Block that represents a switch default entry
 
             PreFragment, // Block that jumps past a fragment
+            PreStatic, // Block that jumps past a static region
         }
 
         public Block(int startAddress, int endAddress)
