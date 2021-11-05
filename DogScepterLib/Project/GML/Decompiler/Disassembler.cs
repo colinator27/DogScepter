@@ -186,7 +186,10 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 if (catchBlock != -1)
                                     addresses.Add(catchBlock);
 
-                                addresses.Add(instr.Address + 12); // Technically not a block here (after the popz), but for our purposes, this is easier to split
+                                // Technically not usually a block here (before/after the call), but for our purposes, 
+                                // this is easier to split into its own section to isolate it now.
+                                addresses.Add(instr.Address - 24);
+                                addresses.Add(instr.Address + 12);
                             }
                             break;
                     }

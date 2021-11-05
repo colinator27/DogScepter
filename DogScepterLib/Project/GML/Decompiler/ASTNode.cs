@@ -59,6 +59,9 @@ namespace DogScepterLib.Project.GML.Decompiler
             SwitchCase,
             SwitchDefault,
 
+            TryStatement,
+            Exception,
+
             FunctionDecl,
             Struct,
             New,
@@ -248,6 +251,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                     case ASTNode.StatementKind.DoUntilLoop:
                     case ASTNode.StatementKind.RepeatLoop:
                     case ASTNode.StatementKind.WithLoop:
+                    case ASTNode.StatementKind.TryStatement:
                         // Don't get rid of curly brackets for these
                         Children[0] = Children[0].Clean(ctx);
                         break;
@@ -1274,8 +1278,6 @@ namespace DogScepterLib.Project.GML.Decompiler
             {
                 ASTNode.Newline(ctx, sb);
                 Children[1].Write(ctx, sb);
-                if (Children[1].NeedsSemicolon)
-                    sb.Append(';');
             }
 
             // Else block
@@ -1699,6 +1701,95 @@ namespace DogScepterLib.Project.GML.Decompiler
         }
     }
 
+    public class ASTTryStatement : ASTNode
+    {
+        public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.TryStatement;
+        public bool NeedsSemicolon { get; set; } = false;
+        public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
+        public List<ASTNode> Children { get; set; } = new List<ASTNode>();
+
+        public bool HasCatch;
+
+        public ASTTryStatement(bool hasCatch)
+        {
+            HasCatch = hasCatch;
+        }
+
+        public void Write(DecompileContext ctx, StringBuilder sb)
+        {
+            sb.Append("try");
+
+            // Main block
+            if (Children[0].Kind != ASTNode.StatementKind.Block)
+            {
+                ASTNode.Newline(ctx, sb);
+                sb.Append('{');
+                ctx.IndentationLevel++;
+                ASTNode.Newline(ctx, sb);
+                Children[0].Write(ctx, sb);
+                if (Children[0].NeedsSemicolon)
+                    sb.Append(';');
+                ctx.IndentationLevel--;
+                ASTNode.Newline(ctx, sb);
+                sb.Append('}');
+            }
+            else
+            {
+                ASTNode.Newline(ctx, sb);
+                Children[0].Write(ctx, sb);
+            }
+
+            // Catch block
+            if (HasCatch)
+            {
+                ASTNode.Newline(ctx, sb);
+                sb.Append("catch (");
+                Children[2].Write(ctx, sb);
+                sb.Append(')');
+
+                if (Children[1].Kind != ASTNode.StatementKind.Block)
+                {
+                    ASTNode.Newline(ctx, sb);
+                    sb.Append('{');
+                    ctx.IndentationLevel++;
+                    ASTNode.Newline(ctx, sb);
+                    Children[1].Write(ctx, sb);
+                    if (Children[1].NeedsSemicolon)
+                        sb.Append(';');
+                    ctx.IndentationLevel--;
+                    ASTNode.Newline(ctx, sb);
+                    sb.Append('}');
+                }
+                else
+                {
+                    ASTNode.Newline(ctx, sb);
+                    Children[1].Write(ctx, sb);
+                }
+            }
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
+
+            // Rework pop in catch block
+            if (HasCatch)
+            {
+#if DEBUG
+                if (Children[1].Children[0].Kind != ASTNode.StatementKind.Assign)
+                    throw new Exception("Expected exception pop");
+#endif
+                Children.Insert(2, Children[1].Children[0].Children[0]);
+                Children[1].Children.RemoveAt(0);
+            }
+
+            return this;
+        }
+    }
+
     public class ASTAsset : ASTNode
     {
         public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Asset;
@@ -1935,6 +2026,27 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             for (int i = 0; i < Children.Count; i++)
                 Children[i] = Children[i].Clean(ctx);
+            return this;
+        }
+    }
+
+    public class ASTException : ASTNode
+    {
+        public ASTNode.StatementKind Kind { get; set; } = ASTNode.StatementKind.Exception;
+        public bool NeedsSemicolon { get; set; } = false;
+        public bool Duplicated { get; set; }
+        public bool NeedsParentheses { get; set; }
+        public Instruction.DataType DataType { get; set; } = Instruction.DataType.Unset;
+        public List<ASTNode> Children { get; set; }
+
+        public void Write(DecompileContext ctx, StringBuilder sb)
+        {
+            // Nothing to do here
+        }
+
+        public ASTNode Clean(DecompileContext ctx)
+        {
+            // Nothing to do here
             return this;
         }
     }

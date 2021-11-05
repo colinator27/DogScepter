@@ -245,6 +245,32 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 statementStack.Push(new(astStatement, s.Branches[i], context.Loop, context.IfStatement));
                         }
                         break;
+                    case Node.NodeType.TryStatement:
+                        {
+                            TryStatement s = context.Node as TryStatement;
+
+                            statementStack.Push(new(context.Current, s.Branches[0], context.Loop, context.IfStatement));
+
+                            bool hasCatch = (s.Branches.Count >= 3);
+                            var astStatement = new ASTTryStatement(hasCatch);
+                            context.Current.Children.Add(astStatement);
+
+                            {
+                                ASTBlock subBlock = new ASTBlock();
+                                astStatement.Children.Add(subBlock);
+                                statementStack.Push(new(subBlock, s.Branches[1], context.Loop, context.IfStatement));
+                            }
+
+                            if (hasCatch)
+                            {
+                                ASTBlock subBlock = new ASTBlock();
+                                astStatement.Children.Add(subBlock);
+
+                                stack.Push(new ASTException()); // Push this placeholder value here that can get removed later
+                                statementStack.Push(new(subBlock, s.Branches[2], context.Loop, context.IfStatement));
+                            }
+                        }
+                        break;
                 }
             }
 
@@ -534,6 +560,17 @@ namespace DogScepterLib.Project.GML.Decompiler
                                             args.Add(stack.Pop());
                                         stack.Push(new ASTNew(args));
                                     }
+                                    break;
+                                case "@@try_unhook@@":
+                                case "@@finish_catch@@":
+                                    normal = false;
+
+                                    // Skip past the popz, if it exists (otherwise could be return/exit cleanup)
+                                    if (i + 1 < block.Instructions.Count && block.Instructions[i + 1].Kind == Instruction.Opcode.Popz)
+                                        i++;
+                                    break;
+                                case "@@finish_finally@@":
+                                    // TODO!!
                                     break;
                             }
 

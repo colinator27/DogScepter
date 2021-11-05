@@ -205,7 +205,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                             }
                         case Instruction.Opcode.Popz:
                             {
-                                if (slow && b.Instructions.Count >= 5)
+                                if (slow && b.Instructions.Count == 6)
                                 {
                                     Instruction tryHookCall = b.Instructions[^2];
                                     if (tryHookCall.Kind == Instruction.Opcode.Call &&
@@ -230,7 +230,15 @@ namespace DogScepterLib.Project.GML.Decompiler
                                         other = res.AddressToBlock[addr];
                                         b.Branches.Add(other);
                                         other.Predecessors.Add(b);
+
+                                        break;
                                     }
+                                }
+
+                                {
+                                    var other = res.AddressToBlock[addr];
+                                    b.Branches.Add(other);
+                                    other.Predecessors.Add(b);
                                 }
                             }
                             break;
@@ -412,16 +420,14 @@ namespace DogScepterLib.Project.GML.Decompiler
         public int EndAddress { get; set; }
 
         public Block Header;
-        public int FinallyAddress;
         public int CatchAddress;
 
-        public TryStatement(Block header, int endAddress, int finallyAddress, int catchAddress)
+        public TryStatement(Block header, int endAddress, int catchAddress)
         {
             Address = header.Address;
             EndAddress = endAddress;
             Header = header;
             Unreachable = header.Unreachable;
-            FinallyAddress = finallyAddress;
             CatchAddress = catchAddress;
         }
 

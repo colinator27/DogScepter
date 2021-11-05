@@ -11,7 +11,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 {
     public class DecompileSettings
     {
-        public string Indent { get; set; } = "    ";
+        public string Indent { get; set; } = "\t";
     }
 
     public class DecompileCache
@@ -181,7 +181,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 BranchStatements.ProcessStatic(this);
 
                 // Find try statement nodes
-                TryStatementNodes = TryStatements.Find(this);
+                TryStatementNodes = TryStatements.FindAndClean(this);
             }
             else
                 TryStatementNodes = new List<TryStatement>();
