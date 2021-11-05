@@ -13,17 +13,27 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             ctx.PredecessorsToClear = new List<Node>();
 
-            // Process basic linear branch statements in nested order
-            List<Node> toProcess = new List<Node>(ctx.SwitchStatementNodes.Count + ctx.IfStatementNodes.Count);
+            // Process basic branch statements in nested order
+            List<Node> toProcess = new List<Node>(ctx.SwitchStatementNodes.Count + ctx.IfStatementNodes.Count +
+                                                  ctx.TryStatementNodes.Count);
             toProcess.AddRange(ctx.SwitchStatementNodes);
             toProcess.AddRange(ctx.IfStatementNodes);
+            toProcess.AddRange(ctx.TryStatementNodes);
             toProcess = toProcess.OrderBy(s => s.EndAddress).ThenByDescending(s => s.Address).ToList();
             foreach (var node in toProcess)
             {
-                if (node.Kind == Node.NodeType.IfStatement)
-                    IfStatements.InsertNode(ctx, node as IfStatement);
-                else
-                    SwitchStatements.InsertNode(ctx, node as SwitchStatement);
+                switch (node.Kind)
+                {
+                    case Node.NodeType.IfStatement:
+                        IfStatements.InsertNode(ctx, node as IfStatement);
+                        break;
+                    case Node.NodeType.SwitchStatement:
+                        SwitchStatements.InsertNode(ctx, node as SwitchStatement);
+                        break;
+                    case Node.NodeType.TryStatement:
+                        TryStatements.InsertNode(ctx, node as TryStatement);
+                        break;
+                }
             }
 
             // Clear predecessors after the fact

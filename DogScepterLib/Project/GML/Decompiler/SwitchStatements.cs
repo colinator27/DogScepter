@@ -137,7 +137,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             return res.OrderBy(s => s.EndAddress).ThenByDescending(s => s.Address).ToList();
         }
 
-        /// Inserts switch statement nodes into the graph
+        /// Inserts a switch statement node into the graph
         public static void InsertNode(DecompileContext ctx, SwitchStatement s)
         {
             // Transfer predecessors and branches

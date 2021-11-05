@@ -24,7 +24,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
     public static class Fragments
     {
-        public static List<Fragment> FindAndProcess(GMCode entry)
+        public static List<Fragment> FindAndProcess(GMCode entry, bool slow = true)
         {
 #if DEBUG
             if (entry.ParentEntry != null)
@@ -32,7 +32,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 #endif
 
             List<Fragment> res = new List<Fragment>(entry.ChildEntries.Count + 1);
-            BlockList blockList = Block.GetBlocks(entry);
+            BlockList blockList = Block.GetBlocks(entry, slow);
 
             // Assemble list of fragments at a high level
             foreach (var child in entry.ChildEntries)

@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using static DogScepterLib.Core.Models.GMCode.Bytecode;
+
 namespace DogScepterLib.Project.GML.Decompiler
 {
     public interface Node
@@ -18,6 +20,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             ShortCircuit,
             IfStatement,
             SwitchStatement,
+            TryStatement
         }
 
         public NodeType Kind { get; set; }
@@ -105,8 +108,8 @@ namespace DogScepterLib.Project.GML.Decompiler
         public int Index = -1;
         public int Address { get; set; }
         public int EndAddress { get; set; }
-        public GMCode.Bytecode.Instruction LastInstr { get; set; } = null;
-        public List<GMCode.Bytecode.Instruction> Instructions = new List<GMCode.Bytecode.Instruction>();
+        public Instruction LastInstr { get; set; } = null;
+        public List<Instruction> Instructions = new List<Instruction>();
         public ControlFlowType ControlFlow { get; set; } = ControlFlowType.None;
         public bool Unreachable { get; set; } = false;
         public Node BelongingTo { get; set; } // Somewhat hacky field to mark a block as belonging to another node, as some control flow use blocks directly for detection
@@ -130,6 +133,8 @@ namespace DogScepterLib.Project.GML.Decompiler
             SwitchCase, // Block that represents a switch case entry
             SwitchDefault, // Block that represents a switch default entry
 
+            TryHook, // Block that hooks a try statement
+
             PreFragment, // Block that jumps past a fragment
             PreStatic, // Block that jumps past a static region
         }
@@ -140,14 +145,13 @@ namespace DogScepterLib.Project.GML.Decompiler
             EndAddress = endAddress;
         }
 
-        public static BlockList GetBlocks(GMCode codeEntry, int startAddr = 0, int endAddr = -1)
+        public static BlockList GetBlocks(GMCode codeEntry, bool slow = true)
         {
             BlockList res = new BlockList();
 
             // Get the addresses of blocks using the disassembler functionality
-            if (endAddr == -1)
-                endAddr = codeEntry.Length;
-            List<int> blockAddresses = Disassembler.FindBlockAddresses(codeEntry.BytecodeEntry, startAddr, endAddr);
+            int endAddr = codeEntry.Length;
+            List<int> blockAddresses = Disassembler.FindBlockAddresses(codeEntry.BytecodeEntry, slow);
 
             // Ensure there's at least an exit block
             blockAddresses.Add(endAddr);
@@ -179,16 +183,16 @@ namespace DogScepterLib.Project.GML.Decompiler
                     b.LastInstr = b.Instructions.Last();
                     switch (b.LastInstr.Kind)
                     {
-                        case GMCode.Bytecode.Instruction.Opcode.B:
+                        case Instruction.Opcode.B:
                             {
                                 var other = res.AddressToBlock[(addr - 4) + (b.LastInstr.JumpOffset * 4)];
                                 b.Branches.Add(other);
                                 other.Predecessors.Add(b);
                                 break;
                             }
-                        case GMCode.Bytecode.Instruction.Opcode.Bf:
-                        case GMCode.Bytecode.Instruction.Opcode.Bt:
-                        case GMCode.Bytecode.Instruction.Opcode.PushEnv:
+                        case Instruction.Opcode.Bf:
+                        case Instruction.Opcode.Bt:
+                        case Instruction.Opcode.PushEnv:
                             {
                                 var other = res.AddressToBlock[(addr - 4) + (b.LastInstr.JumpOffset * 4)];
                                 b.Branches.Add(other);
@@ -199,6 +203,37 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 other.Predecessors.Add(b);
                                 break;
                             }
+                        case Instruction.Opcode.Popz:
+                            {
+                                if (slow && b.Instructions.Count >= 5)
+                                {
+                                    Instruction tryHookCall = b.Instructions[^2];
+                                    if (tryHookCall.Kind == Instruction.Opcode.Call &&
+                                        tryHookCall.Function.Target.Name?.Content == "@@try_hook@@")
+                                    {
+                                        b.ControlFlow = ControlFlowType.TryHook; // Mark this now for performance
+
+                                        int finallyBlock = (int)b.Instructions[^6].Value;
+                                        int catchBlock = (int)b.Instructions[^4].Value;
+
+                                        var other = res.AddressToBlock[finallyBlock];
+                                        b.Branches.Add(other);
+                                        other.Predecessors.Add(b);
+
+                                        if (catchBlock != -1)
+                                        {
+                                            other = res.AddressToBlock[catchBlock];
+                                            b.Branches.Add(other);
+                                            other.Predecessors.Add(b);
+                                        }
+
+                                        other = res.AddressToBlock[addr];
+                                        b.Branches.Add(other);
+                                        other.Predecessors.Add(b);
+                                    }
+                                }
+                            }
+                            break;
                         default:
                             {
                                 var other = res.AddressToBlock[addr];
@@ -363,6 +398,36 @@ namespace DogScepterLib.Project.GML.Decompiler
         public override string ToString()
         {
             return $"Switch Statement, Address {Address}";
+        }
+    }
+
+    public class TryStatement : Node
+    {
+        public Node.NodeType Kind { get; set; } = Node.NodeType.TryStatement;
+
+        public List<Node> Predecessors { get; set; } = new List<Node>();
+        public List<Node> Branches { get; set; } = new List<Node>();
+        public bool Unreachable { get; set; } = false;
+        public int Address { get; set; }
+        public int EndAddress { get; set; }
+
+        public Block Header;
+        public int FinallyAddress;
+        public int CatchAddress;
+
+        public TryStatement(Block header, int endAddress, int finallyAddress, int catchAddress)
+        {
+            Address = header.Address;
+            EndAddress = endAddress;
+            Header = header;
+            Unreachable = header.Unreachable;
+            FinallyAddress = finallyAddress;
+            CatchAddress = catchAddress;
+        }
+
+        public override string ToString()
+        {
+            return $"Try Statement, Address {Address}";
         }
     }
 }

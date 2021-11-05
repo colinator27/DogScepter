@@ -32,7 +32,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                     GMCode entry = code.List[scr];
 
                     // Find fragments
-                    List<Fragment> fragments = Fragments.FindAndProcess(entry);
+                    List<Fragment> fragments = Fragments.FindAndProcess(entry, false);
 
                     // Find blocks in the main fragment that come after another fagment
                     foreach (Block b in fragments[^1].Blocks.List)
@@ -83,6 +83,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<ShortCircuit> ShortCircuitNodes { get; set; }
         public List<IfStatement> IfStatementNodes { get; set; }
         public List<SwitchStatement> SwitchStatementNodes { get; set; }
+        public List<TryStatement> TryStatementNodes { get; set; }
         public List<Node> PredecessorsToClear { get; set; }
         public Node BaseNode { get; set; } // Represents the starting node of the control flow graph
         public ASTBlock BaseASTBlock { get; set; } // Represents the root AST node of the decompilation
@@ -174,11 +175,18 @@ namespace DogScepterLib.Project.GML.Decompiler
             Loops.InsertNodes(this);
             ShortCircuits.InsertNodes(this);
 
-            // Remove static jumps (not needed for decompilation)
             if (Data.VersionInfo.IsNumberAtLeast(2, 3))
+            {
+                // Remove static jumps (not needed for decompilation)
                 BranchStatements.ProcessStatic(this);
 
-            // Find all of the switch/if statements, then insert them in nested order together
+                // Find try statement nodes
+                TryStatementNodes = TryStatements.Find(this);
+            }
+            else
+                TryStatementNodes = new List<TryStatement>();
+
+            // Find all of the switch/if statements, then insert them (as well as 2.3 branch nodes!) in nested order together
             SwitchStatementNodes = SwitchStatements.Find(this);
             IfStatementNodes = IfStatements.Find(this);
             BranchStatements.InsertNodes(this);

@@ -181,7 +181,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             return res.OrderBy(s => s.EndAddress).ThenByDescending(s => s.Address).ToList();
         }
 
-        /// Inserts if statement nodes into the graph
+        /// Inserts an if statement node into the graph
         public static void InsertNode(DecompileContext ctx, IfStatement s)
         {
             // Transfer predecessors and branches

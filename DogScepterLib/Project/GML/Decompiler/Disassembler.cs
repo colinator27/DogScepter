@@ -7,31 +7,33 @@ using DogScepterLib.Core.Models;
 using System.Globalization;
 using DogScepterLib.Core.Chunks;
 
+using static DogScepterLib.Core.Models.GMCode.Bytecode;
+
 namespace DogScepterLib.Project.GML.Decompiler
 {
     public static class Disassembler
     {
-        public static Dictionary<GMCode.Bytecode.Instruction.DataType, char> DataTypeToChar = new Dictionary<GMCode.Bytecode.Instruction.DataType, char>()
+        public static Dictionary<Instruction.DataType, char> DataTypeToChar = new Dictionary<Instruction.DataType, char>()
         {
-            { GMCode.Bytecode.Instruction.DataType.Double, 'd' },
-            { GMCode.Bytecode.Instruction.DataType.Float, 'f' },
-            { GMCode.Bytecode.Instruction.DataType.Int32, 'i' },
-            { GMCode.Bytecode.Instruction.DataType.Int64, 'l' },
-            { GMCode.Bytecode.Instruction.DataType.Boolean, 'b' },
-            { GMCode.Bytecode.Instruction.DataType.Variable, 'v' },
-            { GMCode.Bytecode.Instruction.DataType.String, 's' },
-            { GMCode.Bytecode.Instruction.DataType.Int16, 'e' }
+            { Instruction.DataType.Double, 'd' },
+            { Instruction.DataType.Float, 'f' },
+            { Instruction.DataType.Int32, 'i' },
+            { Instruction.DataType.Int64, 'l' },
+            { Instruction.DataType.Boolean, 'b' },
+            { Instruction.DataType.Variable, 'v' },
+            { Instruction.DataType.String, 's' },
+            { Instruction.DataType.Int16, 'e' }
         };
-        public static Dictionary<char, GMCode.Bytecode.Instruction.DataType> CharToDataType = new Dictionary<char, GMCode.Bytecode.Instruction.DataType>()
+        public static Dictionary<char, Instruction.DataType> CharToDataType = new Dictionary<char, Instruction.DataType>()
         {
-            { 'd', GMCode.Bytecode.Instruction.DataType.Double },
-            { 'f', GMCode.Bytecode.Instruction.DataType.Float },
-            { 'i', GMCode.Bytecode.Instruction.DataType.Int32 },
-            { 'l', GMCode.Bytecode.Instruction.DataType.Int64 },
-            { 'b', GMCode.Bytecode.Instruction.DataType.Boolean },
-            { 'v', GMCode.Bytecode.Instruction.DataType.Variable },
-            { 's', GMCode.Bytecode.Instruction.DataType.String },
-            { 'e', GMCode.Bytecode.Instruction.DataType.Int16}
+            { 'd', Instruction.DataType.Double },
+            { 'f', Instruction.DataType.Float },
+            { 'i', Instruction.DataType.Int32 },
+            { 'l', Instruction.DataType.Int64 },
+            { 'b', Instruction.DataType.Boolean },
+            { 'v', Instruction.DataType.Variable },
+            { 's', Instruction.DataType.String },
+            { 'e', Instruction.DataType.Int16}
         };
         public static Dictionary<ushort, string> BreakIDToName = new Dictionary<ushort, string>()
         {
@@ -67,30 +69,29 @@ namespace DogScepterLib.Project.GML.Decompiler
                     sb.AppendLine($":[{ind}]");
                 }
 
-                if (i.Kind != GMCode.Bytecode.Instruction.Opcode.Break)
+                if (i.Kind != Instruction.Opcode.Break)
                     sb.Append(i.Kind.ToString().ToLower());
 
-                switch (GMCode.Bytecode.Instruction.GetInstructionType(i.Kind))
+                switch (Instruction.GetInstructionType(i.Kind))
                 {
-                    case GMCode.Bytecode.Instruction.InstructionType.SingleType:
+                    case Instruction.InstructionType.SingleType:
                         sb.Append($".{DataTypeToChar[i.Type1]}");
 
-                        if (i.Kind == GMCode.Bytecode.Instruction.Opcode.Dup || 
-                            i.Kind == GMCode.Bytecode.Instruction.Opcode.CallV)
+                        if (i.Kind == Instruction.Opcode.Dup || i.Kind == Instruction.Opcode.CallV)
                         {
                             sb.Append($" {i.Extra}");
                         }
                         break;
 
-                    case GMCode.Bytecode.Instruction.InstructionType.DoubleType:
+                    case Instruction.InstructionType.DoubleType:
                         sb.Append($".{DataTypeToChar[i.Type1]}.{DataTypeToChar[i.Type2]}");
                         break;
 
-                    case GMCode.Bytecode.Instruction.InstructionType.Comparison:
+                    case Instruction.InstructionType.Comparison:
                         sb.Append($".{DataTypeToChar[i.Type1]}.{DataTypeToChar[i.Type2]} {i.ComparisonKind}");
                         break;
 
-                    case GMCode.Bytecode.Instruction.InstructionType.Branch:
+                    case Instruction.InstructionType.Branch:
                         if (i.Address + (i.JumpOffset * 4) == codeEntry.Length)
                             sb.Append(" [end]");
                         else if (i.PopenvExitMagic)
@@ -99,14 +100,13 @@ namespace DogScepterLib.Project.GML.Decompiler
                             sb.Append($" [{blocks.IndexOf(i.Address + (i.JumpOffset * 4))}]");
                         break;
 
-                    case GMCode.Bytecode.Instruction.InstructionType.Pop:
+                    case Instruction.InstructionType.Pop:
                         sb.Append($".{DataTypeToChar[i.Type1]}.{DataTypeToChar[i.Type2]} ");
-                        if (i.Type1 == GMCode.Bytecode.Instruction.DataType.Int16)
+                        if (i.Type1 == Instruction.DataType.Int16)
                             sb.Append(((short)i.TypeInst).ToString()); // Special swap instruction
                         else
                         {
-                            if (i.Type1 == GMCode.Bytecode.Instruction.DataType.Variable && 
-                                i.TypeInst != GMCode.Bytecode.Instruction.InstanceType.Undefined)
+                            if (i.Type1 == Instruction.DataType.Variable && i.TypeInst != Instruction.InstanceType.Undefined)
                             {
                                 sb.Append($"{i.TypeInst.ToString().ToLower()}.");
                             }
@@ -115,16 +115,16 @@ namespace DogScepterLib.Project.GML.Decompiler
                         }
                         break;
 
-                    case GMCode.Bytecode.Instruction.InstructionType.Push:
+                    case Instruction.InstructionType.Push:
                         sb.Append($".{DataTypeToChar[i.Type1]} ");
-                        if (i.Type1 == GMCode.Bytecode.Instruction.DataType.Variable)
+                        if (i.Type1 == Instruction.DataType.Variable)
                         {
-                            if (i.TypeInst != GMCode.Bytecode.Instruction.InstanceType.Undefined)
+                            if (i.TypeInst != Instruction.InstanceType.Undefined)
                                 sb.Append($"{i.TypeInst.ToString().ToLower()}.");
 
                             sb.Append(StringifyVariableRef(i.Variable));
                         }
-                        else if (i.Type1 == GMCode.Bytecode.Instruction.DataType.String)
+                        else if (i.Type1 == Instruction.DataType.String)
                             sb.Append($"\"{SanitizeString(strings[(int)i.Value].Content)}\"");
                         else if (i.Function != null)
                             sb.Append(i.Function.Target.Name.Content);
@@ -132,11 +132,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                             sb.Append((i.Value as IFormattable)?.ToString(null, CultureInfo.InvariantCulture) ?? i.Value.ToString());
                         break;
 
-                    case GMCode.Bytecode.Instruction.InstructionType.Call:
+                    case Instruction.InstructionType.Call:
                         sb.Append($".{DataTypeToChar[i.Type1]} {i.Function.Target.Name.Content} {(short)i.Value}");
                         break;
 
-                    case GMCode.Bytecode.Instruction.InstructionType.Break:
+                    case Instruction.InstructionType.Break:
                         sb.Append($"{BreakIDToName[(ushort)i.Value]}.{DataTypeToChar[i.Type1]}");
                         break;
                 }
@@ -149,37 +149,47 @@ namespace DogScepterLib.Project.GML.Decompiler
             return sb.ToString();
         }
 
-        public static List<int> FindBlockAddresses(GMCode.Bytecode bytecode, int startAddr = 0, int endAddr = int.MaxValue)
+        public static List<int> FindBlockAddresses(GMCode.Bytecode bytecode, bool slow = true)
         {
             HashSet<int> addresses = new HashSet<int>();
 
             if (bytecode.Instructions.Count != 0)
-                addresses.Add(startAddr);
-
-            foreach (var i in bytecode.Instructions)
             {
-                if (i.Address < startAddr)
-                    continue;
-                if (i.Address >= endAddr)
-                    break;
-
-                switch (i.Kind)
+                addresses.Add(0);
+                for (int i = 0; i < bytecode.Instructions.Count; i++)
                 {
-                    case GMCode.Bytecode.Instruction.Opcode.B:
-                    case GMCode.Bytecode.Instruction.Opcode.Bf:
-                    case GMCode.Bytecode.Instruction.Opcode.Bt:
-                    case GMCode.Bytecode.Instruction.Opcode.PushEnv:
-                        addresses.Add(i.Address + 4);
-                        addresses.Add(i.Address + (i.JumpOffset * 4));
-                        break;
-                    case GMCode.Bytecode.Instruction.Opcode.PopEnv:
-                        if (!i.PopenvExitMagic)
-                            addresses.Add(i.Address + (i.JumpOffset * 4));
-                        break;
-                    case GMCode.Bytecode.Instruction.Opcode.Exit:
-                    case GMCode.Bytecode.Instruction.Opcode.Ret:
-                        addresses.Add(i.Address + 4);
-                        break;
+                    Instruction instr = bytecode.Instructions[i];
+                    switch (instr.Kind)
+                    {
+                        case Instruction.Opcode.B:
+                        case Instruction.Opcode.Bf:
+                        case Instruction.Opcode.Bt:
+                        case Instruction.Opcode.PushEnv:
+                            addresses.Add(instr.Address + 4);
+                            addresses.Add(instr.Address + (instr.JumpOffset * 4));
+                            break;
+                        case Instruction.Opcode.PopEnv:
+                            if (!instr.PopenvExitMagic)
+                                addresses.Add(instr.Address + (instr.JumpOffset * 4));
+                            break;
+                        case Instruction.Opcode.Exit:
+                        case Instruction.Opcode.Ret:
+                            addresses.Add(instr.Address + 4);
+                            break;
+                        case Instruction.Opcode.Call:
+                            if (slow && i >= 4 && instr.Function.Target.Name?.Content == "@@try_hook@@")
+                            {
+                                int finallyBlock = (int)bytecode.Instructions[i - 4].Value;
+                                addresses.Add(finallyBlock);
+
+                                int catchBlock = (int)bytecode.Instructions[i - 2].Value;
+                                if (catchBlock != -1)
+                                    addresses.Add(catchBlock);
+
+                                addresses.Add(instr.Address + 12); // Technically not a block here (after the popz), but for our purposes, this is easier to split
+                            }
+                            break;
+                    }
                 }
             }
 
@@ -230,9 +240,9 @@ namespace DogScepterLib.Project.GML.Decompiler
             return sb.ToString();
         }
 
-        private static string StringifyVariableRef(GMCode.Bytecode.Instruction.Reference<GMVariable> var)
+        private static string StringifyVariableRef(Instruction.Reference<GMVariable> var)
         {
-            if (var.Type != GMCode.Bytecode.Instruction.VariableType.Normal)
+            if (var.Type != Instruction.VariableType.Normal)
                 return $"({var.Type.ToString().ToLower()}){var.Target.Name.Content}";
             else
                 return var.Target.Name.Content;
