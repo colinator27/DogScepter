@@ -67,7 +67,21 @@ namespace DogScepterLib.Project.GML.Decompiler
                 for (int i = pred.Branches.Count - 1; i >= 0; i--)
                 {
                     if (pred.Branches[i] == tail)
+                    {
                         pred.Branches[i] = new Block(-1, -1);
+                        if (pred.Kind == Node.NodeType.Block)
+                        {
+                            Block predBlock = pred as Block;
+                            if (predBlock.Instructions.Count >= 1 &&
+                                predBlock.Instructions[^1].Kind == Instruction.Opcode.B)
+                            {
+                                // Remove `b` instruction, which can confuse "continue" logic
+                                predBlock.Instructions.RemoveAt(predBlock.Instructions.Count - 1);
+                                predBlock.LastInstr = null;
+                                predBlock.ControlFlow = Block.ControlFlowType.None;
+                            }
+                        }
+                    }
                 }
             }
             tail.Predecessors.Clear();
@@ -78,6 +92,26 @@ namespace DogScepterLib.Project.GML.Decompiler
                 // Add branch to the try block, then the catch block
                 s.Branches.Add(s.Header.Branches[2]);
                 s.Branches.Add(s.Header.Branches[1]);
+
+                // Check for the end of the catch, and remove any possible "continue" detection that already occurred
+                Node after = tail.Branches[0];
+                foreach (var pred in after.Predecessors)
+                {
+                    if (pred.Kind == Node.NodeType.Block)
+                    {
+                        Block predBlock = pred as Block;
+                        if (predBlock.Instructions.Count >= 2 && 
+                            predBlock.ControlFlow == Block.ControlFlowType.Continue &&
+                            predBlock.Instructions[^1].Kind == Instruction.Opcode.Popz &&
+                            predBlock.Instructions[^2].Kind == Instruction.Opcode.Call &&
+                            predBlock.Instructions[^2].Function.Target.Name.Content == "@@finish_catch@@")
+                        {
+                            predBlock.LastInstr = null;
+                            predBlock.ControlFlow = Block.ControlFlowType.None;
+                            break;
+                        }
+                    }
+                }
             }
             else
             {

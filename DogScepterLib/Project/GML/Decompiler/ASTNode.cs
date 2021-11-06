@@ -1711,6 +1711,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<ASTNode> Children { get; set; } = new List<ASTNode>();
 
         public bool HasCatch;
+        public bool Cleaned = false;
 
         public ASTTryStatement(bool hasCatch)
         {
@@ -1776,14 +1777,18 @@ namespace DogScepterLib.Project.GML.Decompiler
                 Children[i] = Children[i].Clean(ctx);
 
             // Rework pop in catch block
-            if (HasCatch)
+            if (!Cleaned)
             {
+                if (HasCatch)
+                {
 #if DEBUG
-                if (Children[1].Children[0].Kind != ASTNode.StatementKind.Assign)
-                    throw new Exception("Expected exception pop");
+                    if (Children[1].Children[0].Kind != ASTNode.StatementKind.Assign)
+                        throw new Exception("Expected exception pop");
 #endif
-                Children.Insert(2, Children[1].Children[0].Children[0]);
-                Children[1].Children.RemoveAt(0);
+                    Children.Insert(2, Children[1].Children[0].Children[0]);
+                    Children[1].Children.RemoveAt(0);
+                }
+                Cleaned = true;
             }
 
             return this;
