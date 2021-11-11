@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace DogScepterLib.Project.Util
 {
-    // BitArray class yielding higher performance,
-    // for collision masks and decompilation
+    // BitArray class yielding higher performance, primarily for collision masks
     public class FastBitArray
     {
         public int[] Array;
@@ -74,7 +73,8 @@ namespace DogScepterLib.Project.Util
         {
             int len = ((Length + 7) & (-8)) / 8;
             if (Length == 0 || len == 0)
-                return new byte[0];
+                return System.Array.Empty<byte>();
+
             byte[] res = new byte[len];
 
             fixed (byte* ptr = &res[0])

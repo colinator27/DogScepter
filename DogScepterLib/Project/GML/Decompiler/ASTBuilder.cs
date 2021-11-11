@@ -512,6 +512,15 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 }
                             }
 
+                            if (inst.Type2 == Instruction.DataType.Boolean && value.Kind == ASTNode.StatementKind.Int16)
+                            {
+                                ASTInt16 i16 = value as ASTInt16;
+                                if (i16.Value == 0)
+                                    value = new ASTBoolean(false);
+                                else if (i16.Value == 1)
+                                    value = new ASTBoolean(true);
+                            }
+
                             current.Children.Add(new ASTAssign(variable, value));
                         }
                         break;
@@ -693,6 +702,16 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 stack.Pop();
                                 stack.Push(new ASTBoolean(true));
                             }
+                        }
+                        else if (inst.Type1 == Instruction.DataType.Boolean && stack.Peek().Kind == ASTNode.StatementKind.Int16)
+                        {
+                            ASTInt16 i16 = stack.Pop() as ASTInt16;
+                            if (i16.Value == 0)
+                                stack.Push(new ASTBoolean(false));
+                            else if (i16.Value == 1)
+                                stack.Push(new ASTBoolean(true));
+                            else
+                                stack.Push(i16); // Error handler
                         }
                         stack.Peek().DataType = inst.Type2;
                         break;
