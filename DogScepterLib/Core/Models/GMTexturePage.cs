@@ -1,5 +1,7 @@
-﻿using System;
+﻿using ICSharpCode.SharpZipLib.BZip2;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -33,22 +35,62 @@ namespace DogScepterLib.Core.Models
 
     public class GMTextureData : GMSerializable
     {
-        // The PNG data
+        // The PNG or QOI+BZip2 data
         public BufferRegion Data;
+
+        // Fields specifically for QOI *only*
+        public bool IsQoi;
+        public short QoiWidth = -1;
+        public short QoiHeight = -1;
 
         public void Serialize(GMDataWriter writer)
         {
             writer.Pad(128);
             writer.WriteObjectPointer(this);
-            writer.Write(Data);
+            if (IsQoi)
+            {
+                writer.Write(new byte[] { 50, 122, 111, 113 });
+                writer.Write(QoiWidth);
+                writer.Write(QoiHeight);
+                using MemoryStream input = new MemoryStream(Data.Memory.ToArray());
+                using MemoryStream output = new MemoryStream(1024);
+                BZip2.Compress(input, output, false, 9);
+                writer.Write(output.ToArray());
+            }
+            else
+                writer.Write(Data);
         }
 
         public void Unserialize(GMDataReader reader)
         {
             int startOffset = reader.Offset;
 
-            if (!reader.ReadBytes(8).Memory.ToArray().SequenceEqual(new byte[8] { 137, 80, 78, 71, 13, 10, 26, 10 }))
-                reader.Warnings.Add(new GMWarning("PNG header expected.", GMWarning.WarningLevel.Bad));
+            byte[] header = reader.ReadBytes(8).Memory.ToArray();
+            if (!header.SequenceEqual(new byte[8] { 137, 80, 78, 71, 13, 10, 26, 10 }))
+            {
+                reader.Offset = startOffset;
+                if (header.Take(4).SequenceEqual(new byte[4] { 50, 122, 111, 113 }))
+                {
+                    // This is in QOI + BZip2 format
+                    IsQoi = true;
+                    reader.VersionInfo.SetNumber(2, 3, 8);
+                    reader.VersionInfo.UseQoiFormat = true;
+                    reader.Offset += 4;
+
+                    QoiWidth = reader.ReadInt16();
+                    QoiHeight = reader.ReadInt16();
+
+                    // Decompress BZip2 data, leaving just QOI data
+                    using MemoryStream bufferWrapper = new MemoryStream(reader.Buffer);
+                    bufferWrapper.Seek(reader.Offset, SeekOrigin.Begin);
+                    using MemoryStream result = new MemoryStream(1024);
+                    BZip2.Decompress(bufferWrapper, result, false);
+                    Data = new BufferRegion(result.ToArray());
+                    return;
+                }
+                else
+                    reader.Warnings.Add(new GMWarning("PNG or QOI+BZip2 header expected.", GMWarning.WarningLevel.Bad));
+            }
 
             while (true)
             {

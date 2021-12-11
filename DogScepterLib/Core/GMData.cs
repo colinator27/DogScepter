@@ -32,6 +32,8 @@ namespace DogScepterLib.Core
 
             public bool OptionBitflag = true;
 
+            public bool UseQoiFormat = false;
+
             public int BuiltinAudioGroupID => (Major >= 2 || (Major == 1 && (Build >= 1354 || (Build >= 161 && Build < 1000)))) ? 0 : 1;
 
             /// <summary>

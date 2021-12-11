@@ -49,7 +49,7 @@ namespace DogScepterLib.Project.Converters
             info["DefaultWindowHeight"] = generalInfo.DefaultWindowHeight;
             info["Info"] = generalInfo.Info.ToString();
             info["LicenseCRC32"] = generalInfo.LicenseCRC32;
-            info["LicenseMD5"] = generalInfo.LicenseMD5;
+            info["LicenseMD5"] = generalInfo.LicenseMD5.Memory.ToArray();
             info["Timestamp"] = generalInfo.Timestamp;
             info["DisplayName"] = generalInfo.DisplayName.Content;
             info["ActiveTargets"] = generalInfo.ActiveTargets;

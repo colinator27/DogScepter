@@ -78,6 +78,8 @@ namespace DogScepterLib.Project
         public Dictionary<int, int> PageToGroup = new Dictionary<int, int>();
         public Bitmap[] CachedTextures = null;
 
+        public bool FullyInitialized = false;
+
         public Textures(ProjectFile project, bool fast = false)
         {
             Project = project;
@@ -87,6 +89,11 @@ namespace DogScepterLib.Project
             if (fast)
                 return;
 
+            FinishInitialize();
+        }
+
+        public void FinishInitialize()
+        {
             // Finds borders and tiled entries to at least somewhat recreate the original texture
             // This isn't totally accurate to every version, but it's hopefully close enough to look normal
             DetermineGroupBorders();
@@ -96,6 +103,8 @@ namespace DogScepterLib.Project
 
             // Clean up memory now so we're not wasting as much, especially when not even using textures
             DisposeAllTextures();
+
+            FullyInitialized = true;
         }
 
         public void RegenerateTextures()
@@ -135,10 +144,17 @@ namespace DogScepterLib.Project
                     Parallel.ForEach(result, page =>
                     {
                         byte[] res;
-                        using (var ms = new MemoryStream())
+                        if (Project.DataHandle.VersionInfo.UseQoiFormat)
                         {
-                            DrawPage(g, page).Save(ms, ImageFormat.Png);
-                            res = ms.ToArray();
+                            res = QoiConverter.GetArrayFromBitmap(DrawPage(g, page));
+                        }
+                        else
+                        {
+                            using (var ms = new MemoryStream())
+                            {
+                                DrawPage(g, page).Save(ms, ImageFormat.Png);
+                                res = ms.ToArray();
+                            }
                         }
                         lock (g)
                         {
@@ -163,7 +179,14 @@ namespace DogScepterLib.Project
 
             void handlePage(int dataIndex, (TexturePacker.Page, byte[]) page)
             {
-                txtrList[dataIndex].TextureData.Data = new BufferRegion(page.Item2);
+                var texData = txtrList[dataIndex].TextureData;
+                texData.Data = new BufferRegion(page.Item2);
+                if (Project.DataHandle.VersionInfo.UseQoiFormat)
+                {
+                    texData.IsQoi = true;
+                    texData.QoiWidth = (short)page.Item1.Width;
+                    texData.QoiHeight = (short)page.Item1.Height;
+                }
                 foreach (TexturePacker.Page.Item item in page.Item1.Items)
                 {
                     if (item.TextureItem.TexturePageID == -1)
@@ -473,7 +496,10 @@ namespace DogScepterLib.Project
                 if (CachedTextures[ind] != null)
                     return CachedTextures[ind];
                 using Stream s = Project.DataHandle.GetChunk<GMChunkTXTR>().List[ind].TextureData.Data.Memory.AsStream();
-                return CachedTextures[ind] = new Bitmap(s);
+                if (Project.DataHandle.VersionInfo.UseQoiFormat)
+                    return CachedTextures[ind] = QoiConverter.GetBitmapFromStream(s);
+                else
+                    return CachedTextures[ind] = new Bitmap(s);
             }       
         }
 
@@ -483,7 +509,10 @@ namespace DogScepterLib.Project
             Parallel.ForEach(Project.DataHandle.GetChunk<GMChunkTXTR>().List, (elem, _, i) =>
             {
                 using Stream s = elem.TextureData.Data.Memory.AsStream();
-                CachedTextures[i] = new Bitmap(s);
+                if (Project.DataHandle.VersionInfo.UseQoiFormat)
+                    CachedTextures[i] = QoiConverter.GetBitmapFromStream(s);
+                else
+                    CachedTextures[i] = new Bitmap(s);
             });
         }
 
@@ -601,64 +630,74 @@ namespace DogScepterLib.Project
 
                         // Horizontal check
                         bool tileHoriz = true;
-                        for (int y = 0; y < entry.SourceHeight; y++)
+                        if (entry.SourceX <= 0 || (entry.SourceX + entry.SourceWidth) >= data.Width)
+                            tileHoriz = false; // out of bounds
+                        else
                         {
-                            if (*(ptr - 1) != *(ptr + (entry.SourceWidth - 1)) ||
-                                *ptr != *(ptr + entry.SourceWidth))
-                            {
-                                tileHoriz = false;
-                                break;
-                            }
-                            ptr += stride;
-                        }
-                        if (tileHoriz)
-                        {
-                            // Check again to see if it's just the same on the edges anyway
-                            ptr = basePtr;
-                            bool notSame = false;
                             for (int y = 0; y < entry.SourceHeight; y++)
                             {
-                                if (*ptr != *(ptr - 1) ||
-                                    *(ptr + (entry.SourceWidth - 1)) != *(ptr + entry.SourceWidth))
+                                if (*(ptr - 1) != *(ptr + (entry.SourceWidth - 1)) ||
+                                    *ptr != *(ptr + entry.SourceWidth))
                                 {
-                                    notSame = true;
+                                    tileHoriz = false;
                                     break;
                                 }
                                 ptr += stride;
                             }
-                            tileHoriz = notSame;
+                            if (tileHoriz)
+                            {
+                                // Check again to see if it's just the same on the edges anyway
+                                ptr = basePtr;
+                                bool notSame = false;
+                                for (int y = 0; y < entry.SourceHeight; y++)
+                                {
+                                    if (*ptr != *(ptr - 1) ||
+                                        *(ptr + (entry.SourceWidth - 1)) != *(ptr + entry.SourceWidth))
+                                    {
+                                        notSame = true;
+                                        break;
+                                    }
+                                    ptr += stride;
+                                }
+                                tileHoriz = notSame;
+                            }
                         }
 
                         // Vertical check
                         ptr = basePtr;
                         bool tileVert = true;
-                        int bottom = ((entry.SourceHeight - 1) * stride);
-                        for (int x = 0; x < entry.SourceWidth; x++)
+                        if (entry.SourceY <= 0 || (entry.SourceY + entry.SourceHeight) >= data.Height)
+                            tileVert = false; // out of bounds
+                        else
                         {
-                            if (*(ptr - stride) != *(ptr + bottom) ||
-                                *ptr != *(ptr + bottom + stride))
-                            {
-                                tileVert = false;
-                                break;
-                            }
-                            ptr++;
-                        }
-                        if (tileVert)
-                        {
-                            // Check again to see if it's just the same on the edges anyway
-                            ptr = basePtr;
-                            bool notSame = false;
+                            int bottom = ((entry.SourceHeight - 1) * stride);
                             for (int x = 0; x < entry.SourceWidth; x++)
                             {
-                                if (*ptr != *(ptr - stride) ||
-                                    *(ptr + bottom) != *(ptr + bottom + stride))
+                                if (*(ptr - stride) != *(ptr + bottom) ||
+                                    *ptr != *(ptr + bottom + stride))
                                 {
-                                    notSame = true;
+                                    tileVert = false;
                                     break;
                                 }
                                 ptr++;
                             }
-                            tileVert = notSame;
+                            if (tileVert)
+                            {
+                                // Check again to see if it's just the same on the edges anyway
+                                ptr = basePtr;
+                                bool notSame = false;
+                                for (int x = 0; x < entry.SourceWidth; x++)
+                                {
+                                    if (*ptr != *(ptr - stride) ||
+                                        *(ptr + bottom) != *(ptr + bottom + stride))
+                                    {
+                                        notSame = true;
+                                        break;
+                                    }
+                                    ptr++;
+                                }
+                                tileVert = notSame;
+                            }
                         }
 
                         entry._TileHorizontally = tileHoriz;

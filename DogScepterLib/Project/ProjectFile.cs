@@ -69,6 +69,8 @@ namespace DogScepterLib.Project
                     DataHandle.Logger?.Invoke($"Set up textures in {s.ElapsedMilliseconds} ms");
 #endif
                 }
+                else if (!InternalTextures.FullyInitialized)
+                    InternalTextures.FinishInitialize();
                 return InternalTextures;
             }
             set

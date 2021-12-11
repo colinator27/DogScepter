@@ -700,7 +700,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 else if (Children[i].Kind == ASTNode.StatementKind.ShortCircuit)
                     Children[i].NeedsParentheses = true;
             }
-            AssetResolver.ResolveBinary(ctx, this);
+            MacroResolver.ResolveBinary(ctx, this);
             return this;
         }
     }
@@ -766,13 +766,13 @@ namespace DogScepterLib.Project.GML.Decompiler
                     return new ASTInstance(ASTInstance.InstanceType.Global) { Duplicated = Duplicated };
                 case "@@GetInstance@@":
                     {
-                        ASTNode res = AssetResolver.ResolveObject(ctx, Children[0] as ASTInt16);
+                        ASTNode res = MacroResolver.ResolveObject(ctx, Children[0] as ASTInt16);
                         res.Duplicated = Duplicated;
                         return res;
                     }
             }
 
-            AssetResolver.ResolveFunction(ctx, this);
+            MacroResolver.ResolveFunction(ctx, this);
             return this;
         }
     }
@@ -1216,7 +1216,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 }
             }
 
-            AssetResolver.ResolveAssign(ctx, this);
+            MacroResolver.ResolveAssign(ctx, this);
 
             return this;
         }
@@ -1589,7 +1589,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             for (int i = 0; i < Children.Count; i++)
                 Children[i] = Children[i].Clean(ctx);
             if (Children[0].Kind == ASTNode.StatementKind.Int16)
-                Children[0] = AssetResolver.ResolveObject(ctx, Children[0] as ASTInt16);
+                Children[0] = MacroResolver.ResolveObject(ctx, Children[0] as ASTInt16);
             return this;
         }
     }
@@ -1652,7 +1652,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode Clean(DecompileContext ctx)
         {
             ASTBlock.BlockCleanup(ctx, Children);
-            AssetResolver.ResolveSwitch(ctx, this);
+            MacroResolver.ResolveSwitch(ctx, this);
             return this;
         }
     }

@@ -102,6 +102,11 @@ namespace DogScepterLib.Project.Converters
                 {
                     buff = null;
                 }
+                else if (sound.AudioID == -1)
+                {
+                    // No sound bound?
+                    buff = null;
+                }
                 else
                 {
                     if (pf._CachedAudioChunks.TryGetValue(sound.GroupID, out var chunk))

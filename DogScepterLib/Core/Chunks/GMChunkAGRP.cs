@@ -66,6 +66,8 @@ namespace DogScepterLib.Core.Chunks
                         using (FileStream fs = new FileStream(path, FileMode.Open))
                         {
                             GMDataReader groupReader = new GMDataReader(fs, fs.Name);
+                            groupReader.Data.Logger = reader.Data.Logger;
+                            groupReader.Unserialize();
                             AudioData[i] = groupReader.Data;
                             foreach (GMWarning w in groupReader.Warnings)
                             {

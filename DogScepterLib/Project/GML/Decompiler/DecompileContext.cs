@@ -16,12 +16,12 @@ namespace DogScepterLib.Project.GML.Decompiler
 
     public class DecompileCache
     {
-        public AssetResolverTypes Types;
+        public MacroResolverTypes Types;
         public Dictionary<GMFunctionEntry, string> GlobalFunctionNames;
 
         public DecompileCache(ProjectFile pf)
         {
-            Types = new AssetResolverTypes(pf);
+            Types = new MacroResolverTypes(pf);
             GlobalFunctionNames = new Dictionary<GMFunctionEntry, string>();
             if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3))
             {
@@ -74,7 +74,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                     CodeAssetTypes = null;
             }
         }
-        public AssetResolverTypes.AssetResolverTypeJson? CodeAssetTypes;
+        public MacroResolverTypes.MacroResolverTypeJson? CodeAssetTypes;
         public DecompileSettings Settings { get; set; }
         public DecompileCache Cache => Project.DecompileCache;
         public IList<GMString> Strings { get; set; }

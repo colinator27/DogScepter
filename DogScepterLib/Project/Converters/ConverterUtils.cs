@@ -1,4 +1,5 @@
-﻿using DogScepterLib.Core.Models;
+﻿using DogScepterLib.Core;
+using DogScepterLib.Core.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -37,80 +38,82 @@ namespace DogScepterLib.Project.Converters
         public static int GetInt(this Dictionary<string, object> dict, string name)
         {
             object o = dict[name];
-            if (o is JsonElement)
-                return ((JsonElement)dict[name]).GetInt32();
+            if (o is JsonElement elem)
+                return elem.GetInt32();
             return (int)o;
         }
 
         public static long GetLong(this Dictionary<string, object> dict, string name)
         {
             object o = dict[name];
-            if (o is JsonElement)
-                return ((JsonElement)dict[name]).GetInt64();
+            if (o is JsonElement elem)
+                return elem.GetInt64();
             return (long)o;
         }
 
         public static short GetShort(this Dictionary<string, object> dict, string name)
         {
             object o = dict[name];
-            if (o is JsonElement)
-                return ((JsonElement)dict[name]).GetInt16();
+            if (o is JsonElement elem)
+                return elem.GetInt16();
             return (short)o;
         }
 
         public static byte GetByte(this Dictionary<string, object> dict, string name)
         {
             object o = dict[name];
-            if (o is JsonElement)
-                return ((JsonElement)dict[name]).GetByte();
+            if (o is JsonElement elem)
+                return elem.GetByte();
             return (byte)o;
         }
 
         public static bool GetBool(this Dictionary<string, object> dict, string name)
         {
             object o = dict[name];
-            if (o is JsonElement)
-                return ((JsonElement)dict[name]).GetBoolean();
+            if (o is JsonElement elem)
+                return elem.GetBoolean();
             return (bool)o;
         }
 
         public static float GetFloat(this Dictionary<string, object> dict, string name)
         {
             object o = dict[name];
-            if (o is JsonElement)
-                return ((JsonElement)dict[name]).GetSingle();
+            if (o is JsonElement elem)
+                return elem.GetSingle();
             return (float)o;
         }
 
         public static Guid GetGUID(this Dictionary<string, object> dict, string name)
         {
             object o = dict[name];
-            if (o is JsonElement)
-                return ((JsonElement)dict[name]).GetGuid();
+            if (o is JsonElement elem)
+                return elem.GetGuid();
             return (Guid)o;
         }
 
         public static string GetString(this Dictionary<string, object> dict, string name)
         {
             object o = dict[name];
-            if (o is JsonElement)
-                return ((JsonElement)dict[name]).GetString();
+            if (o is JsonElement elem)
+                return elem.GetString();
             return (string)o;
         }
 
         public static byte[] GetBytes(this Dictionary<string, object> dict, string name)
         {
             object o = dict[name];
-            if (o is JsonElement)
-                return ((JsonElement)dict[name]).GetBytesFromBase64();
+            if (o is JsonElement elem)
+                return elem.GetBytesFromBase64();
+            if (o is BufferRegion region)
+                return region.Memory.ToArray();
             return (byte[])o;
         }
 
         public static GMString GetString(this Dictionary<string, object> dict, ProjectFile pf, string name)
         {
             object o = dict[name];
-            if (o is JsonElement)
-                return pf.DataHandle.DefineString(((JsonElement)dict[name]).GetString());
+            if (o is JsonElement elem)
+                return pf.DataHandle.DefineString(elem.GetString());
             return pf.DataHandle.DefineString((string)o);
         }
     }

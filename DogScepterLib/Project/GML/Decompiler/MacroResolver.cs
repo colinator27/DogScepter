@@ -4,13 +4,13 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static DogScepterLib.Project.GML.Decompiler.AssetResolverTypes;
+using static DogScepterLib.Project.GML.Decompiler.MacroResolverTypes;
 
 namespace DogScepterLib.Project.GML.Decompiler
 {
-    public static class AssetResolver
+    public static class MacroResolver
     {
-        public enum AssetType
+        public enum MacroType
         {
             None,
             Boolean,
@@ -27,7 +27,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             Macro_PathEndAction,
         }
 
-        public static ASTNode ResolveAny(DecompileContext ctx, ASTNode node, ASTNode parent, ConditionalAssetType type)
+        public static ASTNode ResolveAny(DecompileContext ctx, ASTNode node, ASTNode parent, ConditionalMacroType type)
         {
             // Check if this type has a condition that needs to be satisfied
             if (type.Condition != null)
@@ -93,52 +93,52 @@ namespace DogScepterLib.Project.GML.Decompiler
             return node;
         }
 
-        public static ASTNode ResolveInt(DecompileContext ctx, ASTNode intNode, ConditionalAssetType type)
+        public static ASTNode ResolveInt(DecompileContext ctx, ASTNode intNode, ConditionalMacroType type)
         {
             int value = (intNode.Kind == ASTNode.StatementKind.Int16) ? (intNode as ASTInt16).Value : (intNode as ASTInt32).Value;
             switch (type.Kind)
             {
-                case AssetType.Boolean:
+                case MacroType.Boolean:
                     if (value == 0)
                         return new ASTBoolean(false);
                     else if (value == 1)
                         return new ASTBoolean(true);
                     break;
-                case AssetType.Object:
+                case MacroType.Object:
                     if (intNode.Kind == ASTNode.StatementKind.Int16)
                         return ResolveObject(ctx, intNode as ASTInt16);
                     break;
-                case AssetType.Sprite:
+                case MacroType.Sprite:
                     if (value >= 0 && value < ctx.Project.Sprites.Count)
                         return new ASTAsset(ctx.Project.Sprites[value].Name);
                     else if (value == -4)
                         return new ASTAsset("noone");
                     break;
-                case AssetType.Room:
+                case MacroType.Room:
                     if (value >= 0 && value < ctx.Project.Rooms.Count)
                         return new ASTAsset(ctx.Project.Rooms[value].Name);
                     else if (value == -4)
                         return new ASTAsset("noone");
                     break;
-                case AssetType.Font:
+                case MacroType.Font:
                     if (value >= 0 && value < ctx.Project.Fonts.Count)
                         return new ASTAsset(ctx.Project.Fonts[value].Name);
                     else if (value == -4)
                         return new ASTAsset("noone");
                     break;
-                case AssetType.Sound:
+                case MacroType.Sound:
                     if (value >= 0 && value < ctx.Project.Sounds.Count)
                         return new ASTAsset(ctx.Project.Sounds[value].Name);
                     else if (value == -4)
                         return new ASTAsset("noone");
                     break;
-                case AssetType.Path:
+                case MacroType.Path:
                     if (value >= 0 && value < ctx.Project.Paths.Count)
                         return new ASTAsset(ctx.Project.Paths[value].Name);
                     else if (value == -4)
                         return new ASTAsset("noone");
                     break;
-                case AssetType.Color:
+                case MacroType.Color:
                     if (value >= 0)
                     {
                         if (ctx.Cache.Types.ColorMacros.TryGetValue(value, out string color))
@@ -146,7 +146,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         return new ASTAsset((ctx.Data.VersionInfo.IsNumberAtLeast(2) ? "0x" : "$") + value.ToString("X6", CultureInfo.InvariantCulture));
                     }
                     break;
-                case AssetType.Keyboard:
+                case MacroType.Keyboard:
                     if (value >= 0)
                     {
                         if (ctx.Cache.Types.KeyboardMacros.TryGetValue(value, out string keyboard))
@@ -155,7 +155,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                             return new ASTAsset("ord(\"" + (char)value + "\")");
                     }
                     break;
-                case AssetType.Macro_PathEndAction:
+                case MacroType.Macro_PathEndAction:
                     {
                         if (ctx.Cache.Types.PathEndActionMacros.TryGetValue(value, out string macro))
                             return new ASTAsset(macro);
@@ -171,7 +171,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             if (ctx.CodeAssetTypes.HasValue)
             {
                 if (ctx.CodeAssetTypes.Value.FunctionArgs != null &&
-                    ctx.CodeAssetTypes.Value.FunctionArgs.TryGetValue(func.Function.Name.Content, out AssetType[] types))
+                    ctx.CodeAssetTypes.Value.FunctionArgs.TryGetValue(func.Function.Name.Content, out MacroType[] types))
                 {
                     for (int i = 0; i < func.Children.Count && i < types.Length; i++)
                         func.Children[i] = ResolveAny(ctx, func.Children[i], func, new(types[i]));
@@ -189,7 +189,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
             // Handle global types
             {
-                if (ctx.Cache.Types.FunctionArgs.TryGetValue(func.Function.Name.Content, out AssetType[] types))
+                if (ctx.Cache.Types.FunctionArgs.TryGetValue(func.Function.Name.Content, out MacroType[] types))
                 {
                     for (int i = 0; i < func.Children.Count && i < types.Length; i++)
                         func.Children[i] = ResolveAny(ctx, func.Children[i], func, new(types[i]));
@@ -207,25 +207,25 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public static void ResolveAssign(DecompileContext ctx, ASTAssign assign)
         {
-            ConditionalAssetType left = GetExpressionType(ctx, assign.Children[0]);
-            if (left.Kind != AssetType.None)
+            ConditionalMacroType left = GetExpressionType(ctx, assign.Children[0]);
+            if (left.Kind != MacroType.None)
                 assign.Children[1] = ResolveAny(ctx, assign.Children[1], assign, left);
         }
 
         public static void ResolveBinary(DecompileContext ctx, ASTBinary bin)
         {
-            ConditionalAssetType left = GetExpressionType(ctx, bin.Children[0]);
-            ConditionalAssetType right = GetExpressionType(ctx, bin.Children[1]);
-            if (left.Kind != AssetType.None && right.Kind == AssetType.None)
+            ConditionalMacroType left = GetExpressionType(ctx, bin.Children[0]);
+            ConditionalMacroType right = GetExpressionType(ctx, bin.Children[1]);
+            if (left.Kind != MacroType.None && right.Kind == MacroType.None)
                 bin.Children[1] = ResolveAny(ctx, bin.Children[1], bin, left);
-            else if (left.Kind == AssetType.None && right.Kind != AssetType.None)
+            else if (left.Kind == MacroType.None && right.Kind != MacroType.None)
                 bin.Children[0] = ResolveAny(ctx, bin.Children[0], bin, right);
         }
 
         public static void ResolveSwitch(DecompileContext ctx, ASTSwitchStatement sw)
         {
-            ConditionalAssetType expr = GetExpressionType(ctx, sw.Children[0]);
-            if (expr.Kind != AssetType.None)
+            ConditionalMacroType expr = GetExpressionType(ctx, sw.Children[0]);
+            if (expr.Kind != MacroType.None)
             {
                 for (int i = 1; i < sw.Children.Count; i++)
                 {
@@ -236,7 +236,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             }
         }
 
-        public static ConditionalAssetType GetExpressionType(DecompileContext ctx, ASTNode node)
+        public static ConditionalMacroType GetExpressionType(DecompileContext ctx, ASTNode node)
         {
             switch (node.Kind)
             {
@@ -248,7 +248,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         if (ctx.CodeAssetTypes.HasValue)
                         {
                             if (ctx.CodeAssetTypes.Value.VariableTypes != null &&
-                                ctx.CodeAssetTypes.Value.VariableTypes.TryGetValue(variable.Variable.Name.Content, out AssetType type))
+                                ctx.CodeAssetTypes.Value.VariableTypes.TryGetValue(variable.Variable.Name.Content, out MacroType type))
                                 return new(type);
                             if (ctx.CodeAssetTypes.Value.VariableTypesCond != null &&
                                 ctx.CodeAssetTypes.Value.VariableTypesCond.TryGetValue(variable.Variable.Name.Content, out var cond))
@@ -257,7 +257,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                         // Handle global types
                         {
-                            if (ctx.Cache.Types.VariableTypes.TryGetValue(variable.Variable.Name.Content, out AssetType type))
+                            if (ctx.Cache.Types.VariableTypes.TryGetValue(variable.Variable.Name.Content, out MacroType type))
                                 return new(type);
                             if (ctx.Cache.Types.VariableTypesCond.TryGetValue(variable.Variable.Name.Content, out var cond))
                                 return cond;
@@ -266,7 +266,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         if (variable.Variable.VariableID == -6)
                         {
                             // This is a builtin variable; check for builtin list
-                            if (ctx.Cache.Types.VariableTypesBuiltin.TryGetValue(variable.Variable.Name.Content, out AssetType type))
+                            if (ctx.Cache.Types.VariableTypesBuiltin.TryGetValue(variable.Variable.Name.Content, out MacroType type))
                                 return new(type);
                         }
                     }
@@ -279,20 +279,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                         if (ctx.CodeAssetTypes.HasValue)
                         {
                             if (ctx.CodeAssetTypes.Value.FunctionReturns != null &&
-                                ctx.CodeAssetTypes.Value.FunctionReturns.TryGetValue(func.Function.Name.Content, out AssetType type))
+                                ctx.CodeAssetTypes.Value.FunctionReturns.TryGetValue(func.Function.Name.Content, out MacroType type))
                                 return new(type);
                         }
 
                         // Handle global types
                         {
-                            if (ctx.Cache.Types.FunctionReturns.TryGetValue(func.Function.Name.Content, out AssetType type))
+                            if (ctx.Cache.Types.FunctionReturns.TryGetValue(func.Function.Name.Content, out MacroType type))
                                 return new(type);
                         }
                     }
                     break;
             }
 
-            return new(AssetType.None);
+            return new(MacroType.None);
         }
 
         public static ASTNode ResolveObject(DecompileContext ctx, ASTInt16 int16)

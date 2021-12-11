@@ -23,7 +23,10 @@ namespace DogScepterLib.Project.Converters
             var tgin = pf.DataHandle.GetChunk<GMChunkTGIN>();
             List<Textures.Group> list;
             if (pf.InternalTextures == null)
-                list = new Textures(pf, true).TextureGroups; // Don't do all the processing if not needed
+            {
+                pf.InternalTextures = new Textures(pf, true);
+                list = pf.InternalTextures.TextureGroups; // Don't do all the processing if not needed
+            }
             else
                 list = pf.Textures.TextureGroups;
 
