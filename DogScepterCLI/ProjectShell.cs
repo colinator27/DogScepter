@@ -197,6 +197,18 @@ namespace DogScepterCLI
                         return Command.CommandResult.Quit;
 
                     return Command.CommandResult.None;
+                }),
+
+                new Command(new[] { "about" },
+                "Displays information about the open project.",
+                "about",
+                args =>
+                {
+                    console.Output.Write("Data file location: ");
+                    console.Output.WriteLine(cfg.InputFile);
+                    console.Output.Write("Output directory: ");
+                    console.Output.WriteLine(cfg.OutputDirectory);
+                    return Command.CommandResult.None;
                 })
             };
             int helpLength = commands.Max(c => c.Usage.Length) + 1;

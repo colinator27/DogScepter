@@ -3,21 +3,17 @@
 
 <img src="icon.png" alt="icon" width="15%" height="15%"> 
 
-\* (This will eventually be a complete README...)
-
-\* (The lack of a proper description fills you with DETERMINATION.)
+DogScepter is a work-in-progress modding tool geared toward (but not limited to) UNDERTALE/DELTARUNE by Toby Fox.
 
 \* Join the Underminers community Discord server! https://discord.gg/RxXpdwJ
 
-\* (Oh, right, this is just a work-in-progress modding tool geared toward (but not limited to) UNDERTALE/DELTARUNE by Toby Fox.)
-
 ## Features
-* Fully supports serializing/deserializing GameMaker data format ID 13 (an unknown version of GM:S 1) up to the latest GMS 2.3.6 runtime (format ID 17).
-* Work in progress "abstract" or "project" mode that deals with a custom project format on disk for ease in modding, even with multiple versions of a game.
-* Work in progress (but currently mostly usable) GML VM decompilation, for use in re-compiling back for modding purposes.
-* Planned features
-    * A command line interface to deal with the aforementioned "project" mode, to deal with assets and compilation.
-    * An actual editor similar to that of UndertaleModTool, but simplified.
+* Fully supports serializing/deserializing GameMaker data format ID 13 (an unknown version of GM:S 1) up to the latest GMS 2.3.7 runtime (format ID 17).
+	* Note: There are some exceptions to this, with certain versions being undocumented or using unknown features.
+* An "abstract"/"project" mode that deals with a custom project format on disk for ease in modding, even with multiple versions of a game.
+* GML VM decompilation, for use in re-compiling back for modding purposes.
+* Work-in-progress command line interface to deal with the aforementioned "project" mode, to deal with assets and compilation.
+* Work-in-progress editor similar to that of UndertaleModTool, but simplified.
 
 ## Roadmap (subject to change)
 - [x] Core library
@@ -39,7 +35,7 @@
     	- Rooms
 - [ ] Command line interface **(currently a work in progress)**
      - Simple CLI to allow actual work to be done with the above project system before everything else is done, including the UI itself. 
-	 - As of writing this, the CLI has basic features and is somewhat usable with an interactive shell.
+	 - As of writing this, the CLI has basic features and is somewhat usable with (or without) an interactive shell.
 
 ## Special Thanks
 * Msnshame and Agentalex9 for assistance in creating the icon for the tool. Additional thanks to the Underminers Discord server members for being there to come up with the name, as well.
