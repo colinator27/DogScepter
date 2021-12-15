@@ -22,9 +22,9 @@ namespace DogScepterLib.Core
         {
             Data = new GMData();
             Data.WorkingBuffer = Buffer;
-            
+
             // Get hash for comparing later
-            using (SHA1Managed sha1 = new SHA1Managed())
+            using (var sha1 = SHA1.Create())
                 Data.Hash = sha1.ComputeHash(Buffer);
             Data.Length = Buffer.Length;
 

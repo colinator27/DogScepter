@@ -19,7 +19,7 @@ namespace DogScepterLib.User
             }
 
             // Returns error message or null if successful.
-            public string? CreateDirectory()
+            public string CreateDirectory()
             {
                 try
                 {
@@ -61,7 +61,7 @@ namespace DogScepterLib.User
             }
             
             // Returns error message, or null if successful.
-            public string? Rename(string filename, string newName)
+            public string Rename(string filename, string newName)
             {
                 try
                 {
@@ -77,7 +77,7 @@ namespace DogScepterLib.User
             }
 
             // Returns error message, or null if successful.
-            public string? WriteAllBytes(string filename, byte[] bytes)
+            public string WriteAllBytes(string filename, byte[] bytes)
             {
                 try
                 {
@@ -122,7 +122,7 @@ namespace DogScepterLib.User
             }
 
             // Returns error message or null if successful.
-            public string? Clear()
+            public string Clear()
             {
                 if (!Directory.Exists(Location))
                     return null;

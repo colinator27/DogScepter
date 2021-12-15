@@ -32,32 +32,25 @@ namespace DogScepterLib.Project.Assets
             if (File.Exists(pngPath))
             {
                 // Load PNG file, make new texture item for it
-                Bitmap imgBitmap;
-                using (var temp = new Bitmap(pngPath))
-                    imgBitmap = temp.FullCopy();
-                res.TextureItem = new GMTextureItem(imgBitmap);
+                DSImage img = new DSImage(pngPath);
+                res.TextureItem = new GMTextureItem(img);
                 res.TextureItem._HasExtraBorder = true;
 
                 // Compute hash manually here
-                byte[] imgBuff = imgBitmap.GetReadOnlyByteArray();
-                using (SHA1Managed sha1 = new SHA1Managed())
-                {
-                    sha1.TransformBlock(buff, 0, buff.Length, null, 0);
-                    sha1.TransformFinalBlock(imgBuff, 0, imgBuff.Length);
-                    res.Length = buff.Length + imgBuff.Length;
-                    res.Hash = sha1.Hash;
-                }
+                using var sha1 = SHA1.Create();
+                sha1.TransformBlock(buff, 0, buff.Length, null, 0);
+                sha1.TransformFinalBlock(img.Data, 0, img.Data.Length);
+                res.Length = buff.Length + img.Data.Length;
+                res.Hash = sha1.Hash;
             }
             else
             {
                 // Compute hash manually here, but without image.
                 // This isn't intended but we won't error out just yet
-                using (SHA1Managed sha1 = new SHA1Managed())
-                {
-                    sha1.TransformFinalBlock(buff, 0, buff.Length);
-                    res.Length = buff.Length;
-                    res.Hash = sha1.Hash;
-                }
+                using var sha1 = SHA1.Create();
+                sha1.TransformFinalBlock(buff, 0, buff.Length);
+                res.Length = buff.Length;
+                res.Hash = sha1.Hash;
             }
 
             return res;
@@ -66,13 +59,11 @@ namespace DogScepterLib.Project.Assets
         protected override byte[] WriteInternal(ProjectFile pf, string assetPath, bool actuallyWrite)
         {
             byte[] buff = JsonSerializer.SerializeToUtf8Bytes(this, ProjectFile.JsonOptions);
-            byte[] imgBuff;
-            Bitmap imgBitmap;
+            DSImage img;
             if (TextureItem.TexturePageID == -1)
-                imgBitmap = TextureItem._Bitmap;
+                img = TextureItem._Image;
             else
-                imgBitmap = pf.Textures.GetTextureEntryBitmap(TextureItem);
-            imgBuff = imgBitmap.GetReadOnlyByteArray();
+                img = pf.Textures.GetTextureEntryImage(TextureItem);
 
             if (actuallyWrite)
             {
@@ -81,15 +72,15 @@ namespace DogScepterLib.Project.Assets
                 using (FileStream fs = new FileStream(assetPath, FileMode.Create))
                     fs.Write(buff, 0, buff.Length);
                 using (FileStream fs = new FileStream(Path.Combine(dir, Name + ".png"), FileMode.Create))
-                    imgBitmap.Save(fs, System.Drawing.Imaging.ImageFormat.Png);
+                    img.SavePng(fs);
             }
 
             // Compute hash manually here
-            using (SHA1Managed sha1 = new SHA1Managed())
+            using (var sha1 = SHA1.Create())
             {
                 sha1.TransformBlock(buff, 0, buff.Length, null, 0);
-                sha1.TransformFinalBlock(imgBuff, 0, imgBuff.Length);
-                Length = buff.Length + imgBuff.Length;
+                sha1.TransformFinalBlock(img.Data, 0, img.Data.Length);
+                Length = buff.Length + img.Data.Length;
                 Hash = sha1.Hash;
             }
             return null;

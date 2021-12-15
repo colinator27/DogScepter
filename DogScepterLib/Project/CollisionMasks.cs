@@ -31,24 +31,27 @@ namespace DogScepterLib.Project
             }
         }
 
-        private static unsafe byte GetHighestAlphaAt(List<BitmapData> items, int x, int y)
+        private static unsafe byte GetHighestAlphaAt(List<DSImage> items, int x, int y)
         {
             byte highest = 0;
 
             foreach (var item in items)
             {
-                byte alpha = *((byte*)item.Scan0 + (x * 4) + (y * item.Stride) + 3);
-                if (alpha > highest)
-                    highest = alpha;
+                fixed (byte* fixedPtr = &item.Data[0])
+                {
+                    byte alpha = *(fixedPtr + (x * 4) + (y * item.Width) + 3);
+                    if (alpha > highest)
+                        highest = alpha;
+                }
             }
 
             return highest;
         }
 
 
-        private static List<Bitmap> GetBitmaps(ProjectFile pf, int width, int height, IList<GMTextureItem> items)
+        private static List<DSImage> GetImages(ProjectFile pf, int width, int height, IList<GMTextureItem> items)
         {
-            List<Bitmap> bitmaps = new List<Bitmap>(items.Count);
+            List<DSImage> images = new(items.Count);
 
             // Make copies of all the entries for reference
             foreach (var item in items)
@@ -56,26 +59,25 @@ namespace DogScepterLib.Project
                 if (item == null)
                     continue;
 
-                Bitmap toAdd;
-
+                DSImage toAdd;
                 if (item.TexturePageID != -1)
-                    toAdd = pf.Textures.GetTextureEntryBitmap(item, width, height);
+                    toAdd = pf.Textures.GetTextureEntryImage(item, width, height);
                 else
-                    toAdd = item._BitmapBeforeCrop ?? item._Bitmap;
+                    toAdd = item._ImageBeforeCrop ?? item._Image;
 
-                bitmaps.Add(toAdd);
+                images.Add(toAdd);
 
                 // Check to ensure every frame has the same dimensions
                 if (toAdd.Width != width || toAdd.Height != height)
                     throw new Exception("Collision mask error: Sprite frame dimensions do not match.");
             }
 
-            return bitmaps;
+            return images;
         }
 
-        public static AssetSprite.CollisionMaskInfo GetInfoForSprite(ProjectFile pf, GMSprite spr, out List<Bitmap> bitmaps, bool suggestPrecise = false)
+        public unsafe static AssetSprite.CollisionMaskInfo GetInfoForSprite(ProjectFile pf, GMSprite spr, out List<DSImage> images, bool suggestPrecise = false)
         {
-            bitmaps = new List<Bitmap>(spr.TextureItems.Count);
+            images = new List<DSImage>(spr.TextureItems.Count);
 
             var info = new AssetSprite.CollisionMaskInfo
             {
@@ -94,10 +96,7 @@ namespace DogScepterLib.Project
                 return info;
 
             // Get bitmaps from frames
-            bitmaps = GetBitmaps(pf, spr.Width, spr.Height, spr.TextureItems);
-            List<BitmapData> bitmapData = new List<BitmapData>(bitmaps.Count);
-            foreach (var item in bitmaps)
-                bitmapData.Add(item.BasicLockBits());
+            images = GetImages(pf, spr.Width, spr.Height, spr.TextureItems);
 
             int boundLeft = Math.Clamp(spr.MarginLeft, 0, spr.Width),
                 boundRight = Math.Clamp(spr.MarginRight, 0, spr.Width - 1),
@@ -129,7 +128,7 @@ namespace DogScepterLib.Project
                                 {
                                     if (mask.GetReverse(x + strideFactor))
                                     {
-                                        byte highestAlpha = GetHighestAlphaAt(bitmapData, x, y);
+                                        byte highestAlpha = GetHighestAlphaAt(images, x, y);
                                         if (highestAlpha > highest)
                                             highest = highestAlpha;
                                         if (highestAlpha != 0 && (!foundNonzero || highestAlpha < lowest))
@@ -172,11 +171,10 @@ namespace DogScepterLib.Project
                         {
                             info.Type = MaskType.PrecisePerFrame;
                             
-                            unsafe
+                            for (int i = 0; i < spr.CollisionMasks.Count; i++)
                             {
-                                for (int i = 0; i < spr.CollisionMasks.Count; i++)
+                                fixed (byte* fixedPtr = &images[i].Data[0])
                                 {
-                                    BitmapData item = bitmapData[i];
                                     FastBitArray mask = new FastBitArray(spr.CollisionMasks[i].Memory.Span);
                                     int strideFactor = boundTop * stride;
                                     for (int y = boundTop; y <= boundBottom; y++)
@@ -185,7 +183,7 @@ namespace DogScepterLib.Project
                                         {
                                             if (mask.GetReverse(x + strideFactor))
                                             {
-                                                byte val = *((byte*)item.Scan0 + (x * 4) + (y * item.Stride) + 3);
+                                                byte val = *(fixedPtr + (x * 4) + (y * images[i].Width) + 3);
                                                 if (val > highest)
                                                     highest = val;
                                                 if (val != 0 && (!foundNonzero || val < lowest))
@@ -232,7 +230,7 @@ namespace DogScepterLib.Project
                                             isDiamond &= inDiamond;
                                             isEllipse &= inEllipse;
 
-                                            byte highestAlpha = GetHighestAlphaAt(bitmapData, x, y);
+                                            byte highestAlpha = GetHighestAlphaAt(images, x, y);
                                             if (highestAlpha > highest)
                                                 highest = highestAlpha;
                                             if (highestAlpha != 0 && (!foundNonzero || highestAlpha < lowest))
@@ -264,7 +262,7 @@ namespace DogScepterLib.Project
                                     {
                                         if (mask.GetReverse(x + strideFactor))
                                         {
-                                            byte highestAlpha = GetHighestAlphaAt(bitmapData, x, y);
+                                            byte highestAlpha = GetHighestAlphaAt(images, x, y);
                                             if (highestAlpha > highest)
                                                 highest = highestAlpha;
                                             if (highestAlpha != 0 && (!foundNonzero || highestAlpha < lowest))
@@ -310,13 +308,10 @@ namespace DogScepterLib.Project
                     break;
             }
 
-            for (int i = 0; i < bitmaps.Count; i++)
-                bitmaps[i].UnlockBits(bitmapData[i]);
-
             return info;
         }
 
-        public static unsafe Rect GetBBoxForBitmap(Bitmap bmp, AssetSprite spr)
+        public static unsafe Rect GetBBoxForImage(DSImage img, AssetSprite spr)
         {
             var info = spr.CollisionMask;
 
@@ -327,15 +322,12 @@ namespace DogScepterLib.Project
                     {
                         int left = spr.Width - 1, top = spr.Height - 1, right = 0, bottom = 0;
 
-                        var data = bmp.BasicLockBits();
-                        unsafe
+                        fixed (byte* fixedPtr = &img.Data[0])
                         {
-                            byte* ptr = (byte*)data.Scan0;
-                            int jump = data.Stride - (bmp.Width * 4);
-
-                            for (int y = 0; y < bmp.Height; y++)
+                            byte* ptr = fixedPtr;
+                            for (int y = 0; y < img.Height; y++)
                             {
-                                for (int x = 0; x < bmp.Width; x++)
+                                for (int x = 0; x < img.Width; x++)
                                 {
                                     if (*(ptr + 3) > info.AlphaTolerance)
                                     {
@@ -350,11 +342,8 @@ namespace DogScepterLib.Project
                                     }
                                     ptr += 4;
                                 }
-                                ptr += jump;
                             }
                         }
-
-                        bmp.UnlockBits(data);
 
                         return new Rect(
                             Math.Max(0, left),
@@ -379,12 +368,12 @@ namespace DogScepterLib.Project
             throw new ArgumentException("invalid sprite mask mode");
         }
 
-        public static unsafe FastBitArray GetMaskForBitmap(Bitmap bmp, AssetSprite spr, ref Rect maskbbox, FastBitArray existingMask = null)
+        public static unsafe FastBitArray GetMaskForImage(DSImage img, AssetSprite spr, ref Rect maskbbox, FastBitArray existingMask = null)
         {
             int stride = ((spr.Width + 7) / 8) * 8;
             FastBitArray res = existingMask ?? new FastBitArray(stride * spr.Height);
 
-            Rect bbox = GetBBoxForBitmap(bmp, spr);
+            Rect bbox = GetBBoxForImage(img, spr);
 
             var info = spr.CollisionMask;
             int sprLeft, sprTop, sprRight, sprBottom;
@@ -432,17 +421,16 @@ namespace DogScepterLib.Project
                 case MaskType.Precise:
                 case MaskType.PrecisePerFrame:
                     int tolerance = info.AlphaTolerance ?? 0;
-                    var data = bmp.BasicLockBits();
-                    unsafe
+                    fixed (byte* fixedPtr = &img.Data[0])
                     {
-                        byte* ptr = (byte*)data.Scan0;
+                        byte* ptr = fixedPtr;
                         if (maskbbox != null)
                         {
                             for (int y = bbox.Top; y <= bbox.Bottom; y++)
                             {
                                 for (int x = bbox.Left; x <= bbox.Right; x++)
                                 {
-                                    if (*(ptr + (x * 4) + (y * data.Stride) + 3) > tolerance)
+                                    if (*(ptr + (x * 4) + (y * img.Width) + 3) > tolerance)
                                     {
                                         res.SetTrueReverse(x + strideFactor);
                                         if (x < maskbbox.Left)
@@ -465,7 +453,7 @@ namespace DogScepterLib.Project
                             {
                                 for (int x = bbox.Left; x <= bbox.Right; x++)
                                 {
-                                    if (*(ptr + (x * 4) + (y * data.Stride) + 3) > tolerance)
+                                    if (*(ptr + (x * 4) + (y * img.Width) + 3) > tolerance)
                                         res.SetTrueReverse(x + strideFactor);
                                 }
 
@@ -473,7 +461,6 @@ namespace DogScepterLib.Project
                             }
                         }
                     }
-                    bmp.UnlockBits(data);
                     break;
                 case MaskType.Diamond:
                     {
@@ -614,12 +601,12 @@ namespace DogScepterLib.Project
             return res;
         }
 
-        public static List<BufferRegion> GetMasksForSprite(ProjectFile pf, AssetSprite spr, out Rect maskbbox, List<Bitmap> bitmaps = null)
+        public static List<BufferRegion> GetMasksForSprite(ProjectFile pf, AssetSprite spr, out Rect maskbbox, List<DSImage> images = null)
         {
-            if (bitmaps == null)
-                bitmaps = GetBitmaps(pf, spr.Width, spr.Height, spr.TextureItems);
+            if (images == null)
+                images = GetImages(pf, spr.Width, spr.Height, spr.TextureItems);
 
-            if (bitmaps.Count == 0)
+            if (images.Count == 0)
             {
                 maskbbox = new Rect(0, 0, 0, 0);
                 return new List<BufferRegion>();
@@ -635,9 +622,9 @@ namespace DogScepterLib.Project
             if (spr.CollisionMask.Type == MaskType.PrecisePerFrame)
             {
                 // Get masks for individual frames
-                List<BufferRegion> res = new List<BufferRegion>(bitmaps.Count);
-                for (int i = 0; i < bitmaps.Count; i++)
-                    res.Add(new BufferRegion(GetMaskForBitmap(bitmaps[i], spr, ref maskbbox).ToByteArray()));
+                List<BufferRegion> res = new List<BufferRegion>(images.Count);
+                for (int i = 0; i < images.Count; i++)
+                    res.Add(new BufferRegion(GetMaskForImage(images[i], spr, ref maskbbox).ToByteArray()));
 
                 if (maskbbox != null)
                 {
@@ -651,9 +638,9 @@ namespace DogScepterLib.Project
             else
             {
                 // Get the mask for the first frame, then add following frames
-                FastBitArray mask = GetMaskForBitmap(bitmaps[0], spr, ref maskbbox);
-                for (int i = 1; i < bitmaps.Count; i++)
-                    GetMaskForBitmap(bitmaps[i], spr, ref maskbbox, mask);
+                FastBitArray mask = GetMaskForImage(images[0], spr, ref maskbbox);
+                for (int i = 1; i < images.Count; i++)
+                    GetMaskForImage(images[i], spr, ref maskbbox, mask);
 
                 if (maskbbox != null)
                 {
@@ -700,67 +687,60 @@ namespace DogScepterLib.Project
             return true;
         }
 
-        public static unsafe Bitmap GetImageFromMask(int width, int height, ReadOnlySpan<byte> mask)
+        public static unsafe DSImage GetImageFromMask(int width, int height, ReadOnlySpan<byte> mask)
         {
-            Bitmap bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-
-            var data = bmp.BasicLockBits(ImageLockMode.WriteOnly);
-
-            uint* ptrInt = (uint*)data.Scan0;
-            int bmpStride = data.Stride / 4;
-
-            int stride = ((width + 7) / 8) * 8;
-
-            FastBitArray arr = new FastBitArray(mask);
-            int strideFactor = 0;
-
-            for (int y = 0; y < height; y++)
+            DSImage img = new(width, height);
+            fixed (byte* bytePtr = &img.Data[0])
             {
-                for (int x = 0; x < width; x++)
+                uint* ptrInt = (uint*)bytePtr;
+
+                int stride = ((width + 7) / 8) * 8;
+                int strideFactor = 0;
+
+                FastBitArray arr = new(mask);
+                for (int y = 0; y < height; y++)
                 {
-                    if (arr.GetReverse(x + strideFactor))
+                    for (int x = 0; x < width; x++)
                     {
-                        *(ptrInt + x + (y * bmpStride)) = 0xFFFFFFFFu;
+                        if (arr.GetReverse(x + strideFactor))
+                        {
+                            *(ptrInt + x + (y * width)) = 0xFFFFFFFFu;
+                        }
+                        else
+                        {
+                            *(ptrInt + x + (y * width)) = 0xFF000000u;
+                        }
                     }
-                    else
-                    {
-                        *(ptrInt + x + (y * bmpStride)) = 0xFF000000u;
-                    }
+
+                    strideFactor += stride;
                 }
-
-                strideFactor += stride;
             }
-
-            bmp.UnlockBits(data);
-
-            return bmp;
+            return img;
         }
 
-        public static unsafe byte[] GetMaskFromImage(Bitmap bmp)
+        public static unsafe byte[] GetMaskFromImage(DSImage img)
         {
-            int stride = ((bmp.Width + 7) / 8) * 8;
-            FastBitArray arr = new FastBitArray(stride * bmp.Height);
+            int stride = ((img.Width + 7) / 8) * 8;
+            FastBitArray arr = new FastBitArray(stride * img.Height);
             int strideFactor = 0;
 
-            var data = bmp.BasicLockBits();
-            int bmpStride = data.Stride / 4;
-
-            uint* ptrInt = (uint*)data.Scan0;
-
-            for (int y = 0; y < bmp.Height; y++)
+            fixed (byte* bytePtr = &img.Data[0])
             {
-                for (int x = 0; x < bmp.Width; x++)
+                uint* ptrInt = (uint*)bytePtr;
+
+                for (int y = 0; y < img.Height; y++)
                 {
-                    if (*(ptrInt + x + (y * bmpStride)) == 0xFFFFFFFFu)
+                    for (int x = 0; x < img.Width; x++)
                     {
-                        arr.SetTrueReverse(x + strideFactor);
+                        if (*(ptrInt + x + (y * img.Width)) == 0xFFFFFFFFu)
+                        {
+                            arr.SetTrueReverse(x + strideFactor);
+                        }
                     }
+
+                    strideFactor += stride;
                 }
-
-                strideFactor += stride;
             }
-
-            bmp.UnlockBits(data);
 
             return arr.ToByteArray();
         }

@@ -35,7 +35,7 @@ namespace DogScepterLib.Project.Assets
             byte[] buff = File.ReadAllBytes(assetPath);
             var res = JsonSerializer.Deserialize<AssetSprite>(buff, ProjectFile.JsonOptions);
 
-            using (SHA1Managed sha1 = new SHA1Managed())
+            using (var sha1 = SHA1.Create())
             {
                 res.Length = buff.Length;
 
@@ -47,14 +47,11 @@ namespace DogScepterLib.Project.Assets
                 while (File.Exists(pngPath))
                 {
                     // Load PNG file, make new texture item for it
-                    Bitmap imgBitmap;
-                    using (var temp = new Bitmap(pngPath))
-                        imgBitmap = temp.FullCopy();
-                    res.TextureItems.Add(new GMTextureItem(imgBitmap));
+                    DSImage img = new DSImage(pngPath);
+                    res.TextureItems.Add(new GMTextureItem(img));
 
-                    byte[] imgBuff = imgBitmap.GetReadOnlyByteArray();
-                    sha1.TransformBlock(imgBuff, 0, imgBuff.Length, null, 0);
-                    res.Length += imgBuff.Length;
+                    sha1.TransformBlock(img.Data, 0, img.Data.Length, null, 0);
+                    res.Length += img.Data.Length;
 
                     pngPath = basePath + "_" + (++ind).ToString() + ".png";
                 }
@@ -82,11 +79,7 @@ namespace DogScepterLib.Project.Assets
                     pngPath = basePath + "_mask_" + ind.ToString() + ".png";
                     while (File.Exists(pngPath))
                     {
-                        Bitmap imgBitmap;
-                        using (var temp = new Bitmap(pngPath))
-                            imgBitmap = temp.FullCopy();
-
-                        byte[] mask = CollisionMasks.GetMaskFromImage(imgBitmap);
+                        byte[] mask = CollisionMasks.GetMaskFromImage(new DSImage(pngPath));
                         res.CollisionMask.RawMasks.Add(new BufferRegion(mask));
 
                         sha1.TransformBlock(mask, 0, mask.Length, null, 0);
@@ -117,7 +110,7 @@ namespace DogScepterLib.Project.Assets
             }
 
             // Compute hash manually here
-            using (SHA1Managed sha1 = new SHA1Managed())
+            using (var sha1 = SHA1.Create())
             {
                 Length = buff.Length;
 
@@ -126,22 +119,20 @@ namespace DogScepterLib.Project.Assets
                 {
                     GMTextureItem item = TextureItems[i];
 
-                    byte[] imgBuff;
-                    Bitmap imgBitmap;
+                    DSImage img;
                     if (item.TexturePageID == -1)
-                        imgBitmap = item._Bitmap;
+                        img = item._Image;
                     else
-                        imgBitmap = pf.Textures.GetTextureEntryBitmap(item, Width, Height);
-                    imgBuff = imgBitmap.GetReadOnlyByteArray();
+                        img = pf.Textures.GetTextureEntryImage(item, Width, Height);
 
                     if (actuallyWrite)
                     {
-                        using (FileStream fs = new FileStream(Path.Combine(dir, Name + "_" + i.ToString() + ".png"), FileMode.Create))
-                            imgBitmap.Save(fs, System.Drawing.Imaging.ImageFormat.Png);
+                        using FileStream fs = new FileStream(Path.Combine(dir, Name + "_" + i.ToString() + ".png"), FileMode.Create);
+                        img.SavePng(fs);
                     }
 
-                    Length += imgBuff.Length;
-                    sha1.TransformBlock(imgBuff, 0, imgBuff.Length, null, 0);
+                    Length += img.Data.Length;
+                    sha1.TransformBlock(img.Data, 0, img.Data.Length, null, 0);
                 }
 
                 if (SpecialInfo != null)
@@ -171,8 +162,8 @@ namespace DogScepterLib.Project.Assets
 
                         if (actuallyWrite)
                         {
-                            using (FileStream fs = new FileStream(Path.Combine(dir, Name + "_mask_" + i.ToString() + ".png"), FileMode.Create))
-                                CollisionMasks.GetImageFromMask(Width, Height, mask).Save(fs, System.Drawing.Imaging.ImageFormat.Png);
+                            using FileStream fs = new FileStream(Path.Combine(dir, Name + "_mask_" + i.ToString() + ".png"), FileMode.Create);
+                            CollisionMasks.GetImageFromMask(Width, Height, mask).SavePng(fs);
                         }
 
                         Length += mask.Length;

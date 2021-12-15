@@ -4,6 +4,7 @@ using CliFx.Infrastructure;
 using DogScepterLib.Core;
 using DogScepterLib.Core.Chunks;
 using DogScepterLib.Project;
+using DogScepterLib.Project.Util;
 using DogScepterLib.User;
 using System;
 using System.Collections.Generic;
@@ -48,6 +49,12 @@ namespace DogScepterCLI.Commands
             if (data == null)
                 return default;
 
+            if (!Directory.Exists(dir))
+            {
+                if (console.PromptYesNo($"Directory \"{dir}\" does not exist. Create it?"))
+                    Directory.CreateDirectory(dir);
+            }
+
             bool didAnything = false;
 
             if (DumpTextures)
@@ -57,12 +64,12 @@ namespace DogScepterCLI.Commands
                 pf.Textures.ParseAllTextures();
                 for (int i = 0; i < pf.Textures.CachedTextures.Length; i++)
                 {
-                    Bitmap curr = pf.Textures.CachedTextures[i];
+                    DSImage curr = pf.Textures.CachedTextures[i];
                     if (curr == null)
                         continue;
                     try
                     {
-                        curr.Save(Path.Combine(dir, $"texture_{i}.png"), ImageFormat.Png);
+                        curr.SavePng(Path.Combine(dir, $"texture_{i}.png"));
                     }
                     catch (Exception e)
                     {
@@ -79,7 +86,14 @@ namespace DogScepterCLI.Commands
                 StringBuilder sb = new StringBuilder();
                 foreach (var str in pf.DataHandle.GetChunk<GMChunkSTRG>().List)
                     sb.AppendLine(str.ToString());
-                File.WriteAllText(Path.Combine(dir, "strings.txt"), sb.ToString());
+                try
+                {
+                    File.WriteAllText(Path.Combine(dir, "strings.txt"), sb.ToString());
+                }
+                catch (Exception e)
+                {
+                    console.Output.WriteLine($"Failed to save strings: {e.Message}");
+                }
             }
 
             if (didAnything)

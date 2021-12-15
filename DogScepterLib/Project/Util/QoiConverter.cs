@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using SixLabors.ImageSharp;
 
 namespace DogScepterLib.Project.Util
 {
@@ -28,7 +29,7 @@ namespace DogScepterLib.Project.Util
         private const byte QOI_MASK_3 = 0xe0;
         private const byte QOI_MASK_4 = 0xf0;
 
-        public unsafe static Bitmap GetBitmapFromStream(Stream s)
+        public unsafe static DSImage GetImageFromStream(Stream s)
         {
             byte[] header = new byte[12];
             s.Read(header, 0, 12);
@@ -42,17 +43,14 @@ namespace DogScepterLib.Project.Util
             byte[] pixelData = new byte[length];
             s.Read(pixelData, 0, length);
 
-            Bitmap bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-            var bmpData = bmp.BasicLockBits(ImageLockMode.WriteOnly);
-            byte* ptr = (byte*)bmpData.Scan0;
-            byte* ptrEnd = ptr + (width * height * 4);
+            DSImage img = new(width, height);
+            int imgPos = 0;
 
             int pos = 0;
             int run = 0;
             byte r = 0, g = 0, b = 0, a = 255;
             byte[] index = new byte[64 * 4];
-            int x = 0, y = 0;
-            while (ptr < ptrEnd)
+            while (imgPos < img.Data.Length)
             {
                 if (run > 0)
                 {
@@ -122,50 +120,46 @@ namespace DogScepterLib.Project.Util
                     index[indexPos2 + 3] = a;
                 }
 
-                *ptr = b;
-                *(ptr + 1) = g;
-                *(ptr + 2) = r;
-                *(ptr + 3) = a;
-                ptr += 4;
+                img.Data[imgPos++] = b;
+                img.Data[imgPos++] = g;
+                img.Data[imgPos++] = r;
+                img.Data[imgPos++] = a;
             }
 
-            bmp.UnlockBits(bmpData);
-
-            return bmp;
+            return img;
         }
 
-        public unsafe static byte[] GetArrayFromBitmap(Bitmap bitmap)
+        public unsafe static byte[] GetArrayFromImage(DSImage img)
         {
-            byte[] res = new byte[(bitmap.Width * bitmap.Height * 4 * 12) + 4]; // default capacity
+            byte[] res = new byte[(img.Width * img.Height * 4 * 12) + 4]; // default capacity
             res[0] = 102; // f
             res[1] = 105; // o
             res[2] = 111; // i
             res[3] = 113; // q
-            res[4] = (byte)(bitmap.Width & 0xff);
-            res[5] = (byte)((bitmap.Width >> 8) & 0xff);
-            res[6] = (byte)(bitmap.Height & 0xff);
-            res[7] = (byte)((bitmap.Height >> 8) & 0xff);
+            res[4] = (byte)(img.Width & 0xff);
+            res[5] = (byte)((img.Width >> 8) & 0xff);
+            res[6] = (byte)(img.Height & 0xff);
+            res[7] = (byte)((img.Height >> 8) & 0xff);
 
-            var bmpData = bitmap.BasicLockBits(ImageLockMode.ReadOnly);
-            byte* ptr = (byte*)bmpData.Scan0;
-            byte* ptrEnd = ptr + (bitmap.Width * bitmap.Height * 4);
+            int imgPos = 0;
+            int imgEnd = img.Data.Length;
 
             int resPos = 12;
             byte r = 0, g = 0, b = 0, a = 255;
             int run = 0;
             int v = 0, vPrev = 0;
             int[] index = new int[64];
-            while (ptr < ptrEnd)
+            while (imgPos < imgEnd)
             {
-                b = *ptr;
-                g = *(ptr + 1);
-                r = *(ptr + 2);
-                a = *(ptr + 3);
+                b = img.Data[imgPos];
+                g = img.Data[imgPos + 1];
+                r = img.Data[imgPos + 2];
+                a = img.Data[imgPos + 3];
 
                 v = (r << 24) | (g << 16) | (b << 8) | a;
                 if (v == vPrev)
                     run++;
-                if (run > 0 && (run == 0x2020 || v != vPrev || ptr == ptrEnd - 4))
+                if (run > 0 && (run == 0x2020 || v != vPrev || imgEnd == imgEnd - 4))
                 {
                     if (run < 33)
                     {
@@ -237,10 +231,8 @@ namespace DogScepterLib.Project.Util
                 }
 
                 vPrev = v;
-                ptr += 4;
+                imgPos += 4;
             }
-
-            bitmap.UnlockBits(bmpData);
 
             // Add padding
             resPos += 4;

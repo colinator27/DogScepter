@@ -43,7 +43,7 @@ namespace DogScepterLib.Project
         public static void ComputeHash(Asset asset, byte[] buff)
         {
             asset.Length = buff.Length;
-            using SHA1Managed sha1 = new SHA1Managed();
+            using var sha1 = SHA1.Create();
             asset.Hash = sha1.ComputeHash(buff);
         }
 
@@ -54,7 +54,7 @@ namespace DogScepterLib.Project
         public static void ComputeHash(Asset asset, BufferRegion buff)
         {
             asset.Length = buff.Length;
-            using SHA1Managed sha1 = new SHA1Managed();
+            using var sha1 = SHA1.Create();
             using Stream s = buff.Memory.AsStream();
             asset.Hash = sha1.ComputeHash(s);
         }

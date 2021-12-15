@@ -1,10 +1,5 @@
 ﻿using DogScepterLib.Project;
 using DogScepterLib.Project.Util;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Drawing;
-using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
@@ -43,25 +38,25 @@ namespace DogScepterLib.Core.Models
         public bool _EmptyBorder = false;
         public GMTextureItem _DuplicateOf = null;
         public TexturePacker.Page.Item _PackItem = null;
-        public Bitmap _Bitmap = null;
-        public Bitmap _BitmapBeforeCrop = null;
+        public DSImage _Image = null;
+        public DSImage _ImageBeforeCrop = null;
 
         public GMTextureItem()
         {
         }
 
         // Creates a new texture entry from a bitmap
-        public GMTextureItem(Bitmap bitmap)
+        public GMTextureItem(DSImage bitmap)
         {
             ReplaceWith(bitmap);
         }
 
-        public void ReplaceWith(Bitmap bitmap)
+        public void ReplaceWith(DSImage image)
         {
-            _Bitmap = bitmap;
+            _Image = image;
 
-            BoundWidth = (ushort)bitmap.Width;
-            BoundHeight = (ushort)bitmap.Height;
+            BoundWidth = (ushort)image.Width;
+            BoundHeight = (ushort)image.Height;
             SourceX = 0;
             SourceY = 0;
             SourceWidth = BoundWidth;
@@ -82,37 +77,35 @@ namespace DogScepterLib.Core.Models
 
         public unsafe void Crop()
         {
-            _BitmapBeforeCrop = _Bitmap;
+            _ImageBeforeCrop = _Image;
 
             int left = BoundWidth, top = BoundHeight, right = 0, bottom = 0;
 
-            var data = _Bitmap.BasicLockBits();
-
-            int stride = (data.Stride / 4);
-            int* ptr = (int*)data.Scan0;
-            int* basePtr = ptr;
-
-            for (int y = 0; y < BoundHeight; y++)
+            fixed (byte* bytePtr = &_Image.Data[0])
             {
-                for (int x = 0; x < BoundWidth; x++)
-                {
-                    if (*((byte*)ptr + 3) != 0)
-                    {
-                        if (x < left)
-                            left = x;
-                        if (y < top)
-                            top = y;
-                        if (x > right)
-                            right = x;
-                        if (y > bottom)
-                            bottom = y;
-                    }
-                    ptr++;
-                }
-                ptr += stride - BoundWidth;
-            }
+                int* ptr = (int*)bytePtr;
+                int* basePtr = ptr;
 
-            _Bitmap.UnlockBits(data);
+                for (int y = 0; y < BoundHeight; y++)
+                {
+                    for (int x = 0; x < BoundWidth; x++)
+                    {
+                        if (*((byte*)ptr + 3) != 0)
+                        {
+                            if (x < left)
+                                left = x;
+                            if (y < top)
+                                top = y;
+                            if (x > right)
+                                right = x;
+                            if (y > bottom)
+                                bottom = y;
+                        }
+                        ptr++;
+                    }
+                    ptr += _Image.Width - BoundWidth;
+                }
+            }
 
             if (left == BoundWidth && top == BoundHeight)
             {
@@ -131,7 +124,7 @@ namespace DogScepterLib.Core.Models
                 TargetHeight = SourceHeight;
                 TargetX = (ushort)left;
                 TargetY = (ushort)top;
-                _Bitmap = _Bitmap.Clone(new Rectangle(left, top, right - left, bottom - top), System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                _Image = new DSImage(_Image, left, top, right - left, bottom - top);
             }
         }
 

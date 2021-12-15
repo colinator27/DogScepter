@@ -2,8 +2,6 @@
 using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
 using DogScepterLib.Project.Converters;
-using MoreLinq;
-using System.Drawing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -76,7 +74,7 @@ namespace DogScepterLib.Project
         public ProjectFile Project;
         public List<Group> TextureGroups = new List<Group>();
         public Dictionary<int, int> PageToGroup = new Dictionary<int, int>();
-        public Bitmap[] CachedTextures = null;
+        public DSImage[] CachedTextures = null;
 
         public bool FullyInitialized = false;
 
@@ -146,13 +144,13 @@ namespace DogScepterLib.Project
                         byte[] res;
                         if (Project.DataHandle.VersionInfo.UseQoiFormat)
                         {
-                            res = QoiConverter.GetArrayFromBitmap(DrawPage(g, page));
+                            res = QoiConverter.GetArrayFromImage(DrawPage(g, page));
                         }
                         else
                         {
                             using (var ms = new MemoryStream())
                             {
-                                DrawPage(g, page).Save(ms, ImageFormat.Png);
+                                DrawPage(g, page).SavePng(ms);
                                 res = ms.ToArray();
                             }
                         }
@@ -489,7 +487,7 @@ namespace DogScepterLib.Project
             }
         }
 
-        public Bitmap GetTexture(int ind)
+        public DSImage GetTexture(int ind)
         {
             lock (CachedTextures)
             {
@@ -497,22 +495,22 @@ namespace DogScepterLib.Project
                     return CachedTextures[ind];
                 using Stream s = Project.DataHandle.GetChunk<GMChunkTXTR>().List[ind].TextureData.Data.Memory.AsStream();
                 if (Project.DataHandle.VersionInfo.UseQoiFormat)
-                    return CachedTextures[ind] = QoiConverter.GetBitmapFromStream(s);
+                    return CachedTextures[ind] = QoiConverter.GetImageFromStream(s);
                 else
-                    return CachedTextures[ind] = new Bitmap(s);
+                    return CachedTextures[ind] = new DSImage(s);
             }       
         }
 
         public void ParseAllTextures()
         {
-            CachedTextures = new Bitmap[8192];
+            CachedTextures = new DSImage[8192];
             Parallel.ForEach(Project.DataHandle.GetChunk<GMChunkTXTR>().List, (elem, _, i) =>
             {
                 using Stream s = elem.TextureData.Data.Memory.AsStream();
                 if (Project.DataHandle.VersionInfo.UseQoiFormat)
-                    CachedTextures[i] = QoiConverter.GetBitmapFromStream(s);
+                    CachedTextures[i] = QoiConverter.GetImageFromStream(s);
                 else
-                    CachedTextures[i] = new Bitmap(s);
+                    CachedTextures[i] = new DSImage(s);
             });
         }
 
@@ -521,16 +519,10 @@ namespace DogScepterLib.Project
             if (CachedTextures == null)
                 return;
             for (int i = 0; i < CachedTextures.Length; i++)
-            {
-                if (CachedTextures[i] != null)
-                {
-                    CachedTextures[i].Dispose();
-                    CachedTextures[i] = null;
-                }
-            }
+                CachedTextures[i] = null;
         }
 
-        public Bitmap GetTextureEntryBitmap(GMTextureItem entry, int? suggestWidth = null, int? suggestHeight = null)
+        public DSImage GetTextureEntryImage(GMTextureItem entry, int? suggestWidth = null, int? suggestHeight = null)
         {
             if (entry.TargetX == 0 && entry.TargetY == 0 &&
                 entry.SourceWidth == entry.BoundWidth &&
@@ -538,33 +530,24 @@ namespace DogScepterLib.Project
                 (suggestWidth == null || (suggestWidth == entry.SourceWidth && suggestHeight == entry.SourceHeight)))
             {
                 // This can be done without copying
-                return GetTextureEntryBitmapFast(entry);
+                return GetTextureEntryImageFast(entry);
             }
 
-            Bitmap texture = GetTexture(entry.TexturePageID);
-            Bitmap res = new Bitmap(suggestWidth ?? entry.BoundWidth, suggestHeight ?? entry.BoundHeight, PixelFormat.Format32bppArgb);
-            using (Graphics g = Graphics.FromImage(res))
-            {
-                g.SmoothingMode = SmoothingMode.None;
-                g.PixelOffsetMode = PixelOffsetMode.None;
-                g.CompositingQuality = CompositingQuality.HighSpeed;
-                g.InterpolationMode = InterpolationMode.NearestNeighbor;
-                g.CompositingMode = CompositingMode.SourceCopy;
-                g.DrawImage(texture, new Rectangle(entry.TargetX, entry.TargetY, entry.TargetWidth, entry.TargetHeight),
-                                                   entry.SourceX, entry.SourceY, entry.SourceWidth, entry.SourceHeight, GraphicsUnit.Pixel);
-            }
+            DSImage texture = GetTexture(entry.TexturePageID);
+            DSImage res = new DSImage(suggestWidth ?? entry.BoundWidth, suggestHeight ?? entry.BoundHeight);
+#if DEBUG
+            Debug.Assert(entry.SourceWidth == entry.TargetWidth);
+            Debug.Assert(entry.SourceHeight == entry.TargetHeight);
+#endif
+            texture.CopyPartTo(res, entry.TargetX, entry.TargetY, entry.SourceWidth, entry.SourceHeight, entry.SourceX, entry.SourceY);
 
             return res;
         }
 
         // Quickly gets a view into a subset of the bitmap, rather than copying and making room for potential padding
-        public Bitmap GetTextureEntryBitmapFast(GMTextureItem entry)
+        public DSImage GetTextureEntryImageFast(GMTextureItem entry)
         {
-            Bitmap toClone = GetTexture(entry.TexturePageID);
-            lock (toClone)
-            {
-                return toClone.Clone(new Rectangle(entry.SourceX, entry.SourceY, entry.SourceWidth, entry.SourceHeight), PixelFormat.Format32bppArgb);
-            }
+            return new DSImage(GetTexture(entry.TexturePageID), entry.SourceX, entry.SourceY, entry.SourceWidth, entry.SourceHeight);
         }
 
         public void DetermineGroupBorders()
@@ -582,7 +565,7 @@ namespace DogScepterLib.Project
                 if (entries.Count != 0)
                 {
                     // Find entry closest to top left of sheet
-                    GMTextureItem entry = entries.MinBy((entry) => entry.SourceX * entry.SourceX + entry.SourceY * entry.SourceY).First();
+                    GMTextureItem entry = entries.MinBy((entry) => entry.SourceX * entry.SourceX + entry.SourceY * entry.SourceY);
                     border = Math.Max(entry.SourceX, entry.SourceY);
                     if (entry._HasExtraBorder)
                         border -= extraBorder; // additional border
@@ -607,13 +590,6 @@ namespace DogScepterLib.Project
 
         public unsafe void DetermineTiledEntries()
         {
-            BitmapData[] allData = new BitmapData[CachedTextures.Length];
-            for (int i = 0; i < CachedTextures.Length; i++)
-            {
-                if (CachedTextures[i] == null)
-                    break;
-                allData[i] = CachedTextures[i].BasicLockBits();
-            }
             foreach (Group group in TextureGroups)
             {
                 // If this group's border is > 0
@@ -622,94 +598,91 @@ namespace DogScepterLib.Project
                 {
                     Parallel.ForEach(group.Items, entry =>
                     {
-                        BitmapData data = allData[entry.TexturePageID];
+                        DSImage img = CachedTextures[entry.TexturePageID];
 
-                        int stride = (data.Stride / 4);
-                        int* ptr = (int*)data.Scan0 + entry.SourceX + (entry.SourceY * stride);
-                        int* basePtr = ptr;
-
-                        // Horizontal check
-                        bool tileHoriz = true;
-                        if (entry.SourceX <= 0 || (entry.SourceX + entry.SourceWidth) >= data.Width)
-                            tileHoriz = false; // out of bounds
-                        else
+                        fixed (byte* bytePtr = &img.Data[0])
                         {
-                            for (int y = 0; y < entry.SourceHeight; y++)
+                            int* ptr = (int*)bytePtr + (entry.SourceX + (entry.SourceY * img.Width));
+                            int* basePtr = ptr;
+                            int stride = img.RealWidth;
+
+                            // Horizontal check
+                            bool tileHoriz = true;
+                            if (entry.SourceX <= 0 || (entry.SourceX + entry.SourceWidth) >= img.Width)
+                                tileHoriz = false; // out of bounds
+                            else
                             {
-                                if (*(ptr - 1) != *(ptr + (entry.SourceWidth - 1)) ||
-                                    *ptr != *(ptr + entry.SourceWidth))
-                                {
-                                    tileHoriz = false;
-                                    break;
-                                }
-                                ptr += stride;
-                            }
-                            if (tileHoriz)
-                            {
-                                // Check again to see if it's just the same on the edges anyway
-                                ptr = basePtr;
-                                bool notSame = false;
                                 for (int y = 0; y < entry.SourceHeight; y++)
                                 {
-                                    if (*ptr != *(ptr - 1) ||
-                                        *(ptr + (entry.SourceWidth - 1)) != *(ptr + entry.SourceWidth))
+                                    if (*(ptr - 1) != *(ptr + (entry.SourceWidth - 1)) ||
+                                        *ptr != *(ptr + entry.SourceWidth))
                                     {
-                                        notSame = true;
+                                        tileHoriz = false;
                                         break;
                                     }
                                     ptr += stride;
                                 }
-                                tileHoriz = notSame;
-                            }
-                        }
-
-                        // Vertical check
-                        ptr = basePtr;
-                        bool tileVert = true;
-                        if (entry.SourceY <= 0 || (entry.SourceY + entry.SourceHeight) >= data.Height)
-                            tileVert = false; // out of bounds
-                        else
-                        {
-                            int bottom = ((entry.SourceHeight - 1) * stride);
-                            for (int x = 0; x < entry.SourceWidth; x++)
-                            {
-                                if (*(ptr - stride) != *(ptr + bottom) ||
-                                    *ptr != *(ptr + bottom + stride))
+                                if (tileHoriz)
                                 {
-                                    tileVert = false;
-                                    break;
+                                    // Check again to see if it's just the same on the edges anyway
+                                    ptr = basePtr;
+                                    bool notSame = false;
+                                    for (int y = 0; y < entry.SourceHeight; y++)
+                                    {
+                                        if (*ptr != *(ptr - 1) ||
+                                            *(ptr + (entry.SourceWidth - 1)) != *(ptr + entry.SourceWidth))
+                                        {
+                                            notSame = true;
+                                            break;
+                                        }
+                                        ptr += stride;
+                                    }
+                                    tileHoriz = notSame;
                                 }
-                                ptr++;
                             }
-                            if (tileVert)
+
+                            // Vertical check
+                            ptr = basePtr;
+                            bool tileVert = true;
+                            if (entry.SourceY <= 0 || (entry.SourceY + entry.SourceHeight) >= img.Height)
+                                tileVert = false; // out of bounds
+                            else
                             {
-                                // Check again to see if it's just the same on the edges anyway
-                                ptr = basePtr;
-                                bool notSame = false;
+                                int bottom = ((entry.SourceHeight - 1) * stride);
                                 for (int x = 0; x < entry.SourceWidth; x++)
                                 {
-                                    if (*ptr != *(ptr - stride) ||
-                                        *(ptr + bottom) != *(ptr + bottom + stride))
+                                    if (*(ptr - stride) != *(ptr + bottom) ||
+                                        *ptr != *(ptr + bottom + stride))
                                     {
-                                        notSame = true;
+                                        tileVert = false;
                                         break;
                                     }
                                     ptr++;
                                 }
-                                tileVert = notSame;
+                                if (tileVert)
+                                {
+                                    // Check again to see if it's just the same on the edges anyway
+                                    ptr = basePtr;
+                                    bool notSame = false;
+                                    for (int x = 0; x < entry.SourceWidth; x++)
+                                    {
+                                        if (*ptr != *(ptr - stride) ||
+                                            *(ptr + bottom) != *(ptr + bottom + stride))
+                                        {
+                                            notSame = true;
+                                            break;
+                                        }
+                                        ptr++;
+                                    }
+                                    tileVert = notSame;
+                                }
                             }
-                        }
 
-                        entry._TileHorizontally = tileHoriz;
-                        entry._TileVertically = tileVert;
+                            entry._TileHorizontally = tileHoriz;
+                            entry._TileVertically = tileVert;
+                        }
                     });
                 }
-            }
-            for (int i = 0; i < allData.Length; i++)
-            {
-                if (allData[i] == null)
-                    break;
-                CachedTextures[i].UnlockBits(allData[i]);
             }
         }
 
@@ -718,41 +691,38 @@ namespace DogScepterLib.Project
             if (entry.TexturePageID == -1)
             {
                 // This is hand-crafted, and has a custom bitmap at the moment
-                Bitmap texture = entry._Bitmap;
-                var data = texture.BasicLockBits();
-
+                DSImage texture = entry._Image;
+                
                 long key = (long)((entry.SourceWidth * 65535) + entry.SourceHeight) << 32;
+                fixed (byte* bytePtr = &texture.Data[0])
+                {
+                    int* ptr = (int*)bytePtr;
+                    int w = entry.SourceWidth - 1, h = ((entry.SourceHeight - 1) * texture.Width);
 
-                int* ptr = (int*)data.Scan0;
-                int stride = (data.Stride / 4);
-                int w = entry.SourceWidth - 1, h = ((entry.SourceHeight - 1) * stride);
-
-                key |= ((long)(*((byte*)ptr + 3)) << 24) |
-                       ((long)(*((byte*)(ptr + w) + 3)) << 16) |
-                       ((long)(*((byte*)(ptr + h) + 3)) << 8) |
-                       (*((byte*)(ptr + w + h) + 3));
-
-                texture.UnlockBits(data);
+                    key |= ((long)(*((byte*)ptr + 3)) << 24) |
+                           ((long)(*((byte*)(ptr + w) + 3)) << 16) |
+                           ((long)(*((byte*)(ptr + h) + 3)) << 8) |
+                           (*((byte*)(ptr + w + h) + 3));
+                }
                 return key;
             }
             else
             {
                 // This is normal
-                Bitmap texture = GetTexture(entry.TexturePageID);
-                var data = texture.BasicLockBits();
+                DSImage texture = GetTexture(entry.TexturePageID);
 
                 long key = (long)((entry.SourceWidth * 65535) + entry.SourceHeight) << 32;
 
-                int stride = (data.Stride / 4);
-                int* ptr = (int*)data.Scan0 + entry.SourceX + (entry.SourceY * stride);
-                int w = entry.SourceWidth - 1, h = ((entry.SourceHeight - 1) * stride);
+                fixed (byte* bytePtr = &texture.Data[0])
+                {
+                    int* ptr = (int*)bytePtr + entry.SourceX + (entry.SourceY * texture.Width);
+                    int w = entry.SourceWidth - 1, h = ((entry.SourceHeight - 1) * texture.Width);
 
-                key |= ((long)(*((byte*)ptr + 3)) << 24) |
-                       ((long)(*((byte*)(ptr + w) + 3)) << 16) |
-                       ((long)(*((byte*)(ptr + h) + 3)) << 8) |
-                       (*((byte*)(ptr + w + h) + 3));
-
-                texture.UnlockBits(data);
+                    key |= ((long)(*((byte*)ptr + 3)) << 24) |
+                           ((long)(*((byte*)(ptr + w) + 3)) << 16) |
+                           ((long)(*((byte*)(ptr + h) + 3)) << 8) |
+                           (*((byte*)(ptr + w + h) + 3));
+                }
                 return key;
             }
         }
@@ -780,97 +750,73 @@ namespace DogScepterLib.Project
             if (startAt >= list.Count)
                 return -1;
 
-            Bitmap texture;
+            DSImage texture;
             if (self.TexturePageID == -1)
-                texture = self._Bitmap; // Custom bitmap
+                texture = self._Image; // Custom bitmap
             else
                 texture = GetTexture(self.TexturePageID);
-            lock (texture)
+            for (int i = startAt; i < list.Count; i++)
             {
-                BitmapData data = null;
-                int stride = 0;
+                GMTextureItem entry = list[i];
 
-                for (int i = startAt; i < list.Count; i++)
+                // Eliminate or choose based off of basic factors
+                if (entry == self ||
+                    entry._HasExtraBorder != self._HasExtraBorder ||
+                    entry._TileHorizontally != self._TileHorizontally ||
+                    entry._TileVertically != self._TileVertically)
+                    continue;
+                if (self.TexturePageID != -1)
                 {
-                    GMTextureItem entry = list[i];
-
-                    // Eliminate or choose based off of basic factors
-                    if (entry == self ||
-                        entry._HasExtraBorder != self._HasExtraBorder ||
-                        entry._TileHorizontally != self._TileHorizontally ||
-                        entry._TileVertically != self._TileVertically)
-                        continue;
-                    if (self.TexturePageID != -1)
+                    if (self.TexturePageID == entry.TexturePageID)
                     {
-                        if (self.TexturePageID == entry.TexturePageID)
-                        {
-                            if (self.SourceX == entry.SourceX &&
-                                self.SourceY == entry.SourceY)
-                                return i;
-                            continue; // These are on the same page but different X/Y, so ignore
-                        }
-                        else if (entry.TexturePageID != -1)
-                        {
-                            // These aren't on the same page...
-                            continue;
-                        }
-                    }
-
-                    if (data == null)
-                    {
-                        data = texture.BasicLockBits();
-                        stride = (data.Stride / 4);
-                    }
-
-                    // Otherwise, get the raw data
-                    Bitmap entryTexture;
-                    int entryStride;
-                    BitmapData entryData = null;
-                    if (entry.TexturePageID == -1)
-                        entryTexture = entry._Bitmap; // Custom bitmap
-                    else
-                        entryTexture = GetTexture(entry.TexturePageID);
-
-                    lock (entryTexture)
-                    {
-                        if (entryTexture != texture)
-                            entryData = entryTexture.BasicLockBits();
-                        entryStride = (entryData != null) ? (entryData.Stride / 4) : (data.Stride / 4);
-
-                        int* ptr = (int*)data.Scan0 + (self.SourceX + (self.SourceY * stride));
-                        int* entryPtr = (int*)entryData.Scan0 + (entry.SourceX + (entry.SourceY * entryStride));
-
-                        bool checking = true;
-                        for (int y = 0; y < self.SourceHeight && checking; y++)
-                        {
-                            for (int x = 0; x < self.SourceWidth; x++)
-                            {
-                                if (*ptr != *entryPtr)
-                                {
-                                    checking = false;
-                                    break;
-                                }
-                                ptr++;
-                                entryPtr++;
-                            }
-                            ptr += stride - self.SourceWidth;
-                            entryPtr += entryStride - self.SourceWidth;
-                        }
-
-                        if (entryData != null)
-                            entryTexture.UnlockBits(entryData);
-                        if (checking)
-                        {
-                            texture.UnlockBits(data);
+                        if (self.SourceX == entry.SourceX &&
+                            self.SourceY == entry.SourceY)
                             return i;
-                        }
+                        continue; // These are on the same page but different X/Y, so ignore
+                    }
+                    else if (entry.TexturePageID != -1)
+                    {
+                        // These aren't on the same page...
+                        continue;
                     }
                 }
 
-                if (data != null)
-                    texture.UnlockBits(data);
-                return -1;
+                // Otherwise, get the raw data
+                DSImage entryTexture;
+                if (entry.TexturePageID == -1)
+                    entryTexture = entry._Image; // Custom bitmap
+                else
+                    entryTexture = GetTexture(entry.TexturePageID);
+
+                fixed (byte* bytePtr = &texture.Data[0],
+                             entryBytePtr = &entryTexture.Data[0])
+                {
+                    int* ptr = (int*)bytePtr + (self.SourceX + (self.SourceY * texture.Width));
+                    int* entryPtr = (int*)entryBytePtr + (entry.SourceX + (entry.SourceY * entryTexture.Width));
+
+                    bool checking = true;
+                    for (int y = 0; y < self.SourceHeight && checking; y++)
+                    {
+                        for (int x = 0; x < self.SourceWidth; x++)
+                        {
+                            if (*ptr != *entryPtr)
+                            {
+                                checking = false;
+                                break;
+                            }
+                            ptr++;
+                            entryPtr++;
+                        }
+                        ptr += texture.Width - self.SourceWidth;
+                        entryPtr += entryTexture.Width - self.SourceWidth;
+                    }
+
+                    if (checking)
+                        return i;
+                }
             }
+
+            return -1;
         }
 
         // After every element has been properly added to HashedItems, including any new ones
@@ -901,127 +847,112 @@ namespace DogScepterLib.Project
             }
         }
 
-        public Bitmap DrawPage(Group group, TexturePacker.Page page)
+        public DSImage DrawPage(Group group, TexturePacker.Page page)
         {
             // This is pretty much a complete guess here
             bool alwaysCropBorder = !Project.DataHandle.VersionInfo.IsNumberAtLeast(2);
 
-            Bitmap bmp = new Bitmap(page.Width, page.Height, PixelFormat.Format32bppArgb);
+            DSImage res = new(page.Width, page.Height);
 
-            using (Graphics g = Graphics.FromImage(bmp))
+            foreach (var item in page.Items)
             {
-                g.SmoothingMode = SmoothingMode.None;
-                g.PixelOffsetMode = PixelOffsetMode.None;
-                g.CompositingQuality = CompositingQuality.HighSpeed;
-                g.InterpolationMode = InterpolationMode.NearestNeighbor;
-                g.CompositingMode = CompositingMode.SourceCopy;
-                foreach (var item in page.Items)
+                GMTextureItem entry = item.TextureItem;
+
+                if (entry._DuplicateOf != null)
                 {
-                    GMTextureItem entry = item.TextureItem;
-
-                    if (entry._DuplicateOf != null)
-                    {
-                        entry.SourceX = (ushort)item.X;
-                        entry.SourceY = (ushort)item.Y;
-                        continue;
-                    }
-
-                    Bitmap entryBitmap;
-                    if (entry.TexturePageID == -1)
-                        entryBitmap = entry._Bitmap; // Custom bitmap
-                    else
-                        entryBitmap = GetTextureEntryBitmapFast(entry);
-
                     entry.SourceX = (ushort)item.X;
                     entry.SourceY = (ushort)item.Y;
+                    continue;
+                }
 
-                    g.DrawImage(entryBitmap, item.X, item.Y);
+                DSImage entryImage;
+                if (entry.TexturePageID == -1)
+                    entryImage = entry._Image; // Custom bitmap
+                else
+                    entryImage = GetTextureEntryImageFast(entry);
 
-                    if (!entry._EmptyBorder)
-                    { 
-                        int border = group.Border;
-                        if (border != 0)
+                entry.SourceX = (ushort)item.X;
+                entry.SourceY = (ushort)item.Y;
+
+                entryImage.CopyTo(res, item.X, item.Y);
+
+                if (!entry._EmptyBorder)
+                { 
+                    int border = group.Border;
+                    if (border != 0)
+                    {
+                        if (entry._TileHorizontally)
                         {
-                            if (entry._TileHorizontally)
+                            // left
+                            entryImage.CopyTiledBorderVertTo(res, item.X - border, item.Y, border, entryImage.Width - border);
+
+                            // right
+                            entryImage.CopyTiledBorderVertTo(res, item.X + entryImage.Width, item.Y, border, 0);
+
+                            // top left
+                            entryImage.CopyPartTo(res, item.X - border, item.Y - border, border, border, entryImage.Width - border, entryImage.Height - border);
+
+                            // top right
+                            entryImage.CopyPartTo(res, item.X + entryImage.Width, item.Y - border, border, border, 0, entryImage.Height - border);
+
+                            // bottom left
+                            entryImage.CopyPartTo(res, item.X - border, item.Y + entryImage.Height, border, border, entryImage.Width - border, 0);
+
+                            // bottom right
+                            entryImage.CopyPartTo(res, item.X + entryImage.Width, item.Y + entryImage.Height, border, border, 0, 0);
+                        }
+                        else if (!entry._TileVertically)
+                        {
+                            if (alwaysCropBorder || entry.TargetX == 0)
                             {
                                 // left
-                                g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y, border, entryBitmap.Height),
-                                                                       entryBitmap.Width - border, 0, border, entryBitmap.Height, GraphicsUnit.Pixel);
-                                // right
-                                g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y, border, entryBitmap.Height),
-                                                                       0, 0, border, entryBitmap.Height, GraphicsUnit.Pixel);
-                                // top left
-                                g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y - border, border, border),
-                                                                       entryBitmap.Width - border, entryBitmap.Height - border,
-                                                                       border, border, GraphicsUnit.Pixel);
-                                // top right
-                                g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y - border, border, border),
-                                                                       0, entryBitmap.Height - border, border, border, GraphicsUnit.Pixel);
-                                // bottom left
-                                g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y + entryBitmap.Height, border, border),
-                                                                       entryBitmap.Width - border, 0, border, border, GraphicsUnit.Pixel);
-                                // bottom right
-                                g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y + entryBitmap.Height, border, border),
-                                                                       0, 0, border, border, GraphicsUnit.Pixel);
-                            }
-                            else if (!entry._TileVertically)
-                            {
-                                if (alwaysCropBorder || entry.TargetX == 0)
-                                {
-                                    // left
-                                    g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y, border, entryBitmap.Height),
-                                                                           0, 0, 0.5f, entryBitmap.Height, GraphicsUnit.Pixel);
-                                    // top left
-                                    g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y - border, border, border),
-                                                                           0, 0, 0.5f, 0.5f, GraphicsUnit.Pixel);
-                                    // bottom left
-                                    g.DrawImage(entryBitmap, new Rectangle(item.X - border, item.Y + entryBitmap.Height, border, border),
-                                                                           0, entryBitmap.Height - 1, 0.5f, 0.5f, GraphicsUnit.Pixel);
-                                }
-                                if (alwaysCropBorder || entry.TargetX + entry.TargetWidth == entry.BoundWidth)
-                                {
-                                    // right
-                                    g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y, border, entryBitmap.Height),
-                                                                           entryBitmap.Width - 1, 0, 0.5f, entryBitmap.Height, GraphicsUnit.Pixel);
-                                    // top right
-                                    g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y - border, border, border),
-                                                                           entryBitmap.Width - 1, 0, 0.5f, 0.5f, GraphicsUnit.Pixel);
-                                    // bottom right
-                                    g.DrawImage(entryBitmap, new Rectangle(item.X + entryBitmap.Width, item.Y + entryBitmap.Height, border, border),
-                                                                           entryBitmap.Width - 1, entryBitmap.Height - 1, 0.5f, 0.5f, GraphicsUnit.Pixel);
-                                }
-                            }
+                                entryImage.CopyBorderVertTo(res, item.X - border, item.Y, border, 0);
 
-                            if (entry._TileVertically)
+                                // top left
+                                entryImage.CopyBorderPixelTo(res, item.X - border, item.Y - border, border, 0, 0);
+
+                                // bottom left
+                                entryImage.CopyBorderPixelTo(res, item.X - border, item.Y + entryImage.Height, border, 0, entryImage.Height - 1);
+                            }
+                            if (alwaysCropBorder || entry.TargetX + entry.TargetWidth == entry.BoundWidth)
+                            {
+                                // right
+                                entryImage.CopyBorderVertTo(res, item.X + entryImage.Width, item.Y, border, entryImage.Width - 1);
+
+                                // top right
+                                entryImage.CopyBorderPixelTo(res, item.X + entryImage.Width, item.Y - border, border, entryImage.Width - 1, 0);
+
+                                // bottom right
+                                entryImage.CopyBorderPixelTo(res, item.X + entryImage.Width, item.Y + entryImage.Height, border, entryImage.Width - 1, entryImage.Height - 1);
+                            }
+                        }
+
+                        if (entry._TileVertically)
+                        {
+                            // top
+                            entryImage.CopyTiledBorderHorzTo(res, item.X, item.Y - border, border, entryImage.Height - border);
+
+                            // bottom
+                            entryImage.CopyTiledBorderHorzTo(res, item.X, item.Y + entryImage.Height, border, 0);
+                        }
+                        else
+                        {
+                            if (alwaysCropBorder || entry.TargetY == 0)
                             {
                                 // top
-                                g.DrawImage(entryBitmap, new Rectangle(item.X, item.Y - border, entryBitmap.Width, border),
-                                                                       0, entryBitmap.Height - border, entryBitmap.Width, border, GraphicsUnit.Pixel);
-                                // bottom
-                                g.DrawImage(entryBitmap, new Rectangle(item.X, item.Y + entryBitmap.Height, entryBitmap.Width, border),
-                                                                       0, 0, entryBitmap.Width, border, GraphicsUnit.Pixel);
+                                entryImage.CopyBorderHorzTo(res, item.X, item.Y - border, border, 0);
                             }
-                            else
+                            if (alwaysCropBorder || entry.TargetY + entry.TargetHeight == entry.BoundHeight)
                             {
-                                if (alwaysCropBorder || entry.TargetY == 0)
-                                {
-                                    // top
-                                    g.DrawImage(entryBitmap, new Rectangle(item.X, item.Y - border, entryBitmap.Width, border),
-                                                                           0f, 0f, entryBitmap.Width, 0.5f, GraphicsUnit.Pixel);
-                                }
-                                if (alwaysCropBorder || entry.TargetY + entry.TargetHeight == entry.BoundHeight)
-                                {
-                                    // bottom
-                                    g.DrawImage(entryBitmap, new Rectangle(item.X, item.Y + entryBitmap.Height, entryBitmap.Width, border),
-                                                                           0, entryBitmap.Height - 1, entryBitmap.Width, 0.5f, GraphicsUnit.Pixel);
-                                }
+                                // bottom
+                                entryImage.CopyBorderHorzTo(res, item.X, item.Y + entryImage.Height, border, entryImage.Height - 1);
                             }
                         }
                     }
                 }
             }
 
-            return bmp;
+            return res;
         }
         
         // Clears and re-initializes all the entries in the TGIN chunk
@@ -1094,6 +1025,7 @@ namespace DogScepterLib.Project
         public void Dispose()
         {
             DisposeAllTextures();
+            GC.SuppressFinalize(this);
         }
     }
 }

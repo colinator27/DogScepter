@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using DogScepterLib.Project.Util;
 
 namespace DogScepterLib.Project.Converters
 {
@@ -76,9 +77,9 @@ namespace DogScepterLib.Project.Converters
             }
 
             // Determine collision mask info
-            List<Bitmap> bitmaps;
-            projectAsset.CollisionMask = CollisionMasks.GetInfoForSprite(pf, asset, out bitmaps);
-            List<BufferRegion> regenerated = CollisionMasks.GetMasksForSprite(pf, projectAsset, out _, bitmaps);
+            List<DSImage> images;
+            projectAsset.CollisionMask = CollisionMasks.GetInfoForSprite(pf, asset, out images);
+            List<BufferRegion> regenerated = CollisionMasks.GetMasksForSprite(pf, projectAsset, out _, images);
             if (!CollisionMasks.CompareMasks(asset.CollisionMasks, regenerated))
             {
                 bool manual = true;
@@ -86,8 +87,8 @@ namespace DogScepterLib.Project.Converters
                     projectAsset.CollisionMask.Type == AssetSprite.CollisionMaskInfo.MaskType.Ellipse)
                 {
                     // This may be a false positive diamond/ellipse, try suggesting Precise
-                    projectAsset.CollisionMask = CollisionMasks.GetInfoForSprite(pf, asset, out bitmaps, true);
-                    regenerated = CollisionMasks.GetMasksForSprite(pf, projectAsset, out _, bitmaps);
+                    projectAsset.CollisionMask = CollisionMasks.GetInfoForSprite(pf, asset, out images, true);
+                    regenerated = CollisionMasks.GetMasksForSprite(pf, projectAsset, out _, images);
                     manual = !CollisionMasks.CompareMasks(asset.CollisionMasks, regenerated);
                 }
 
