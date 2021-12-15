@@ -147,7 +147,7 @@ namespace DogScepterLib.Project.Util
             int resPos = 12;
             byte r = 0, g = 0, b = 0, a = 255;
             int run = 0;
-            int v = 0, vPrev = 0;
+            int v = 0, vPrev = 0xff;
             int[] index = new int[64];
             while (imgPos < imgEnd)
             {
