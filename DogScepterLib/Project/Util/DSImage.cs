@@ -97,13 +97,16 @@ namespace DogScepterLib.Project.Util
             if (Parent != null)
             {
                 // This is a subset of another image; need to build new data here
-                byte[] res = new byte[Width * Height * 4];
-                int pos = (OffsetX + (OffsetY * RealWidth)) * 4;
-                int jump = (RealWidth - Width) * 4;
+                byte[] res = new byte[(Width * Height) << 2];
+                int pos = (OffsetX + (OffsetY * RealWidth)) << 2;
+                int jump = RealWidth << 2;
+                int destPos = 0;
+                int destJump = Width << 2;
                 for (int y = 0; y < Height; y++)
                 {
-                    Buffer.BlockCopy(Data, pos, res, 0, Width * 4);
+                    Buffer.BlockCopy(Data, pos, res, destPos, Width << 2);
                     pos += jump;
+                    destPos += destJump;
                 }
                 return res;
             }

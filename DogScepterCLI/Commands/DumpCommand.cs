@@ -107,22 +107,5 @@ namespace DogScepterCLI.Commands
 
             return default;
         }
-
-        private bool CheckExisting(IConsole console, string dir)
-        {
-            if (!Directory.Exists(dir))
-            {
-                console.Error.WriteLine("Project directory does not exist.");
-                return false;
-            }
-
-            if (!File.Exists(Path.Combine(dir, "project.json")))
-            {
-                console.Error.WriteLine("No project exists in this location.");
-                return false;
-            }
-
-            return true;
-        }
     }
 }
