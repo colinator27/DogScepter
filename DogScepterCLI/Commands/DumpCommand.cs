@@ -4,6 +4,7 @@ using CliFx.Infrastructure;
 using DogScepterLib.Core;
 using DogScepterLib.Core.Chunks;
 using DogScepterLib.Project;
+using DogScepterLib.Project.GML.Decompiler;
 using DogScepterLib.Project.Util;
 using DogScepterLib.User;
 using System;
@@ -35,6 +36,12 @@ namespace DogScepterCLI.Commands
         [CommandOption("strings", Description = "Dump strings.")]
         public bool DumpStrings { get; private set; }
 
+        [CommandOption("code", Description = "Dump decompiled code.")]
+        public bool DumpCode { get; private set; }
+
+        [CommandOption("config", Description = "Set the configuration to use.")]
+        public string Config { get; private set; } = null;
+
         public ValueTask ExecuteAsync(IConsole console)
         {
             console.Output.WriteLine();
@@ -53,6 +60,11 @@ namespace DogScepterCLI.Commands
             {
                 if (console.PromptYesNo($"Directory \"{dir}\" does not exist. Create it?"))
                     Directory.CreateDirectory(dir);
+                else
+                {
+                    console.Output.WriteLine("Bailing.");
+                    return default;
+                }
             }
 
             bool didAnything = false;
@@ -94,6 +106,46 @@ namespace DogScepterCLI.Commands
                 {
                     console.Output.WriteLine($"Failed to save strings: {e.Message}");
                 }
+            }
+
+            if (DumpCode)
+            {
+                didAnything = true;
+                console.Output.WriteLine("Dumping code...");
+
+                pf.DecompileCache = new DecompileCache(pf);
+
+                if (Config != null)
+                {
+                    try
+                    {
+                        if (!pf.DecompileCache.Types.AddFromConfigFile(Config))
+                            console.Output.WriteLine($"Didn't find a macro type config named \"{Config}\".");
+                    }
+                    catch (Exception ex)
+                    {
+                        console.Output.WriteLine($"Failed to load macro type config: {ex}");
+                    }
+                }
+
+                string codeOutputDir = Path.Combine(dir, "code");
+                Directory.CreateDirectory(codeOutputDir);
+
+                var codeList = pf.DataHandle.GetChunk<GMChunkCODE>().List;
+                Parallel.ForEach(codeList, elem =>
+                {
+                    if (elem.ParentEntry != null)
+                        return;
+                    try
+                    {
+                        File.WriteAllText(Path.Combine(codeOutputDir, elem.Name.Content[0..Math.Min(elem.Name.Content.Length, 128)] + ".gml"),
+                                          new DecompileContext(pf).DecompileWholeEntry(elem));
+                    }
+                    catch (Exception e)
+                    {
+                        console.Output.WriteLine($"Failed to decompile code for \"{elem.Name.Content}\": {e}");
+                    }
+                });
             }
 
             if (didAnything)

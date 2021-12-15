@@ -28,4 +28,10 @@
     <PackageReference Include="System.Threading.Tasks.Dataflow" Version="6.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="GameConfigs\MacroTypes\DELTARUNE_Chapter2.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

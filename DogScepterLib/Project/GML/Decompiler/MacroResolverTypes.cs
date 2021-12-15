@@ -1,6 +1,5 @@
 ﻿using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
-using DogScepterLib.Project.Assets;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -505,9 +504,19 @@ namespace DogScepterLib.Project.GML.Decompiler
             public Dictionary<string, MacroResolverTypeJson> CodeEntries { get; set; }
         }
 
-        public void AddFromFile(string filePath)
+        public bool AddFromConfigFile(string name)
         {
-            AddFromFile(File.ReadAllBytes(filePath));
+            return AddFromFile(Path.Combine(GameConfigs.MacroTypesDirectory, name + ".json"));
+        }
+
+        public bool AddFromFile(string filePath)
+        {
+            if (File.Exists(filePath))
+            {
+                AddFromFile(File.ReadAllBytes(filePath));
+                return true;
+            }
+            return false;
         }
 
         public void AddFromFile(byte[] data)
