@@ -104,15 +104,18 @@ namespace DogScepterLib.Project.GML.Compiler
         public TokenKind Kind { get; set; }
         public int Index { get; set; }
         public string Text { get; set; }
+        public CodeContext Context { get; set; }
 
-        public Token(TokenKind kind, int index)
+        public Token(CodeContext context, TokenKind kind, int index)
         {
+            Context = context;
             Kind = kind;
             Index = index;
         }
 
-        public Token(TokenKind kind, int index, string text)
+        public Token(CodeContext context, TokenKind kind, int index, string text)
         {
+            Context = context;
             Kind = kind;
             Index = index;
             Text = text;
@@ -121,7 +124,7 @@ namespace DogScepterLib.Project.GML.Compiler
 
     public class Lexer
     {
-        public static void LexCode(CompileContext ctx)
+        public static void LexCode(CodeContext ctx)
         {
             ctx.Tokens = new();
             ctx.Position = 0;
@@ -132,18 +135,109 @@ namespace DogScepterLib.Project.GML.Compiler
                 ctx.Tokens.Add(next);
             }
             while (next.Kind != TokenKind.EOF && next.Kind != TokenKind.Error);
+
+            // Remove EOF token for macros
+            if (ctx.Kind == CodeContext.CodeKind.Macro && next.Kind == TokenKind.EOF)
+                ctx.Tokens.RemoveAt(ctx.Tokens.Count - 1);
         }
 
-        private static Token GetNextToken(CompileContext ctx)
+        private static Token GetNextToken(CodeContext ctx)
         {
             SkipWhitespace(ctx);
             if (ctx.Position >= ctx.Code.Length)
-                return new Token(TokenKind.EOF, ctx.Position);
+                return new Token(ctx, TokenKind.EOF, ctx.Position);
 
             char c = ctx.Code[ctx.Position];
             char lookahead = (ctx.Position + 1 < ctx.Code.Length) ? ctx.Code[ctx.Position + 1] : '\0';
+            
+            // Directives, such as macros
+            while (c == '#' && lookahead != '\0')
+            {
+                int startIndex = ctx.Position;
 
-            // TODO: Handle macros?
+                // Read the type
+                StringBuilder directiveType = new();
+                directiveType.Append(lookahead);
+                ctx.Position += 2;
+                while (ctx.Position < ctx.Code.Length && !char.IsWhiteSpace(ctx.Code[ctx.Position]))
+                {
+                    directiveType.Append(ctx.Code[ctx.Position]);
+                    ctx.Position++;
+                }
+                
+                // Process each type
+                switch (directiveType.ToString())
+                {
+                    case "macro":
+                        {
+                            // Parse the macro's name
+                            ctx.Position++;
+                            StringBuilder macroName = new();
+                            while (ctx.Position < ctx.Code.Length && !char.IsWhiteSpace(ctx.Code[ctx.Position]))
+                            {
+                                macroName.Append(ctx.Code[ctx.Position]);
+                                ctx.Position++;
+                            }
+
+                            // Parse the macro's content
+                            ctx.Position++;
+                            StringBuilder macroContent = new();
+                            while (ctx.Position < ctx.Code.Length && ctx.Code[ctx.Position] != '\n')
+                            {
+                                char curr = ctx.Code[ctx.Position];
+                                if (curr == '\\' && ctx.Position + 1 < ctx.Code.Length)
+                                {
+                                    // Ignore the next newline, as long as there's whitespace between now and the end of the line
+                                    int backslashPos = ctx.Position++;
+                                    do
+                                    {
+                                        curr = ctx.Code[ctx.Position++];
+                                    }
+                                    while (ctx.Position < ctx.Code.Length && char.IsWhiteSpace(curr) && curr != '\n');
+
+                                    if (curr == '\n')
+                                    {
+                                        // We found the newline, so we're safe to resume
+                                        continue;
+                                    }
+                                    else
+                                    {
+                                        // We didn't find a newline, so this is something else
+                                        ctx.Position = backslashPos;
+                                    }
+                                }
+                                macroContent.Append(curr);
+                                ctx.Position++;
+                            }
+
+                            // Attempt adding the macro
+                            string newMacroName = macroName.ToString(), newMacroContent = macroContent.ToString();
+                            CodeContext newMacro = new(ctx.BaseContext, $"macro \"{macroName}\" from \"{ctx.Name}\"", newMacroContent);
+                            newMacro.Kind = CodeContext.CodeKind.Macro;
+                            if (!ctx.BaseContext.Macros.TryAdd(newMacroName, newMacro))
+                            {
+                                // The macro was already defined!
+                                ctx.Error($"Duplicate macro \"{newMacroName}\" found", startIndex);
+                            }
+                            else
+                            {
+                                // Tokenize this macro
+                                LexCode(newMacro);
+                            }
+                            break;
+                        }
+                    default:
+                        ctx.Error($"Unrecognized directive \"{directiveType}\"", startIndex);
+                        break;
+                }
+
+                // Need to set up for the rest of the token parsing again
+                SkipWhitespace(ctx);
+                if (ctx.Position >= ctx.Code.Length)
+                    return new Token(ctx, TokenKind.EOF, ctx.Position);
+                c = ctx.Code[ctx.Position];
+                lookahead = (ctx.Position + 1 < ctx.Code.Length) ? ctx.Code[ctx.Position + 1] : '\0';
+            }
 
             // Identifiers
             if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_')
@@ -164,7 +258,7 @@ namespace DogScepterLib.Project.GML.Compiler
                 return ReadNumber(ctx);
 
             // Strings
-            if (ctx.IsGMS2)
+            if (ctx.BaseContext.IsGMS2)
             {
                 if (c == '@' && (lookahead == '"' || lookahead == '\''))
                 {
@@ -180,90 +274,91 @@ namespace DogScepterLib.Project.GML.Compiler
                     return ReadVerbatimString(ctx);
             }
 
+            // All other symbols
             switch (c)
             {
                 case '{':
-                    return new Token(TokenKind.Begin, ctx.Position++);
+                    return new Token(ctx, TokenKind.Begin, ctx.Position++);
                 case '}':
-                    return new Token(TokenKind.End, ctx.Position++);
+                    return new Token(ctx, TokenKind.End, ctx.Position++);
                 case '(':
-                    return new Token(TokenKind.Open, ctx.Position++);
+                    return new Token(ctx, TokenKind.Open, ctx.Position++);
                 case ')':
-                    return new Token(TokenKind.Close, ctx.Position++);
+                    return new Token(ctx, TokenKind.Close, ctx.Position++);
                 case '=':
                     if (lookahead == '=')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.Equal, startPos);
+                        return new Token(ctx, TokenKind.Equal, startPos);
                     }
-                    return new Token(TokenKind.Assign, ctx.Position++);
+                    return new Token(ctx, TokenKind.Assign, ctx.Position++);
                 case '+':
                     if (lookahead == '+')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.Increment, startPos);
+                        return new Token(ctx, TokenKind.Increment, startPos);
                     }
                     if (lookahead == '=')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.AssignPlus, startPos);
+                        return new Token(ctx, TokenKind.AssignPlus, startPos);
                     }
-                    return new Token(TokenKind.Plus, ctx.Position++);
+                    return new Token(ctx, TokenKind.Plus, ctx.Position++);
                 case '-':
                     if (lookahead == '-')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.Decrement, startPos);
+                        return new Token(ctx, TokenKind.Decrement, startPos);
                     }
                     if (lookahead == '=')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.AssignMinus, startPos);
+                        return new Token(ctx, TokenKind.AssignMinus, startPos);
                     }
-                    return new Token(TokenKind.Minus, ctx.Position++);
+                    return new Token(ctx, TokenKind.Minus, ctx.Position++);
                 case '*':
                     if (lookahead == '=')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.AssignTimes, startPos);
+                        return new Token(ctx, TokenKind.AssignTimes, startPos);
                     }
-                    return new Token(TokenKind.Times, ctx.Position++);
+                    return new Token(ctx, TokenKind.Times, ctx.Position++);
                 case '/':
                     if (lookahead == '=')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.AssignDivide, startPos);
+                        return new Token(ctx, TokenKind.AssignDivide, startPos);
                     }
-                    return new Token(TokenKind.Divide, ctx.Position++);
+                    return new Token(ctx, TokenKind.Divide, ctx.Position++);
                 case '!':
                     if (lookahead == '=')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.NotEqual, startPos);
+                        return new Token(ctx, TokenKind.NotEqual, startPos);
                     }
-                    return new Token(TokenKind.Not, ctx.Position++);
+                    return new Token(ctx, TokenKind.Not, ctx.Position++);
                 case ',':
-                    return new Token(TokenKind.Comma, ctx.Position++);
+                    return new Token(ctx, TokenKind.Comma, ctx.Position++);
                 case '.':
-                    return new Token(TokenKind.Dot, ctx.Position++);
+                    return new Token(ctx, TokenKind.Dot, ctx.Position++);
                 case ':':
                     if (lookahead == '=')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.Assign, startPos);
+                        return new Token(ctx, TokenKind.Assign, startPos);
                     }
-                    return new Token(TokenKind.Colon, ctx.Position++);
+                    return new Token(ctx, TokenKind.Colon, ctx.Position++);
                 case ';':
-                    return new Token(TokenKind.Semicolon, ctx.Position++);
+                    return new Token(ctx, TokenKind.Semicolon, ctx.Position++);
                 case '[':
                     switch (lookahead)
                     {
@@ -271,36 +366,36 @@ namespace DogScepterLib.Project.GML.Compiler
                             {
                                 int startPos = ctx.Position;
                                 ctx.Position += 2;
-                                return new Token(TokenKind.ArrayListOpen, startPos);
+                                return new Token(ctx, TokenKind.ArrayListOpen, startPos);
                             }
                         case '?':
                             {
                                 int startPos = ctx.Position;
                                 ctx.Position += 2;
-                                return new Token(TokenKind.ArrayMapOpen, startPos);
+                                return new Token(ctx, TokenKind.ArrayMapOpen, startPos);
                             }
                         case '#':
                             {
                                 int startPos = ctx.Position;
                                 ctx.Position += 2;
-                                return new Token(TokenKind.ArrayGridOpen, startPos);
+                                return new Token(ctx, TokenKind.ArrayGridOpen, startPos);
                             }
                         case '@':
                             {
                                 int startPos = ctx.Position;
                                 ctx.Position += 2;
-                                return new Token(TokenKind.ArrayDirectOpen, startPos);
+                                return new Token(ctx, TokenKind.ArrayDirectOpen, startPos);
                             }
                         case '$':
                             {
                                 int startPos = ctx.Position;
                                 ctx.Position += 2;
-                                return new Token(TokenKind.ArrayStructOpen, startPos);
+                                return new Token(ctx, TokenKind.ArrayStructOpen, startPos);
                             }
                     }
-                    return new Token(TokenKind.ArrayOpen, ctx.Position++);
+                    return new Token(ctx, TokenKind.ArrayOpen, ctx.Position++);
                 case ']':
-                    return new Token(TokenKind.ArrayClose, ctx.Position++);
+                    return new Token(ctx, TokenKind.ArrayClose, ctx.Position++);
                 case '<':
                     switch (lookahead)
                     {
@@ -308,22 +403,22 @@ namespace DogScepterLib.Project.GML.Compiler
                             {
                                 int startPos = ctx.Position;
                                 ctx.Position += 2;
-                                return new Token(TokenKind.LesserEqual, startPos);
+                                return new Token(ctx, TokenKind.LesserEqual, startPos);
                             }
                         case '<':
                             {
                                 int startPos = ctx.Position;
                                 ctx.Position += 2;
-                                return new Token(TokenKind.BitShiftLeft, startPos);
+                                return new Token(ctx, TokenKind.BitShiftLeft, startPos);
                             }
                         case '>':
                             {
                                 int startPos = ctx.Position;
                                 ctx.Position += 2;
-                                return new Token(TokenKind.NotEqual, startPos);
+                                return new Token(ctx, TokenKind.NotEqual, startPos);
                             }
                     }
-                    return new Token(TokenKind.Lesser, ctx.Position++);
+                    return new Token(ctx, TokenKind.Lesser, ctx.Position++);
                 case '>':
                     switch (lookahead)
                     {
@@ -331,16 +426,16 @@ namespace DogScepterLib.Project.GML.Compiler
                             {
                                 int startPos = ctx.Position;
                                 ctx.Position += 2;
-                                return new Token(TokenKind.GreaterEqual, startPos);
+                                return new Token(ctx, TokenKind.GreaterEqual, startPos);
                             }
                         case '>':
                             {
                                 int startPos = ctx.Position;
                                 ctx.Position += 2;
-                                return new Token(TokenKind.BitShiftRight, startPos);
+                                return new Token(ctx, TokenKind.BitShiftRight, startPos);
                             }
                     }
-                    return new Token(TokenKind.Greater, ctx.Position++);
+                    return new Token(ctx, TokenKind.Greater, ctx.Position++);
                 case '?':
                     if (lookahead == '?')
                     {
@@ -349,72 +444,73 @@ namespace DogScepterLib.Project.GML.Compiler
                             ctx.Code[ctx.Position] == '=')
                         {
                             ctx.Position += 3;
-                            return new Token(TokenKind.AssignNullCoalesce, startPos);
+                            return new Token(ctx, TokenKind.AssignNullCoalesce, startPos);
                         }
                         ctx.Position += 2;
-                        return new Token(TokenKind.NullCoalesce, startPos);
+                        return new Token(ctx, TokenKind.NullCoalesce, startPos);
                     }
-                    return new Token(TokenKind.Conditional, ctx.Position++);
+                    return new Token(ctx, TokenKind.Conditional, ctx.Position++);
                 case '%':
                     if (lookahead == '=')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.AssignMod, startPos);
+                        return new Token(ctx, TokenKind.AssignMod, startPos);
                     }
-                    return new Token(TokenKind.Mod, ctx.Position++);
+                    return new Token(ctx, TokenKind.Mod, ctx.Position++);
                 case '&':
                     if (lookahead == '&')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.And, startPos);
+                        return new Token(ctx, TokenKind.And, startPos);
                     }
                     if (lookahead == '=')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.AssignAnd, startPos);
+                        return new Token(ctx, TokenKind.AssignAnd, startPos);
                     }
-                    return new Token(TokenKind.BitAnd, ctx.Position++);
+                    return new Token(ctx, TokenKind.BitAnd, ctx.Position++);
                 case '|':
                     if (lookahead == '|')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.Or, startPos);
+                        return new Token(ctx, TokenKind.Or, startPos);
                     }
                     if (lookahead == '=')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.AssignOr, startPos);
+                        return new Token(ctx, TokenKind.AssignOr, startPos);
                     }
-                    return new Token(TokenKind.BitOr, ctx.Position++);
+                    return new Token(ctx, TokenKind.BitOr, ctx.Position++);
                 case '^':
                     if (lookahead == '^')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.Xor, startPos);
+                        return new Token(ctx, TokenKind.Xor, startPos);
                     }
                     if (lookahead == '=')
                     {
                         int startPos = ctx.Position;
                         ctx.Position += 2;
-                        return new Token(TokenKind.AssignXor, startPos);
+                        return new Token(ctx, TokenKind.AssignXor, startPos);
                     }
-                    return new Token(TokenKind.BitXor, ctx.Position++);
+                    return new Token(ctx, TokenKind.BitXor, ctx.Position++);
                 case '~':
-                    return new Token(TokenKind.BitNegate, ctx.Position++);
+                    return new Token(ctx, TokenKind.BitNegate, ctx.Position++);
             }
 
-            Token err = new(TokenKind.Error, ctx.Position++);
+            // No valid token found
+            Token err = new(ctx, TokenKind.Error, ctx.Position++);
             ctx.Error("Invalid token", err);
             return err;
         }
 
-        private static void SkipWhitespace(CompileContext ctx)
+        private static void SkipWhitespace(CodeContext ctx)
         {
             bool stillWhitespace = true;
             while (stillWhitespace)
@@ -473,7 +569,7 @@ namespace DogScepterLib.Project.GML.Compiler
             }
         }
 
-        private static Token ReadIdentifier(CompileContext ctx)
+        private static Token ReadIdentifier(CodeContext ctx)
         {
             int startPosition = ctx.Position;
 
@@ -494,46 +590,46 @@ namespace DogScepterLib.Project.GML.Compiler
             string identifier = sb.ToString();
             return identifier switch
             {
-                "and" => new Token(TokenKind.And, startPosition),
-                "or" => new Token(TokenKind.Or, startPosition),
-                "xor" => new Token(TokenKind.Xor, startPosition),
-                "while" => new Token(TokenKind.While, startPosition),
-                "with" => new Token(TokenKind.With, startPosition),
-                "if" => new Token(TokenKind.If, startPosition),
-                "do" => new Token(TokenKind.Do, startPosition),
-                "not" => new Token(TokenKind.Not, startPosition),
-                "enum" => new Token(TokenKind.Enum, startPosition),
-                "begin" => new Token(TokenKind.Begin, startPosition),
-                "end" => new Token(TokenKind.End, startPosition),
-                "var" => new Token(TokenKind.Var, startPosition),
-                "globalvar" => new Token(TokenKind.Globalvar, startPosition),
-                "return" => new Token(TokenKind.Return, startPosition),
-                "default" => new Token(TokenKind.Default, startPosition),
-                "for" => new Token(TokenKind.For, startPosition),
-                "case" => new Token(TokenKind.Case, startPosition),
-                "switch" => new Token(TokenKind.Switch, startPosition),
-                "until" => new Token(TokenKind.Until, startPosition),
-                "continue" => new Token(TokenKind.Continue, startPosition),
-                "break" => new Token(TokenKind.Break, startPosition),
-                "else" => new Token(TokenKind.Else, startPosition),
-                "repeat" => new Token(TokenKind.Repeat, startPosition),
-                "exit" => new Token(TokenKind.Exit, startPosition),
-                "then" => new Token(TokenKind.Then, startPosition),
-                "mod" => new Token(TokenKind.Mod, startPosition),
-                "div" => new Token(TokenKind.Div, startPosition),
-                "function" => new Token(TokenKind.Function, startPosition),
-                "new" => new Token(TokenKind.New, startPosition),
-                "delete" => new Token(TokenKind.Delete, startPosition),
-                "throw" => new Token(TokenKind.Throw, startPosition),
-                "try" => new Token(TokenKind.Try, startPosition),
-                "catch" => new Token(TokenKind.Catch, startPosition),
-                "finally" => new Token(TokenKind.Finally, startPosition),
-                "static" => new Token(TokenKind.Static, startPosition),
-                _ => new Token(TokenKind.Identifier, startPosition, identifier)
+                "and" => new Token(ctx, TokenKind.And, startPosition),
+                "or" => new Token(ctx, TokenKind.Or, startPosition),
+                "xor" => new Token(ctx, TokenKind.Xor, startPosition),
+                "while" => new Token(ctx, TokenKind.While, startPosition),
+                "with" => new Token(ctx, TokenKind.With, startPosition),
+                "if" => new Token(ctx, TokenKind.If, startPosition),
+                "do" => new Token(ctx, TokenKind.Do, startPosition),
+                "not" => new Token(ctx, TokenKind.Not, startPosition),
+                "enum" => new Token(ctx, TokenKind.Enum, startPosition),
+                "begin" => new Token(ctx, TokenKind.Begin, startPosition),
+                "end" => new Token(ctx, TokenKind.End, startPosition),
+                "var" => new Token(ctx, TokenKind.Var, startPosition),
+                "globalvar" => new Token(ctx, TokenKind.Globalvar, startPosition),
+                "return" => new Token(ctx, TokenKind.Return, startPosition),
+                "default" => new Token(ctx, TokenKind.Default, startPosition),
+                "for" => new Token(ctx, TokenKind.For, startPosition),
+                "case" => new Token(ctx, TokenKind.Case, startPosition),
+                "switch" => new Token(ctx, TokenKind.Switch, startPosition),
+                "until" => new Token(ctx, TokenKind.Until, startPosition),
+                "continue" => new Token(ctx, TokenKind.Continue, startPosition),
+                "break" => new Token(ctx, TokenKind.Break, startPosition),
+                "else" => new Token(ctx, TokenKind.Else, startPosition),
+                "repeat" => new Token(ctx, TokenKind.Repeat, startPosition),
+                "exit" => new Token(ctx, TokenKind.Exit, startPosition),
+                "then" => new Token(ctx, TokenKind.Then, startPosition),
+                "mod" => new Token(ctx, TokenKind.Mod, startPosition),
+                "div" => new Token(ctx, TokenKind.Div, startPosition),
+                "function" => new Token(ctx, TokenKind.Function, startPosition),
+                "new" => new Token(ctx, TokenKind.New, startPosition),
+                "delete" => new Token(ctx, TokenKind.Delete, startPosition),
+                "throw" => new Token(ctx, TokenKind.Throw, startPosition),
+                "try" => new Token(ctx, TokenKind.Try, startPosition),
+                "catch" => new Token(ctx, TokenKind.Catch, startPosition),
+                "finally" => new Token(ctx, TokenKind.Finally, startPosition),
+                "static" => new Token(ctx, TokenKind.Static, startPosition),
+                _ => new Token(ctx, TokenKind.Identifier, startPosition, identifier)
             };
         }
 
-        private static Token ReadNumber(CompileContext ctx)
+        private static Token ReadNumber(CodeContext ctx)
         {
             int startPosition = ctx.Position;
 
@@ -551,10 +647,10 @@ namespace DogScepterLib.Project.GML.Compiler
                     break;
             }
 
-            return new Token(TokenKind.Number, startPosition, sb.ToString());
+            return new Token(ctx, TokenKind.Number, startPosition, sb.ToString());
         }
 
-        private static Token ReadHex(CompileContext ctx)
+        private static Token ReadHex(CodeContext ctx)
         {
             int startPosition = ctx.Position;
 
@@ -577,10 +673,10 @@ namespace DogScepterLib.Project.GML.Compiler
                     break;
             }
 
-            return new Token(TokenKind.Number, startPosition, sb.ToString());
+            return new Token(ctx, TokenKind.Number, startPosition, sb.ToString());
         }
 
-        private static Token ReadVerbatimString(CompileContext ctx)
+        private static Token ReadVerbatimString(CodeContext ctx)
         {
             int startPosition = ctx.Position;
 
@@ -596,10 +692,10 @@ namespace DogScepterLib.Project.GML.Compiler
                 ctx.Position++;
             }
 
-            return new Token(TokenKind.String, startPosition, sb.ToString());
+            return new Token(ctx, TokenKind.String, startPosition, sb.ToString());
         }
 
-        private static Token ReadString(CompileContext ctx)
+        private static Token ReadString(CodeContext ctx)
         {
             int startPosition = ctx.Position++;
 
@@ -669,7 +765,7 @@ namespace DogScepterLib.Project.GML.Compiler
                                         }
                                         catch (ArgumentOutOfRangeException)
                                         {
-                                            ctx.Error("\\u value in string not in valid range.", new Token(TokenKind.String, startPosition, sb.ToString()));
+                                            ctx.Error("\\u value in string not in valid range.", new Token(ctx, TokenKind.String, startPosition, sb.ToString()));
                                         }
                                     }
                                 }
@@ -693,7 +789,7 @@ namespace DogScepterLib.Project.GML.Compiler
                                     if (charsRead == 2)
                                         sb.Append((char)result);
                                     else
-                                        ctx.Error("\\x value in string is missing valid hex characters.", new Token(TokenKind.String, startPosition, sb.ToString()));
+                                        ctx.Error("\\x value in string is missing valid hex characters.", new Token(ctx, TokenKind.String, startPosition, sb.ToString()));
                                 }
                                 break;
                             default:
@@ -717,7 +813,7 @@ namespace DogScepterLib.Project.GML.Compiler
                                         if (charsRead == 3)
                                             sb.Append((char)result);
                                         else
-                                            ctx.Error("\\??? octal value in string is missing valid octal characters.", new Token(TokenKind.String, startPosition, sb.ToString()));
+                                            ctx.Error("\\??? octal value in string is missing valid octal characters.", new Token(ctx, TokenKind.String, startPosition, sb.ToString()));
                                     }
                                     else
                                     {
@@ -731,7 +827,7 @@ namespace DogScepterLib.Project.GML.Compiler
                 }
                 else if (c == '\n')
                 {
-                    ctx.Error("Cannot have raw newlines in normal strings.", new Token(TokenKind.String, startPosition, sb.ToString()));
+                    ctx.Error("Cannot have raw newlines in normal strings.", new Token(ctx, TokenKind.String, startPosition, sb.ToString()));
                     ctx.Position++;
                 }
                 else
@@ -741,7 +837,7 @@ namespace DogScepterLib.Project.GML.Compiler
                 }
             }
 
-            return new Token(TokenKind.String, startPosition, sb.ToString());
+            return new Token(ctx, TokenKind.String, startPosition, sb.ToString());
         }
 
         private static int ConvertHexToInt(char c)
