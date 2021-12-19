@@ -61,6 +61,8 @@ namespace DogScepterLib.Project.GML.Compiler
         AssignOr,
         AssignXor,
         BitNegate,
+        BitShiftLeft,
+        BitShiftRight,
 
         Conditional,
         NullCoalesce,
@@ -253,6 +255,12 @@ namespace DogScepterLib.Project.GML.Compiler
                 case '.':
                     return new Token(TokenKind.Dot, ctx.Position++);
                 case ':':
+                    if (lookahead == '=')
+                    {
+                        int startPos = ctx.Position;
+                        ctx.Position += 2;
+                        return new Token(TokenKind.Assign, startPos);
+                    }
                     return new Token(TokenKind.Colon, ctx.Position++);
                 case ';':
                     return new Token(TokenKind.Semicolon, ctx.Position++);
@@ -293,6 +301,46 @@ namespace DogScepterLib.Project.GML.Compiler
                     return new Token(TokenKind.ArrayOpen, ctx.Position++);
                 case ']':
                     return new Token(TokenKind.ArrayClose, ctx.Position++);
+                case '<':
+                    switch (lookahead)
+                    {
+                        case '=':
+                            {
+                                int startPos = ctx.Position;
+                                ctx.Position += 2;
+                                return new Token(TokenKind.LesserEqual, startPos);
+                            }
+                        case '<':
+                            {
+                                int startPos = ctx.Position;
+                                ctx.Position += 2;
+                                return new Token(TokenKind.BitShiftLeft, startPos);
+                            }
+                        case '>':
+                            {
+                                int startPos = ctx.Position;
+                                ctx.Position += 2;
+                                return new Token(TokenKind.NotEqual, startPos);
+                            }
+                    }
+                    return new Token(TokenKind.Lesser, ctx.Position++);
+                case '>':
+                    switch (lookahead)
+                    {
+                        case '=':
+                            {
+                                int startPos = ctx.Position;
+                                ctx.Position += 2;
+                                return new Token(TokenKind.GreaterEqual, startPos);
+                            }
+                        case '>':
+                            {
+                                int startPos = ctx.Position;
+                                ctx.Position += 2;
+                                return new Token(TokenKind.BitShiftRight, startPos);
+                            }
+                    }
+                    return new Token(TokenKind.Greater, ctx.Position++);
                 case '?':
                     if (lookahead == '?')
                     {
@@ -553,14 +601,17 @@ namespace DogScepterLib.Project.GML.Compiler
 
         private static Token ReadString(CompileContext ctx)
         {
-            int startPosition = ctx.Position;
+            int startPosition = ctx.Position++;
 
             StringBuilder sb = new();
             while (ctx.Position < ctx.Code.Length)
             {
                 char c = ctx.Code[ctx.Position];
                 if (c == '"')
+                {
+                    ctx.Position++;
                     break;
+                }
                 if (c == '\\')
                 {
                     ctx.Position++;
@@ -679,7 +730,10 @@ namespace DogScepterLib.Project.GML.Compiler
                     }
                 }
                 else if (c == '\n')
+                {
                     ctx.Error("Cannot have raw newlines in normal strings.", new Token(TokenKind.String, startPosition, sb.ToString()));
+                    ctx.Position++;
+                }
                 else
                 {
                     sb.Append(c);
