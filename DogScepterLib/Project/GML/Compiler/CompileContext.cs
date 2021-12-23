@@ -9,17 +9,37 @@ namespace DogScepterLib.Project.GML.Compiler
     public class CompileContext
     {
         public ProjectFile Project { get; init; }
+        public Builtins Builtins { get; init; }
         public List<CodeContext> Code { get; init; } = new();
         public bool IsGMS2 { get; init; }
         public bool IsGMS23 { get; init; }
         public List<ErrorMessage> Errors { get; init; } = new();
         public Dictionary<string, CodeContext> Macros { get; init; } = new();
+        public Dictionary<string, int> AssetIds = new();
 
         public CompileContext(ProjectFile pf)
         {
             Project = pf;
             IsGMS2 = pf.DataHandle.VersionInfo.IsNumberAtLeast(2);
             IsGMS23 = pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3);
+            
+            // Populate asset ID dictionary
+            AddAssets(pf.Sounds);
+            AddAssets(pf.Sprites);
+            AddAssets(pf.Backgrounds);
+            AddAssets(pf.Fonts);
+            AddAssets(pf.Paths);
+            AddAssets(pf.Objects);
+            AddAssets(pf.Rooms);
+
+            // Initialize builtin variables/functions
+            Builtins = new(this);
+        }
+
+        private void AddAssets<T>(AssetRefList<T> list) where T : Asset
+        {
+            foreach (var asset in list)
+                AssetIds[asset.Name] = asset.DataIndex;
         }
 
         public void AddCode(string name, string code)
@@ -27,7 +47,7 @@ namespace DogScepterLib.Project.GML.Compiler
             Code.Add(new CodeContext(this, name, code));
         }
 
-        public void Compile()
+        public bool Compile()
         {
             // Tokenize all of the code
             foreach (var code in Code)
@@ -43,7 +63,17 @@ namespace DogScepterLib.Project.GML.Compiler
                 ExpandMacro(kvp.Value, referencedMacros);
             }
 
-            // TODO: Perform basic processing on every token (expanding macros, identifying functions, etc)
+            if (Errors.Count != 0)
+                return false;
+
+            // Perform basic processing on every token (expanding macros, identifying functions, etc)
+            foreach (var code in Code)
+                TokenProcessor.ProcessIdentifiers(code);
+
+            if (Errors.Count != 0)
+                return false;
+
+            return true;
         }
 
         private void ExpandMacro(CodeContext macro, HashSet<string> referenced)

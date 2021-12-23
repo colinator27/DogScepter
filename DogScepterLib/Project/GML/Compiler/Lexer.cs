@@ -1,127 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 
 namespace DogScepterLib.Project.GML.Compiler
 {
-    public enum TokenKind
-    {
-        EOF,
-        Error,
-
-        Identifier,
-        Number,
-        String,
-
-        Begin,
-        End,
-        Open,
-        Close,
-        Comma,
-        Dot,
-        Colon,
-        Semicolon,
-        ArrayOpen,
-        ArrayClose,
-
-        ArrayListOpen,
-        ArrayMapOpen,
-        ArrayGridOpen,
-        ArrayDirectOpen,
-        ArrayStructOpen,
-
-        Equal,
-        NotEqual,
-        Greater,
-        GreaterEqual,
-        Lesser,
-        LesserEqual,
-
-        Assign,
-        Plus,
-        Increment,
-        AssignPlus,
-        Minus,
-        Decrement,
-        AssignMinus,
-        Times,
-        AssignTimes,
-        Divide,
-        AssignDivide,
-        Mod,
-        AssignMod,
-
-        And,
-        Or,
-        Xor,
-        BitAnd,
-        BitOr,
-        BitXor,
-        AssignAnd,
-        AssignOr,
-        AssignXor,
-        BitNegate,
-        BitShiftLeft,
-        BitShiftRight,
-
-        Conditional,
-        NullCoalesce,
-        AssignNullCoalesce,
-
-        While,
-        With,
-        If,
-        Do,
-        Not,
-        Enum,
-        Var,
-        Globalvar,
-        Return,
-        Default,
-        For,
-        Case,
-        Switch,
-        Until,
-        Continue,
-        Break,
-        Else,
-        Repeat,
-        Exit,
-        Then,
-        Div,
-        Function,
-        New,
-        Delete,
-        Throw,
-        Try,
-        Catch,
-        Finally,
-        Static,
-    }
-
-    public class Token
-    {
-        public TokenKind Kind { get; set; }
-        public int Index { get; set; }
-        public string Text { get; set; }
-        public CodeContext Context { get; set; }
-
-        public Token(CodeContext context, TokenKind kind, int index)
-        {
-            Context = context;
-            Kind = kind;
-            Index = index;
-        }
-
-        public Token(CodeContext context, TokenKind kind, int index, string text)
-        {
-            Context = context;
-            Kind = kind;
-            Index = index;
-            Text = text;
-        }
-    }
-
     public class Lexer
     {
         public static void LexCode(CodeContext ctx)
@@ -633,47 +516,60 @@ namespace DogScepterLib.Project.GML.Compiler
         {
             int startPosition = ctx.Position;
 
-            StringBuilder sb = new();
-            sb.Append(ctx.Code[ctx.Position++]);
+            // Read the part of the string we're interested in
             while (ctx.Position < ctx.Code.Length)
             {
                 char c = ctx.Code[ctx.Position];
                 if (char.IsDigit(c) || c == '.')
-                {
-                    sb.Append(c);
                     ctx.Position++;
-                }
                 else
                     break;
             }
+            ReadOnlySpan<char> str = ctx.Code.AsSpan(startPosition, ctx.Position - startPosition);
 
-            return new Token(ctx, TokenKind.Number, startPosition, sb.ToString());
+            // Parse the number immediately
+            if (long.TryParse(str, NumberStyles.Integer, CultureInfo.InvariantCulture, out long value))
+            {
+                if ((long)(double)value == value)
+                    return new Token(ctx, new TokenConstant((double)value), startPosition);
+                return new Token(ctx, new TokenConstant(value), startPosition);
+            }
+            if (double.TryParse(str, NumberStyles.Float, CultureInfo.InvariantCulture, out double value2))
+                return new Token(ctx, new TokenConstant(value2), startPosition);
+
+            ctx.Error($"Invalid number \"{str}\"", startPosition);
+            return new Token(ctx, startPosition);
         }
 
         private static Token ReadHex(CodeContext ctx)
         {
             int startPosition = ctx.Position;
 
-            StringBuilder sb = new();
-            sb.Append(ctx.Code[ctx.Position++]);
+            // Read the part of the string we're interested in
+            ctx.Position++;
             if (ctx.Code[ctx.Position] == 'x')
-            {
-                sb.Append('x');
                 ctx.Position++;
-            }
+            int startNumber = ctx.Position;
             while (ctx.Position < ctx.Code.Length)
             {
                 char c = ctx.Code[ctx.Position];
                 if (char.IsDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))
-                {
-                    sb.Append(c);
                     ctx.Position++;
-                }
                 else
                     break;
             }
+            ReadOnlySpan<char> str = ctx.Code.AsSpan(startNumber, ctx.Position - startNumber);
 
-            return new Token(ctx, TokenKind.Number, startPosition, sb.ToString());
+            // Parse the number immediately
+            if (long.TryParse(str, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long value))
+            {
+                if (value >= int.MinValue && value <= int.MaxValue)
+                    return new Token(ctx, new TokenConstant((double)value), startPosition);
+                return new Token(ctx, new TokenConstant(value), startPosition);
+            }
+
+            ctx.Error($"Invalid hex literal \"{str}\"", startPosition);
+            return new Token(ctx, startPosition);
         }
 
         private static Token ReadVerbatimString(CodeContext ctx)
@@ -692,7 +588,7 @@ namespace DogScepterLib.Project.GML.Compiler
                 ctx.Position++;
             }
 
-            return new Token(ctx, TokenKind.String, startPosition, sb.ToString());
+            return new Token(ctx, new TokenConstant(sb.ToString()), startPosition);
         }
 
         private static Token ReadString(CodeContext ctx)
@@ -765,7 +661,7 @@ namespace DogScepterLib.Project.GML.Compiler
                                         }
                                         catch (ArgumentOutOfRangeException)
                                         {
-                                            ctx.Error("\\u value in string not in valid range.", new Token(ctx, TokenKind.String, startPosition, sb.ToString()));
+                                            ctx.Error("\\u value in string not in valid range.", new Token(ctx, startPosition));
                                         }
                                     }
                                 }
@@ -789,7 +685,7 @@ namespace DogScepterLib.Project.GML.Compiler
                                     if (charsRead == 2)
                                         sb.Append((char)result);
                                     else
-                                        ctx.Error("\\x value in string is missing valid hex characters.", new Token(ctx, TokenKind.String, startPosition, sb.ToString()));
+                                        ctx.Error("\\x value in string is missing valid hex characters.", new Token(ctx, startPosition));
                                 }
                                 break;
                             default:
@@ -813,7 +709,7 @@ namespace DogScepterLib.Project.GML.Compiler
                                         if (charsRead == 3)
                                             sb.Append((char)result);
                                         else
-                                            ctx.Error("\\??? octal value in string is missing valid octal characters.", new Token(ctx, TokenKind.String, startPosition, sb.ToString()));
+                                            ctx.Error("\\??? octal value in string is missing valid octal characters.", new Token(ctx, startPosition));
                                     }
                                     else
                                     {
@@ -827,7 +723,7 @@ namespace DogScepterLib.Project.GML.Compiler
                 }
                 else if (c == '\n')
                 {
-                    ctx.Error("Cannot have raw newlines in normal strings.", new Token(ctx, TokenKind.String, startPosition, sb.ToString()));
+                    ctx.Error("Cannot have raw newlines in normal strings.", new Token(ctx, startPosition));
                     ctx.Position++;
                 }
                 else
@@ -837,7 +733,7 @@ namespace DogScepterLib.Project.GML.Compiler
                 }
             }
 
-            return new Token(ctx, TokenKind.String, startPosition, sb.ToString());
+            return new Token(ctx, new TokenConstant(sb.ToString()), startPosition);
         }
 
         private static int ConvertHexToInt(char c)
