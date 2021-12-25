@@ -10,6 +10,7 @@ namespace DogScepterLib.Project.GML.Compiler
     {
         Block,
         Constant, // Represents basic number/string data type in the code
+
         FunctionCall, // Represents a place where a function is called (but can also be a variable name)
         FunctionCallChain, // Appears in cases like a.b() and a()(). First child is a ChainReference or another FunctionCallChain
         Variable, // Represents a single variable name (and nothing else)
@@ -17,6 +18,11 @@ namespace DogScepterLib.Project.GML.Compiler
         Prefix, // Appears in cases like ++a, ++a.b.c, ++a.b[0] (and so on)
         Postfix, // Appears in cases like a++, a.b.c++, a.b[0]++ (and so on)
         Accessor, // Arrays and accessors
+
+        Conditional, // like (a ? b : c)
+        NullCoalesce, // like (a ?? b)
+        Binary, // like (a == b) and most other operators, including arithmetic
+        Unary, // like !a (and other operations)
     }
 
     public class Node

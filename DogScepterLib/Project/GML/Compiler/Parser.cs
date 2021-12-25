@@ -256,6 +256,40 @@ namespace DogScepterLib.Project.GML.Compiler
                             ctx.Error("Invalid prefix", curr);
                         return n;
                     }
+                case TokenKind.Not:
+                case TokenKind.Plus:
+                case TokenKind.Minus:
+                case TokenKind.BitNegate:
+                    {
+                        ctx.Position++;
+                        Node n = new(NodeKind.Unary, curr);
+                        n.Children.Add(ParseChain(ctx));
+                        return n;
+                    }
+                case TokenKind.ArrayOpen:
+                    if (ctx.BaseContext.IsGMS2)
+                    {
+                        ctx.Position++;
+                        Node n = new(NodeKind.FunctionCall, new Token(ctx, TokenKind.FunctionCall, -1) { Value = new TokenFunction("@@NewGMLArray@@", null) });
+                        curr = ctx.Tokens[ctx.Position];
+                        while (curr.Kind != TokenKind.EOF && curr.Kind != TokenKind.ArrayClose)
+                        {
+                            n.Children.Add(ParseExpression(ctx));
+                            curr = ctx.Tokens[ctx.Position];
+                            if (curr.Kind == TokenKind.Comma)
+                                curr = ctx.Tokens[++ctx.Position];
+                            else if (curr.Kind != TokenKind.ArrayClose)
+                            {
+                                ctx.Error("Expected ',' or ']'", curr);
+                                break;
+                            }
+                        }
+                        ExpectToken(ctx, TokenKind.ArrayClose, "]");
+                        return n;
+                    }
+                    
+                    ctx.Error("Cannot use array literal in pre-GMS2 runtime.", curr);
+                    return null;
             }
 
             ctx.Error("Invalid base expression", curr);
@@ -290,10 +324,255 @@ namespace DogScepterLib.Project.GML.Compiler
             ExpectToken(ctx, TokenKind.Close, ")");
         }
 
-        public static Node ParseExpression(CodeContext ctx)
+        public static Node ParseExpression(CodeContext ctx) => ParseConditional(ctx);
+
+        public static Node ParseConditional(CodeContext ctx)
         {
-            // TODO: Handle operations, right now this is incomplete
-            return ParseChain(ctx);
+            Node left = ParseNullCoalesce(ctx);
+            if (left == null)
+                return null;
+            if (ctx.Tokens[ctx.Position].Kind == TokenKind.Conditional)
+            {
+                ctx.Position++;
+                Node res = new(NodeKind.Conditional);
+                res.Children.Add(left);
+                res.Children.Add(ParseNullCoalesce(ctx));
+                ExpectToken(ctx, TokenKind.Colon, ":");
+                res.Children.Add(ParseNullCoalesce(ctx));
+                return res;
+            }
+            return left;
+        }
+
+        public static Node ParseNullCoalesce(CodeContext ctx)
+        {
+            Node left = ParseOr(ctx);
+            if (left == null)
+                return null;
+            if (ctx.Tokens[ctx.Position].Kind == TokenKind.NullCoalesce)
+            {
+                ctx.Position++;
+                Node res = new(NodeKind.NullCoalesce);
+                res.Children.Add(left);
+                res.Children.Add(ParseOr(ctx));
+                return res;
+            }
+            return left;
+        }
+
+        public static Node ParseOr(CodeContext ctx)
+        {
+            Node left = ParseAnd(ctx);
+            if (left == null)
+                return null;
+            Token curr = ctx.Tokens[ctx.Position];
+            if (curr.Kind == TokenKind.Or)
+            {
+                ctx.Position++;
+                Node res = new(NodeKind.Binary, curr);
+                res.Children.Add(left);
+                res.Children.Add(ParseAnd(ctx));
+                while (ctx.Tokens[ctx.Position].Kind == TokenKind.Or)
+                    res.Children.Add(ParseAnd(ctx));
+                return res;
+            }
+            return left;
+        }
+
+        public static Node ParseAnd(CodeContext ctx)
+        {
+            Node left = ParseXor(ctx);
+            if (left == null)
+                return null;
+            Token curr = ctx.Tokens[ctx.Position];
+            if (curr.Kind == TokenKind.And)
+            {
+                ctx.Position++;
+                Node res = new(NodeKind.Binary, curr);
+                res.Children.Add(left);
+                res.Children.Add(ParseXor(ctx));
+                while (ctx.Tokens[ctx.Position].Kind == TokenKind.And)
+                    res.Children.Add(ParseXor(ctx));
+                return res;
+            }
+            return left;
+        }
+
+        public static Node ParseXor(CodeContext ctx)
+        {
+            Node left = ParseCompare(ctx);
+            if (left == null)
+                return null;
+            Token curr = ctx.Tokens[ctx.Position];
+            if (curr.Kind == TokenKind.Xor)
+            {
+                ctx.Position++;
+                Node res = new(NodeKind.Binary, curr);
+                res.Children.Add(left);
+                res.Children.Add(ParseCompare(ctx));
+                return res;
+            }
+            return left;
+        }
+
+        public static Node ParseCompare(CodeContext ctx)
+        {
+            Node left = ParseBitwise(ctx);
+            if (left == null)
+                return null;
+            Token curr = ctx.Tokens[ctx.Position];
+            switch (curr.Kind)
+            {
+                case TokenKind.Equal:
+                case TokenKind.NotEqual:
+                case TokenKind.Greater:
+                case TokenKind.GreaterEqual:
+                case TokenKind.Lesser:
+                case TokenKind.LesserEqual:
+                    {
+                        ctx.Position++;
+                        Node res = new(NodeKind.Binary, curr);
+                        res.Children.Add(left);
+                        res.Children.Add(ParseBitwise(ctx));
+                        return res;
+                    }
+                case TokenKind.Assign:
+                    {
+                        // Legacy: convert = to ==
+                        ctx.Position++;
+                        Node res = new(NodeKind.Binary, new Token(ctx, TokenKind.Equal, -1));
+                        res.Children.Add(left);
+                        res.Children.Add(ParseBitwise(ctx));
+                        return res;
+                    }
+            }
+            return left;
+        }
+
+        public static Node ParseBitwise(CodeContext ctx)
+        {
+            Node left = ParseBitShift(ctx);
+            if (left == null)
+                return null;
+            Token curr = ctx.Tokens[ctx.Position];
+            switch (curr.Kind)
+            {
+                case TokenKind.BitAnd:
+                case TokenKind.BitOr:
+                case TokenKind.BitXor:
+                    Node res = new(NodeKind.Binary, curr);
+                    res.Children.Add(left);
+                    res.Children.Add(ParseBitShift(ctx));
+
+                    curr = ctx.Tokens[++ctx.Position];
+                    while (curr.Kind == TokenKind.BitAnd ||
+                           curr.Kind == TokenKind.BitOr ||
+                           curr.Kind == TokenKind.BitXor)
+                    {
+                        Node next = new(NodeKind.Binary, curr);
+                        next.Children.Add(res);
+                        next.Children.Add(ParseBitShift(ctx));
+                        res = next;
+
+                        curr = ctx.Tokens[ctx.Position];
+                    }
+                    break;
+            }
+            return left;
+        }
+
+        public static Node ParseBitShift(CodeContext ctx)
+        {
+            Node left = ParseAddSub(ctx);
+            if (left == null)
+                return null;
+            Token curr = ctx.Tokens[ctx.Position];
+            switch (curr.Kind)
+            {
+                case TokenKind.BitShiftLeft:
+                case TokenKind.BitShiftRight:
+                    Node res = new(NodeKind.Binary, curr);
+                    res.Children.Add(left);
+                    res.Children.Add(ParseAddSub(ctx));
+
+                    curr = ctx.Tokens[++ctx.Position];
+                    while (curr.Kind == TokenKind.BitShiftLeft ||
+                           curr.Kind == TokenKind.BitShiftRight)
+                    {
+                        Node next = new(NodeKind.Binary, curr);
+                        next.Children.Add(res);
+                        next.Children.Add(ParseAddSub(ctx));
+                        res = next;
+
+                        curr = ctx.Tokens[ctx.Position];
+                    }
+                    break;
+            }
+            return left;
+        }
+
+        public static Node ParseAddSub(CodeContext ctx)
+        {
+            Node left = ParseMulDiv(ctx);
+            if (left == null)
+                return null;
+            Token curr = ctx.Tokens[ctx.Position];
+            switch (curr.Kind)
+            {
+                case TokenKind.Plus:
+                case TokenKind.Minus:
+                    Node res = new(NodeKind.Binary, curr);
+                    res.Children.Add(left);
+                    res.Children.Add(ParseMulDiv(ctx));
+
+                    curr = ctx.Tokens[++ctx.Position];
+                    while (curr.Kind == TokenKind.Plus ||
+                           curr.Kind == TokenKind.Minus)
+                    {
+                        Node next = new(NodeKind.Binary, curr);
+                        next.Children.Add(res);
+                        next.Children.Add(ParseMulDiv(ctx));
+                        res = next;
+
+                        curr = ctx.Tokens[ctx.Position];
+                    }
+                    break;
+            }
+            return left;
+        }
+
+        public static Node ParseMulDiv(CodeContext ctx)
+        {
+            Node left = ParseChain(ctx);
+            if (left == null)
+                return null;
+            Token curr = ctx.Tokens[ctx.Position];
+            switch (curr.Kind)
+            {
+                case TokenKind.Times:
+                case TokenKind.Divide:
+                case TokenKind.Mod:
+                case TokenKind.Div:
+                    Node res = new(NodeKind.Binary, curr);
+                    res.Children.Add(left);
+                    res.Children.Add(ParseChain(ctx));
+
+                    curr = ctx.Tokens[++ctx.Position];
+                    while (curr.Kind == TokenKind.Times ||
+                           curr.Kind == TokenKind.Divide ||
+                           curr.Kind == TokenKind.Mod ||
+                           curr.Kind == TokenKind.Div)
+                    {
+                        Node next = new(NodeKind.Binary, curr);
+                        next.Children.Add(res);
+                        next.Children.Add(ParseChain(ctx));
+                        res = next;
+
+                        curr = ctx.Tokens[ctx.Position];
+                    }
+                    break;
+            }
+            return left;
         }
     }
 }
