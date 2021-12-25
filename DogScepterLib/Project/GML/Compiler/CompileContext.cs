@@ -16,6 +16,7 @@ namespace DogScepterLib.Project.GML.Compiler
         public List<ErrorMessage> Errors { get; init; } = new();
         public Dictionary<string, CodeContext> Macros { get; init; } = new();
         public Dictionary<string, int> AssetIds = new();
+        public Dictionary<string, int> VariableIds = new();
 
         public CompileContext(ProjectFile pf)
         {
@@ -73,6 +74,22 @@ namespace DogScepterLib.Project.GML.Compiler
             if (Errors.Count != 0)
                 return false;
 
+            // Parse tokens
+            foreach (var code in Code)
+            {
+                code.Position = 0;
+                code.RootNode = new Node(NodeKind.Block);
+                Parser.SkipSemicolons(code);
+                while (!code.Errored && code.Tokens[code.Position].Kind != TokenKind.EOF)
+                {
+                    code.RootNode.Children.Add(Parser.ParseStatement(code));
+                    Parser.SkipSemicolons(code);
+                }
+            }
+
+            if (Errors.Count != 0)
+                return false;
+
             return true;
         }
 
@@ -114,6 +131,8 @@ namespace DogScepterLib.Project.GML.Compiler
 
         public int Position { get; set; } = 0;
         public List<Token> Tokens { get; set; } = null;
+        public Node RootNode { get; set; } = null;
+        public bool Errored { get; set; } = false;
 
         public CodeContext(CompileContext baseContext, string name, string code)
         {
@@ -138,6 +157,7 @@ namespace DogScepterLib.Project.GML.Compiler
                     column++;
             }
 
+            Errored = true;
             BaseContext.Errors.Add(new(this, message, line, column));
         }
 
@@ -157,6 +177,7 @@ namespace DogScepterLib.Project.GML.Compiler
                     column++;
             }
 
+            Errored = true;
             BaseContext.Errors.Add(new(this, message, line, column));
         }
     }

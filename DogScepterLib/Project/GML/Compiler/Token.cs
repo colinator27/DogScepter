@@ -100,13 +100,14 @@ namespace DogScepterLib.Project.GML.Compiler
 
         Constant,
         Variable,
-        FunctionCall,
+        FunctionCall
     }
 
     public class Token
     {
         public TokenKind Kind { get; set; }
         public int Index { get; set; }
+        public int ID { get; set; } = 0;
         public string Text { get; set; }
         public ITokenValue Value { get; set; }
         public CodeContext Context { get; set; }
@@ -147,6 +148,20 @@ namespace DogScepterLib.Project.GML.Compiler
             Kind = TokenKind.Variable;
             Value = value;
             Index = index;
+            
+            // Initialize variable ID
+            if (value.Builtin != null)
+                ID = value.Builtin.ID;
+            else
+            {
+                if (context.BaseContext.VariableIds.TryGetValue(value.Name, out int id))
+                    ID = id;
+                else
+                {
+                    ID = 100000 + context.BaseContext.VariableIds.Count;
+                    context.BaseContext.VariableIds.Add(value.Name, ID);
+                }
+            }
         }
 
         public Token(CodeContext context, TokenFunction value, int index)
@@ -155,6 +170,11 @@ namespace DogScepterLib.Project.GML.Compiler
             Kind = TokenKind.FunctionCall;
             Value = value;
             Index = index;
+
+            // Initialize function ID
+            if (value.Builtin != null)
+                ID = value.Builtin.ID;
+            // TODO? handle else case here? Not sure if it really matters
         }
 
         public override string ToString()
@@ -162,7 +182,7 @@ namespace DogScepterLib.Project.GML.Compiler
             if (Text != null)
                 return $"Token: {Kind}, Text: {Text} ({Index})";
             if (Value != null)
-                return $"Token: {Kind}, Value: {Value} ({Index})";
+                return $"Token: {Kind}, Value: {Value} ({Index}) [{ID}]";
             return $"Token: {Kind} ({Index})";
         }
     }
