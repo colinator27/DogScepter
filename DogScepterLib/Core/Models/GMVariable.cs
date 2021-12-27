@@ -63,6 +63,20 @@ namespace DogScepterLib.Core.Models
             if (reader.VersionInfo.FormatID > 14)
             {
                 VariableType = (GMCode.Bytecode.Instruction.InstanceType)reader.ReadInt32();
+
+                // Handle max struct ID detection (for GML compilation in 2.3)
+                if (VariableType == GMCode.Bytecode.Instruction.InstanceType.Static)
+                {
+                    if (Name.Content.StartsWith("__struct__"))
+                    {
+                        if (int.TryParse(Name.Content[10..], out int id))
+                        {
+                            if (id > reader.Data.Stats.LastStructID)
+                                reader.Data.Stats.LastStructID = id;
+                        }
+                    }
+                }
+
                 VariableID = reader.ReadInt32();
             }
             Occurrences = reader.ReadInt32();

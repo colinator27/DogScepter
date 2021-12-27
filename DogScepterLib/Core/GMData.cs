@@ -89,7 +89,13 @@ namespace DogScepterLib.Core
             }
         }
 
+        public class GMStats
+        {
+            public int LastStructID = -1;
+        }
+
         public GMVersionInfo VersionInfo;
+        public GMStats Stats;
 
         public GMChunkFORM FORM;
         public Dictionary<string, GMChunk> Chunks => FORM.Chunks;
@@ -122,6 +128,7 @@ namespace DogScepterLib.Core
         public GMData()
         {
             VersionInfo = new GMVersionInfo();
+            Stats = new GMStats();
         }
 
         public void BuildStringCache()

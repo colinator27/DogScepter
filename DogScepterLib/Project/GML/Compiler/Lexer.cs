@@ -22,6 +22,13 @@ namespace DogScepterLib.Project.GML.Compiler
             // Remove EOF token for macros
             if (ctx.Kind == CodeContext.CodeKind.Macro && next.Kind == TokenKind.EOF)
                 ctx.Tokens.RemoveAt(ctx.Tokens.Count - 1);
+            else
+            {
+                // Add safety EOF tokens at the end for parsing
+                Token eof = ctx.Tokens[^1];
+                for (int i = 0; i < 8; i++)
+                    ctx.Tokens.Add(eof);
+            }
         }
 
         private static Token GetNextToken(CodeContext ctx)

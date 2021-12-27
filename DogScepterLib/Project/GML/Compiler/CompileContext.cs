@@ -133,16 +133,30 @@ namespace DogScepterLib.Project.GML.Compiler
         public List<Token> Tokens { get; set; } = null;
         public Node RootNode { get; set; } = null;
         public bool Errored { get; set; } = false;
+        public List<string> LocalVars { get; set; } = new();
+        public List<string> StaticVars { get; set; } = new();
+        public List<string> ArgumentVars { get; set; } = new();
 
         public CodeContext(CompileContext baseContext, string name, string code)
         {
             BaseContext = baseContext;
             Name = name;
             Code = code;
+
+            if (baseContext.Project.DataHandle.VersionInfo.FormatID >= 15)
+                LocalVars.Add("arguments");
         }
 
         public void Error(string message, int index)
         {
+            Errored = true;
+
+            if (index == -1)
+            {
+                BaseContext.Errors.Add(new(this, message));
+                return;
+            }
+
             // Count lines/columns
             int line = 1;
             int column = 1;
@@ -156,8 +170,6 @@ namespace DogScepterLib.Project.GML.Compiler
                 else
                     column++;
             }
-
-            Errored = true;
             BaseContext.Errors.Add(new(this, message, line, column));
         }
 
@@ -189,7 +201,7 @@ namespace DogScepterLib.Project.GML.Compiler
         public int Line { get; init; }
         public int Column { get; init; }
 
-        public ErrorMessage(CodeContext context, string message, int line, int column)
+        public ErrorMessage(CodeContext context, string message, int line = -1, int column = -1)
         {
             Context = context;
             Message = message;

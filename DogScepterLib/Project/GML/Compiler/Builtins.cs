@@ -61,6 +61,7 @@ namespace DogScepterLib.Project.GML.Compiler
         {
             Context = ctx;
 
+            // Should always have ID 0
             VarGlobalDefine("undefined", false);
 
             VarInstanceDefine("x");

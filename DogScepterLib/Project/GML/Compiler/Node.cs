@@ -8,7 +8,9 @@ namespace DogScepterLib.Project.GML.Compiler
 {
     public enum NodeKind
     {
-        Block,
+        Empty,
+        Group, // Group of nodes, used inside other nodes
+        Block, // Group of statements
         Constant, // Represents basic number/string data type in the code
 
         FunctionCall, // Represents a place where a function is called (but can also be a variable name)
@@ -23,6 +25,11 @@ namespace DogScepterLib.Project.GML.Compiler
         NullCoalesce, // like (a ?? b)
         Binary, // like (a == b) and most other operators, including arithmetic
         Unary, // like !a (and other operations)
+
+        Assign, // like a = 123
+        If, // if statement
+
+        FunctionDecl, // like function(){}, but also used internally for structs
     }
 
     public class Node
@@ -30,11 +37,14 @@ namespace DogScepterLib.Project.GML.Compiler
         public NodeKind Kind { get; set; }
         public Token Token { get; set; }
         public List<Node> Children { get; set; } = new();
+        public INodeInfo Info { get; set; }
+
+        private static readonly Token NullToken = new(null, -1);
 
         public Node(NodeKind kind)
         {
             Kind = kind;
-            Token = new Token(null, -1);
+            Token = NullToken;
         }
 
         public Node(NodeKind kind, Token token)
@@ -47,6 +57,45 @@ namespace DogScepterLib.Project.GML.Compiler
         {
             Kind = NodeKind.Variable;
             Token = new Token(context, new TokenVariable(builtin.Name, builtin), -1);
+        }
+
+        public override string ToString()
+        {
+            if (Info != null)
+                return $"Node: {Kind} ({Info}) > {Children.Count} children";
+            if (Kind == NodeKind.Variable)
+                return $"Node: {Kind} [{Token.Value}] > {Children.Count} children";
+            if (Token != NullToken)
+                return $"Node: {Kind} ({Token}) > {Children.Count} children";
+            return $"Node: {Kind} > {Children.Count} children";
+        }
+    }
+
+    public interface INodeInfo
+    {
+    }
+
+    public class NodeFunctionInfo : INodeInfo
+    {
+        public bool IsConstructor { get; set; }
+        public List<string> LocalVars { get; set; }
+        public List<string> StaticVars { get; set; }
+        public List<string> Arguments { get; set; }
+        public int InheritingIndex { get; set; }
+        public int OptionalArgsIndex { get; set; }
+
+        public NodeFunctionInfo(bool isConstructor, List<string> localVars, List<string> staticVars, List<string> arguments)
+        {
+            IsConstructor = isConstructor;
+            LocalVars = localVars;
+            StaticVars = staticVars;
+            Arguments = arguments;
+        }
+
+        public override string ToString()
+        {
+            return $"Func Info: constructor={IsConstructor}, locals={LocalVars.Count}, statics={StaticVars.Count}, " +
+                   $"args={Arguments.Count}, inherits={InheritingIndex != -1}, optionals={OptionalArgsIndex != -1}";
         }
     }
 }
