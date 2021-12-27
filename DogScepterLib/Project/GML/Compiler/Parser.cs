@@ -620,7 +620,7 @@
             decl.Children.Add(new Node(NodeKind.Variable,
                                         new Token(ctx, TokenKind.Variable, -1)
                                         {
-                                            Value = new TokenVariable($"__struct__{++ctx.BaseContext.Project.DataHandle.Stats.LastStructID}", null),
+                                            Value = new TokenVariable($"___struct___{++ctx.BaseContext.Project.DataHandle.Stats.LastStructID}", null),
                                             ID = -16 // static
                                         }));
             decl.Children.Add(new Node(NodeKind.Group)); // no arguments

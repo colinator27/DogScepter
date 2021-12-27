@@ -67,9 +67,9 @@ namespace DogScepterLib.Core.Models
                 // Handle max struct ID detection (for GML compilation in 2.3)
                 if (VariableType == GMCode.Bytecode.Instruction.InstanceType.Static)
                 {
-                    if (Name.Content.StartsWith("__struct__"))
+                    if (Name.Content.StartsWith("___struct___"))
                     {
-                        if (int.TryParse(Name.Content[10..], out int id))
+                        if (int.TryParse(Name.Content[12..], out int id))
                         {
                             if (id > reader.Data.Stats.LastStructID)
                                 reader.Data.Stats.LastStructID = id;
