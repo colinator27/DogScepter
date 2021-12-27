@@ -68,6 +68,7 @@ namespace DogScepterLib.Project.GML.Compiler
         NullCoalesce,
         AssignNullCoalesce,
 
+        _KeywordsBegin,
         While,
         With,
         If,
@@ -97,6 +98,7 @@ namespace DogScepterLib.Project.GML.Compiler
         Catch,
         Finally,
         Static,
+        _KeywordsEnd,
 
         Constant,
         Variable,

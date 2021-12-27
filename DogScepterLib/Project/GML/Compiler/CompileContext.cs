@@ -142,9 +142,6 @@ namespace DogScepterLib.Project.GML.Compiler
             BaseContext = baseContext;
             Name = name;
             Code = code;
-
-            if (baseContext.Project.DataHandle.VersionInfo.FormatID >= 15)
-                LocalVars.Add("arguments");
         }
 
         public void Error(string message, int index)
@@ -175,22 +172,7 @@ namespace DogScepterLib.Project.GML.Compiler
 
         public void Error(string message, Token token)
         {
-            // Count lines/columns
-            int line = 1;
-            int column = 1;
-            for (int i = 0; i < token.Index; i++)
-            {
-                if (Code[i] == '\n')
-                {
-                    line++;
-                    column = 1;
-                }
-                else
-                    column++;
-            }
-
-            Errored = true;
-            BaseContext.Errors.Add(new(this, message, line, column));
+            Error(message, token?.Index ?? -1);
         }
     }
 

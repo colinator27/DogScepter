@@ -116,7 +116,14 @@ namespace DogScepterLib.Project.GML.Compiler
                             }
                             break;
                         }
+                    case "region":
+                    case "endregion":
+                        // Skip other recognized directives we don't care about
+                        while (ctx.Position < ctx.Code.Length && ctx.Code[ctx.Position] != '\n')
+                            ctx.Position++;
+                        break;
                     default:
+                        // Give an error at compile time (such as in the case of typos of "macro") to try to be helpful
                         ctx.Error($"Unrecognized directive \"{directiveType}\"", startIndex);
                         break;
                 }

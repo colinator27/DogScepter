@@ -23,10 +23,92 @@
                         return ParseFunctionDecl(ctx);
                     ctx.Error("Cannot use function declarations in pre-GMS2.3 runtime", curr);
                     return null;
-                default:
-                    Node res = ParseAssignOrFunction(ctx);
-                    if (res != null)
+                case TokenKind.Exit:
+                    ctx.Position++;
+                    return new Node(NodeKind.Exit, curr);
+                case TokenKind.Break:
+                    ctx.Position++;
+                    return new Node(NodeKind.Break, curr);
+                case TokenKind.Continue:
+                    ctx.Position++;
+                    return new Node(NodeKind.Continue, curr);
+                case TokenKind.Return:
+                    {
+                        Node res = new Node(NodeKind.Return, curr);
+                        curr = ctx.Tokens[++ctx.Position];
+                        if (curr.Kind != TokenKind.Semicolon && (curr.Kind < TokenKind._KeywordsBegin || curr.Kind > TokenKind._KeywordsEnd))
+                            res.Children.Add(ParseExpression(ctx));
                         return res;
+                    }
+                case TokenKind.Switch:
+                    return ParseSwitch(ctx);
+                case TokenKind.Var:
+                    return ParseLocalVarDecl(ctx);
+                case TokenKind.Globalvar:
+                    UnsupportedSyntax(ctx, curr);
+                    break;
+                case TokenKind.With:
+                    {
+                        Node res = new Node(NodeKind.With, curr);
+                        ctx.Position++;
+                        res.Children.Add(ParseExpression(ctx));
+                        if (ctx.Tokens[ctx.Position].Kind == TokenKind.Do)
+                            ctx.Position++;
+                        res.Children.Add(ParseStatement(ctx));
+                        return res;
+                    }
+                case TokenKind.While:
+                    {
+                        Node res = new Node(NodeKind.While, curr);
+                        ctx.Position++;
+                        res.Children.Add(ParseExpression(ctx));
+                        if (ctx.Tokens[ctx.Position].Kind == TokenKind.Do)
+                            ctx.Position++;
+                        res.Children.Add(ParseStatement(ctx));
+                        return res;
+                    }
+                case TokenKind.Repeat:
+                    {
+                        Node res = new Node(NodeKind.Repeat, curr);
+                        ctx.Position++;
+                        res.Children.Add(ParseExpression(ctx));
+                        res.Children.Add(ParseStatement(ctx));
+                        return res;
+                    }
+                case TokenKind.Do:
+                    {
+                        Node res = new Node(NodeKind.DoUntil, curr);
+                        ctx.Position++;
+                        res.Children.Add(ParseStatement(ctx));
+                        SkipSemicolons(ctx);
+                        ExpectToken(ctx, TokenKind.Until, "'until'");
+                        res.Children.Add(ParseExpression(ctx));
+                        return res;
+                    }
+                case TokenKind.If:
+                    {
+                        Node res = new Node(NodeKind.If, curr);
+                        ctx.Position++;
+                        res.Children.Add(ParseExpression(ctx));
+                        if (ctx.Tokens[ctx.Position].Kind == TokenKind.Then)
+                            ctx.Position++;
+                        res.Children.Add(ParseStatement(ctx));
+                        SkipSemicolons(ctx);
+                        if (ctx.Tokens[ctx.Position].Kind == TokenKind.Else)
+                        {
+                            ctx.Position++;
+                            res.Children.Add(ParseStatement(ctx));
+                        }
+                        return res;
+                    }
+                case TokenKind.For:
+                    return ParseFor(ctx);
+                default:
+                    {
+                        Node res = ParseAssignOrFunction(ctx);
+                        if (res != null)
+                            return res;
+                    }
                     break;
             }
 
@@ -48,6 +130,11 @@
                 ctx.Position--; // Prevent array access exception
             ctx.Error($"Expected {expected}", got);
             return null;
+        }
+
+        private static void UnsupportedSyntax(CodeContext ctx, Token t)
+        {
+            ctx.Error("Unsupported syntax", t);
         }
 
         private static Node ParseBlock(CodeContext ctx)
@@ -320,9 +407,18 @@
                         return ParseFunctionDecl(ctx);
                     ctx.Error("Cannot use function declarations in pre-GMS2.3 runtime", curr);
                     return null;
-                // TODO: TokenKind.New:
-                // TODO: TokenKind.Delete:
-                // TODO: TokenKind.Try:
+                case TokenKind.New:
+                    // TODO
+                    UnsupportedSyntax(ctx, curr);
+                    break;
+                case TokenKind.Delete:
+                    // TODO
+                    UnsupportedSyntax(ctx, curr);
+                    break;
+                case TokenKind.Try:
+                    // TODO
+                    UnsupportedSyntax(ctx, curr);
+                    break;
             }
 
             ctx.Error("Invalid base expression", curr);
@@ -863,6 +959,133 @@
             ctx.LocalVars = outerLocalVars;
             ctx.StaticVars = outerStaticVars;
             ctx.ArgumentVars = outerArgumentVars;
+
+            return res;
+        }
+
+        private static Node ParseLocalVarDecl(CodeContext ctx)
+        {
+            Node res = new(NodeKind.LocalVarDecl, ExpectToken(ctx, TokenKind.Var, "'var'"));
+
+            Token curr = ctx.Tokens[ctx.Position];
+            while (curr.Kind == TokenKind.Variable)
+            {
+                TokenVariable tokenVar = (curr.Value as TokenVariable);
+                if (tokenVar.Builtin != null)
+                    ctx.Error($"Local variable declared over builtin variable '{tokenVar.Name}'", curr);
+                Node variable = new Node(NodeKind.Variable, curr);
+                res.Children.Add(variable);
+
+                // Add to this context's local list
+                if (!ctx.LocalVars.Contains(tokenVar.Name))
+                    ctx.LocalVars.Add(tokenVar.Name);
+
+                curr = ctx.Tokens[++ctx.Position];
+                if (curr.Kind == TokenKind.Assign)
+                {
+                    // Parse initial value
+                    ctx.Position++;
+                    variable.Children.Add(ParseExpression(ctx));
+                    curr = ctx.Tokens[ctx.Position];
+                }
+
+                if (curr.Kind != TokenKind.Comma)
+                    break;
+                ctx.Position++;
+            }
+
+            // This error doesn't really occur "officially" but nobody should do this on purpose
+            if (res.Children.Count == 0)
+                ctx.Error("Local variable declaration has no variables", res.Token);
+
+            return res;
+        }
+
+        private static Node ParseSwitch(CodeContext ctx)
+        {
+            Node res = new(NodeKind.Switch);
+
+            ExpectToken(ctx, TokenKind.Switch, "'switch'");
+            res.Children.Add(ParseExpression(ctx));
+            ExpectToken(ctx, TokenKind.Begin, "'{'");
+
+            SkipSemicolons(ctx);
+            Token curr = ctx.Tokens[ctx.Position];
+            while (curr.Kind != TokenKind.EOF && curr.Kind != TokenKind.End)
+            {
+                if (curr.Kind == TokenKind.Case)
+                {
+                    Node caseNode = new(NodeKind.SwitchCase, curr);
+                    ctx.Position++;
+                    caseNode.Children.Add(ParseExpression(ctx));
+                    ExpectToken(ctx, TokenKind.Colon, "':'");
+                    res.Children.Add(caseNode);
+                }
+                else if (curr.Kind == TokenKind.Default)
+                {
+                    ctx.Position++;
+                    ExpectToken(ctx, TokenKind.Colon, "':'");
+                    res.Children.Add(new Node(NodeKind.SwitchDefault, curr));
+                }
+                else
+                    res.Children.Add(ParseStatement(ctx));
+                SkipSemicolons(ctx);
+                curr = ctx.Tokens[ctx.Position];
+            }
+            ExpectToken(ctx, TokenKind.End, "'}'");
+            
+            return res;
+        }
+
+        private static Node ParseFor(CodeContext ctx)
+        {
+            Node res = new(NodeKind.For, ExpectToken(ctx, TokenKind.For, "'for'"));
+
+            ExpectToken(ctx, TokenKind.Open, "'('");
+            
+            Token curr = ctx.Tokens[ctx.Position];
+            if (curr.Kind == TokenKind.Semicolon)
+            {
+                // No initialization
+                res.Children.Add(new Node(NodeKind.Block));
+                ctx.Position++;
+            }
+            else
+            {
+                res.Children.Add(ParseStatement(ctx));
+                SkipSemicolons(ctx);
+            }
+
+            curr = ctx.Tokens[ctx.Position];
+            if (curr.Kind == TokenKind.Semicolon)
+            {
+                // true condition
+                res.Children.Add(new Node(NodeKind.Constant, new Token(ctx, new TokenConstant(1), curr.Index)));
+                ctx.Position++;
+            }
+            else
+            {
+                res.Children.Add(ParseExpression(ctx));
+                if (ctx.Tokens[ctx.Position].Kind == TokenKind.Semicolon)
+                    ctx.Position++;
+            }
+
+            curr = ctx.Tokens[ctx.Position];
+            if (curr.Kind == TokenKind.Close)
+            {
+                // No iteration statement
+                res.Children.Add(new Node(NodeKind.Block));
+                ctx.Position++;
+            }
+            else
+            {
+                res.Children.Add(ParseStatement(ctx));
+                SkipSemicolons(ctx);
+                ExpectToken(ctx, TokenKind.Close, "')'");
+            }
+
+            // Body
+            res.Children.Add(ParseStatement(ctx));
 
             return res;
         }

@@ -27,7 +27,20 @@ namespace DogScepterLib.Project.GML.Compiler
         Unary, // like !a (and other operations)
 
         Assign, // like a = 123
-        If, // if statement
+        Exit,
+        Break,
+        Continue,
+        Return,
+        If,
+        Switch,
+        SwitchCase,
+        SwitchDefault,
+        LocalVarDecl, // like var a = 123, etc.
+        With,
+        While,
+        For,
+        Repeat,
+        DoUntil,
 
         FunctionDecl, // like function(){}, but also used internally for structs
     }
