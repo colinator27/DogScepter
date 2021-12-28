@@ -15,6 +15,9 @@ namespace DogScepterLib.Project.GML.Compiler
         public bool IsGMS23 { get; init; }
         public List<ErrorMessage> Errors { get; init; } = new();
         public Dictionary<string, CodeContext> Macros { get; init; } = new();
+        public Dictionary<string, Enum> Enums { get; init; } = new();
+        public bool ResolveEnums { get; set; } = false;
+        public HashSet<string> ReferencedEnums { get; init; } = new();
         public Dictionary<string, int> AssetIds = new();
         public Dictionary<string, int> VariableIds = new();
 
@@ -90,6 +93,49 @@ namespace DogScepterLib.Project.GML.Compiler
             if (Errors.Count != 0)
                 return false;
 
+            // Expand interdependent enums
+            ResolveEnums = true;
+            foreach (var _enum in Enums.Values)
+            {
+                foreach (var val in _enum.Values)
+                {
+                    ReferencedEnums.Clear();
+                    ReferencedEnums.Add(_enum.Name);
+
+                    if (!val.HasValue && val.Node != null)
+                        val.Node = NodeProcessor.ProcessNode(this, val.Node);
+                }
+            }
+            ReferencedEnums.Clear();
+            foreach (var _enum in Enums.Values)
+            {
+                long counter = 0;
+                foreach (var val in _enum.Values)
+                {
+                    if (val.Node == null)
+                    {
+                        val.HasValue = true;
+                        val.Value = counter++;
+                    }
+                    else if (val.HasValue)
+                    {
+                        counter = val.Value + 1;
+                    }
+                    else
+                        val.Node.Token.Context?.Error("Enum did not resolve (note: must be integer constants)", val.Node.Token);
+                }
+            }
+
+            if (Errors.Count != 0)
+                return false;
+
+            // Perform optimizations and basic processing on the parse tree
+            foreach (var code in Code)
+                code.RootNode = NodeProcessor.ProcessNode(this, code.RootNode);
+
+            if (Errors.Count != 0)
+                return false;
+
             return true;
         }
 
@@ -136,6 +182,8 @@ namespace DogScepterLib.Project.GML.Compiler
         public List<string> LocalVars { get; set; } = new();
         public List<string> StaticVars { get; set; } = new();
         public List<string> ArgumentVars { get; set; } = new();
+        public Node FunctionBeginBlock { get; set; } = null;
+        public Node FunctionStatic { get; set; } = null;
 
         public CodeContext(CompileContext baseContext, string name, string code)
         {
@@ -189,6 +237,58 @@ namespace DogScepterLib.Project.GML.Compiler
             Message = message;
             Line = line;
             Column = column;
+        }
+    }
+
+    public class Enum
+    {
+        public string Name { get; init; }
+        public List<EnumValue> Values { get; init; } = new();
+
+        public Enum(string name)
+        {
+            Name = name;
+        }
+
+        public bool Contains(string name)
+        {
+            return Values.Any(x => x.Name == name);
+        }
+
+        public bool TryGetValue(string name, out EnumValue val)
+        {
+            val = Values.Find(x => x.Name == name);
+            return val != null;
+        }
+    }
+
+    public class EnumValue
+    {
+        public string Name { get; init; }
+        public bool HasValue { get; set; } = false;
+        public long Value { get; set; }
+
+        private Node _node;
+        public Node Node { get => _node; set { _node = value; CheckForValue(); } }
+
+        public EnumValue(string name, Node node)
+        {
+            Name = name;
+            Node = node;
+        }
+
+        public void CheckForValue()
+        {
+            if (Node != null && Node.Kind == NodeKind.Constant && (Node.Token.Value as TokenConstant).Kind != ConstantKind.String)
+            {
+                HasValue = true;
+
+                var constant = (Node.Token.Value as TokenConstant);
+                if (constant.Kind == ConstantKind.Number)
+                    Value = (long)constant.ValueNumber;
+                else if (constant.Kind == ConstantKind.Int64)
+                    Value = constant.ValueInt64;
+            }
         }
     }
 }

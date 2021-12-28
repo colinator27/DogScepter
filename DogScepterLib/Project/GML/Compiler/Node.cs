@@ -43,6 +43,8 @@ namespace DogScepterLib.Project.GML.Compiler
         DoUntil,
 
         FunctionDecl, // like function(){}, but also used internally for structs
+        Static, // used for static groupings
+        New,
     }
 
     public class Node

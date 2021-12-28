@@ -1,4 +1,6 @@
-﻿namespace DogScepterLib.Project.GML.Compiler
+﻿using System.Collections.Generic;
+
+namespace DogScepterLib.Project.GML.Compiler
 {
     public class Parser
     {
@@ -103,6 +105,19 @@
                     }
                 case TokenKind.For:
                     return ParseFor(ctx);
+                case TokenKind.Static:
+                    if (ctx.BaseContext.IsGMS23)
+                        return ParseStatic(ctx);
+                    ctx.Error("Cannot use static in pre-GMS2.3 runtime", curr);
+                    return null;
+                case TokenKind.Enum:
+                    return ParseEnum(ctx);
+                case TokenKind.Try:
+                    if (ctx.BaseContext.IsGMS23)
+                        UnsupportedSyntax(ctx, curr); // TODO
+                    else
+                        ctx.Error("Cannot use static in pre-GMS2.3 runtime", curr);
+                    return null;
                 default:
                     {
                         Node res = ParseAssignOrFunction(ctx);
@@ -137,9 +152,17 @@
             ctx.Error("Unsupported syntax", t);
         }
 
-        private static Node ParseBlock(CodeContext ctx)
+        private static Node ParseBlock(CodeContext ctx, bool newFuncBegin = false)
         {
             Node res = new(NodeKind.Block);
+
+            Node oldFuncBegin = ctx.FunctionBeginBlock;
+            Node oldFuncStatic = ctx.FunctionStatic;
+            if (newFuncBegin)
+            {
+                ctx.FunctionBeginBlock = res;
+                ctx.FunctionStatic = null;
+            }
 
             ctx.Position++;
             SkipSemicolons(ctx);
@@ -151,6 +174,12 @@
                 curr = ctx.Tokens[ctx.Position];
             }
             ExpectToken(ctx, TokenKind.End, "'}'");
+
+            if (newFuncBegin)
+            {
+                ctx.FunctionBeginBlock = oldFuncBegin;
+                ctx.FunctionStatic = oldFuncStatic;
+            }
 
             return res;
         }
@@ -223,7 +252,7 @@
         // Check for [low level, dot, variable, <opt. ++/-->], or [low level, dot, function call],
         // or [low level, open <for chain function calls>], or [low level, array open <for chain array accesses>]
         // Then does the check again, in a chain, if necessary
-        private static Node ParseChain(CodeContext ctx)
+        private static Node ParseChain(CodeContext ctx, bool ignoreCalls = false)
         {
             Node left = ParseBase(ctx);
             if (left == null)
@@ -262,6 +291,12 @@
                         break;
                     case TokenKind.Open:
                         {
+                            if (ignoreCalls)
+                            {
+                                finishedChain = true;
+                                break;
+                            }
+
                             // Handle chain function calls, like a()()
                             Node call = new(NodeKind.FunctionCallChain);
                             call.Children.Add(left);
@@ -408,17 +443,21 @@
                     ctx.Error("Cannot use function declarations in pre-GMS2.3 runtime", curr);
                     return null;
                 case TokenKind.New:
-                    // TODO
-                    UnsupportedSyntax(ctx, curr);
-                    break;
+                    if (ctx.BaseContext.IsGMS23)
+                        return ParseNew(ctx);
+                    ctx.Error("Cannot use 'new' in pre-GMS2.3 runtime", curr);
+                    return null;
                 case TokenKind.Delete:
-                    // TODO
-                    UnsupportedSyntax(ctx, curr);
-                    break;
-                case TokenKind.Try:
-                    // TODO
-                    UnsupportedSyntax(ctx, curr);
-                    break;
+                    if (ctx.BaseContext.IsGMS23)
+                    {
+                        ctx.Position++;
+                        Node n = new(NodeKind.Assign, new Token(ctx, TokenKind.Assign, curr.Index));
+                        n.Children.Add(ParseChain(ctx));
+                        n.Children.Add(new Node(ctx, ctx.BaseContext.Builtins.VarGlobal["undefined"]));
+                        return n;
+                    }
+                    ctx.Error("Cannot use 'delete' in pre-GMS2.3 runtime", curr);
+                    return null;
             }
 
             ctx.Error("Invalid base expression", curr);
@@ -953,7 +992,7 @@
             };
 
             // Parse actual block
-            res.Children.Add(ParseBlock(ctx));
+            res.Children.Add(ParseBlock(ctx, true));
 
             // Restore local/static AND argument vars from outer scope
             ctx.LocalVars = outerLocalVars;
@@ -965,7 +1004,7 @@
 
         private static Node ParseLocalVarDecl(CodeContext ctx)
         {
-            Node res = new(NodeKind.LocalVarDecl, ExpectToken(ctx, TokenKind.Var, "'var'"));
+            Node res = new(NodeKind.LocalVarDecl, ctx.Tokens[ctx.Position++]);
 
             Token curr = ctx.Tokens[ctx.Position];
             while (curr.Kind == TokenKind.Variable)
@@ -973,7 +1012,7 @@
                 TokenVariable tokenVar = (curr.Value as TokenVariable);
                 if (tokenVar.Builtin != null)
                     ctx.Error($"Local variable declared over builtin variable '{tokenVar.Name}'", curr);
-                Node variable = new Node(NodeKind.Variable, curr);
+                Node variable = new(NodeKind.Variable, curr);
                 res.Children.Add(variable);
 
                 // Add to this context's local list
@@ -1003,9 +1042,8 @@
 
         private static Node ParseSwitch(CodeContext ctx)
         {
-            Node res = new(NodeKind.Switch);
+            Node res = new(NodeKind.Switch, ctx.Tokens[ctx.Position++]);
 
-            ExpectToken(ctx, TokenKind.Switch, "'switch'");
             res.Children.Add(ParseExpression(ctx));
             ExpectToken(ctx, TokenKind.Begin, "'{'");
 
@@ -1039,7 +1077,7 @@
 
         private static Node ParseFor(CodeContext ctx)
         {
-            Node res = new(NodeKind.For, ExpectToken(ctx, TokenKind.For, "'for'"));
+            Node res = new(NodeKind.For, ctx.Tokens[ctx.Position++]);
 
             ExpectToken(ctx, TokenKind.Open, "'('");
             
@@ -1088,6 +1126,139 @@
             res.Children.Add(ParseStatement(ctx));
 
             return res;
+        }
+
+        private static Node ParseStatic(CodeContext ctx)
+        {
+            Token first = ctx.Tokens[ctx.Position++];
+            if (ctx.FunctionBeginBlock == null)
+            {
+                ctx.Error("Cannot use static outside of function declaration", first);
+                return new Node(NodeKind.Empty);
+            }
+
+            // Make new static block at beginning if necessary
+            if (ctx.FunctionStatic == null)
+            {
+                ctx.FunctionStatic = new Node(NodeKind.Static);
+                ctx.FunctionBeginBlock.Children.Insert(0, ctx.FunctionStatic);
+            }
+
+            Token curr = ctx.Tokens[ctx.Position];
+            bool didAnything = false;
+            while (curr.Kind == TokenKind.Variable)
+            {
+                didAnything = true;
+
+                TokenVariable tokenVar = (curr.Value as TokenVariable);
+                if (tokenVar.Builtin != null)
+                    ctx.Error($"Static variable declared over builtin variable '{tokenVar.Name}'", curr);
+                Node variable = new(NodeKind.Variable, curr);
+                ctx.FunctionStatic.Children.Add(variable);
+
+                // Add to this context's static list
+                if (!ctx.StaticVars.Contains(tokenVar.Name))
+                    ctx.StaticVars.Add(tokenVar.Name);
+
+                curr = ctx.Tokens[++ctx.Position];
+                if (curr.Kind == TokenKind.Assign)
+                {
+                    // Parse initial value
+                    ctx.Position++;
+                    variable.Children.Add(ParseExpression(ctx));
+                    curr = ctx.Tokens[ctx.Position];
+                }
+                else
+                    ctx.Error("Static declarations require an initial assignment", curr);
+
+                if (curr.Kind != TokenKind.Comma)
+                    break;
+                ctx.Position++;
+            }
+
+            // This error doesn't really occur "officially" but nobody should do this on purpose
+            if (!didAnything)
+                ctx.Error("Static variable declaration has no variables", first);
+
+            // Don't need to insert any statements *here*
+            return new Node(NodeKind.Empty);
+        }
+
+        private static Node ParseNew(CodeContext ctx)
+        {
+            Node res = new(NodeKind.New, ctx.Tokens[ctx.Position++]);
+
+            Token curr = ctx.Tokens[ctx.Position];
+            if (curr.Kind == TokenKind.FunctionCall)
+            {
+                res.Children.Add(new Node(NodeKind.Variable,
+                                    new Token(ctx, new TokenVariable((curr.Value as TokenFunction).Name, null), curr.Index)));
+            }
+            else
+            {
+                res.Children.Add(ParseChain(ctx, true)); // ignore calls when parsing chain here (otherwise it's ambiguous)
+            }
+
+            ParseCallArguments(ctx, res);
+
+            return res;
+        }
+
+        private static Node ParseEnum(CodeContext ctx)
+        {
+            ctx.Position++;
+
+            // Read enum name and check for errors
+            Token nameToken = ExpectToken(ctx, TokenKind.Variable, "enum name");
+            if (nameToken == null)
+                return new Node(NodeKind.Empty);
+            TokenVariable nameVar = (nameToken.Value as TokenVariable);
+            if (nameVar.Builtin != null)
+            {
+                ctx.Error($"Enum declared using builtin variable name '{nameVar.Name}'", nameToken);
+                return new Node(NodeKind.Empty);
+            }
+            if (ctx.BaseContext.Enums.ContainsKey(nameVar.Name))
+                ctx.Error($"Enum name '{nameVar.Name}' declared more than once", nameToken);
+
+            // Add new entry to global enum dictionary
+            Enum newEnum = new(nameVar.Name);
+            ctx.BaseContext.Enums[newEnum.Name] = newEnum;
+
+            // Parse enum values
+            ExpectToken(ctx, TokenKind.Begin, "'{'");
+            Token curr = ctx.Tokens[ctx.Position];
+            while (curr.Kind != TokenKind.EOF && curr.Kind != TokenKind.End)
+            {
+                Token entry = ExpectToken(ctx, TokenKind.Variable, "enum entry name");
+                curr = ctx.Tokens[ctx.Position];
+                if (entry == null)
+                    continue;
+
+                string entryName = (entry.Value as TokenVariable).Name;
+                if (newEnum.Contains(entryName))
+                    ctx.Error($"Duplicate enum entry name '{entryName}'", entry);
+
+                // Parse actual value, if supplied
+                EnumValue val;
+                if (curr.Kind == TokenKind.Assign)
+                {
+                    ctx.Position++;
+                    val = new EnumValue(entryName, NodeProcessor.ProcessNode(ctx.BaseContext, ParseExpression(ctx)));
+                }
+                else
+                    val = new EnumValue(entryName, null);
+                newEnum.Values.Add(val);
+
+                curr = ctx.Tokens[ctx.Position];
+                if (curr.Kind == TokenKind.Comma)
+                    curr = ctx.Tokens[++ctx.Position];
+                else if (curr.Kind != TokenKind.End)
+                    ctx.Error("Expected ','", curr);
+            }
+            ExpectToken(ctx, TokenKind.End, "'}'");
+
+            return new Node(NodeKind.Empty);
         }
     }
 }
