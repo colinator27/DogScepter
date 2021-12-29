@@ -48,7 +48,9 @@ namespace DogScepterLib.Project.GML.Compiler
                         // Check builtin constants
                         if (ctx.BaseContext.Builtins.Constants.TryGetValue(name, out double constant))
                         {
-                            ctx.Tokens[i] = new Token(ctx, new TokenConstant(constant), ctx.Tokens[i].Index);
+                            var constantToken = new TokenConstant(constant);
+                            constantToken.IsBool = (name == "true" || name == "false");
+                            ctx.Tokens[i] = new Token(ctx, constantToken, ctx.Tokens[i].Index);
                             continue;
                         }
 

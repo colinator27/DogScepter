@@ -38,7 +38,8 @@ namespace DogScepterLib.Project.GML.Compiler
                     {
                         Node res = new Node(NodeKind.Return, curr);
                         curr = ctx.Tokens[++ctx.Position];
-                        if (curr.Kind != TokenKind.Semicolon && (curr.Kind < TokenKind._KeywordsBegin || curr.Kind > TokenKind._KeywordsEnd))
+                        if (curr.Kind != TokenKind.Semicolon && 
+                            (curr.Kind < TokenKind._KeywordsBegin || curr.Kind > TokenKind._KeywordsEnd || curr.Kind == TokenKind.Function))
                             res.Children.Add(ParseExpression(ctx));
                         return res;
                     }
@@ -279,6 +280,30 @@ namespace DogScepterLib.Project.GML.Compiler
                             Node next = ParseBase(ctx);
                             if (next == null)
                                 return null;
+                            if (left.Children[^1].Kind == NodeKind.Constant)
+                            {
+                                // The left side should be an instance type
+                                // This current node should be a variable. Need to propagate the instance type to it
+                                if (next.Kind != NodeKind.Variable)
+                                    ctx.Error("Expected variable after instance type", left.Children[^1].Token);
+                                else
+                                {
+                                    TokenConstant constant = left.Children[^1].Token.Value as TokenConstant;
+                                    if (constant.Kind != ConstantKind.Number || (int)constant.ValueNumber != constant.ValueNumber)
+                                        ctx.Error("Invalid instance type", left.Children[^1].Token);
+                                    else
+                                    {
+                                        (next.Token.Value as TokenVariable).InstanceType = (int)constant.ValueNumber;
+                                        left.Children[^1] = next;
+
+                                        // Undo chain reference if only one
+                                        if (left.Children.Count == 1)
+                                            left = left.Children[0];
+
+                                        break;
+                                    }
+                                }
+                            }
                             left.Children.Add(next);
                             if (next.Kind == NodeKind.FunctionCall)
                             {

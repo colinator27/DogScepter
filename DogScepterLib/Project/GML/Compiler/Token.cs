@@ -196,6 +196,7 @@ namespace DogScepterLib.Project.GML.Compiler
     public class TokenVariable : ITokenValue
     {
         public string Name { get; set; }
+        public int InstanceType = -1; // assume self until told otherwise
         public BuiltinVariable Builtin { get; set; }
 
         public TokenVariable(string name, BuiltinVariable builtin)
@@ -206,7 +207,7 @@ namespace DogScepterLib.Project.GML.Compiler
 
         public override string ToString()
         {
-            return $"\"{Name}\" {(Builtin != null ? "(builtin)" : "(user)")}";
+            return $"\"{Name}\"@{InstanceType} {(Builtin != null ? "(builtin)" : "(user)")}";
         }
     }
 
@@ -240,6 +241,7 @@ namespace DogScepterLib.Project.GML.Compiler
         public string ValueString;
         public double ValueNumber;
         public long ValueInt64;
+        public bool IsBool = false;
 
         public TokenConstant(double valueNumber)
         {

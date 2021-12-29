@@ -68,6 +68,21 @@ namespace DogScepterLib.Project.GML.Compiler
             VarInstanceDefine("y");
 
             FunctionDefine("show_message", 1);
+            FunctionDefine("show_debug_message", 1);
+
+            FunctionDefine("ord", 1);
+            FunctionDefine("chr", 1);
+            FunctionDefine("int64", 1);
+            FunctionDefine("real", 1);
+            FunctionDefine("string", 1);
+
+            ConstantDefine("self", -1);
+            ConstantDefine("other", -2);
+            ConstantDefine("all", -3);
+            ConstantDefine("noone", -4);
+            ConstantDefine("global", -5);
+            ConstantDefine("false", 0);
+            ConstantDefine("true", 1);
         }
 
         private void VarGlobalDefine(string name, bool canSet = true, bool canGet = true)
@@ -83,6 +98,11 @@ namespace DogScepterLib.Project.GML.Compiler
         private void FunctionDefine(string name, int argCount)
         {
             Functions[name] = new BuiltinFunction(this, name, argCount);
+        }
+
+        private void ConstantDefine(string name, double val)
+        {
+            Constants[name] = val;
         }
     }
 }

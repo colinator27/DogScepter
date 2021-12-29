@@ -159,7 +159,7 @@ namespace DogScepterLib.Project.Util
                 v = (r << 24) | (g << 16) | (b << 8) | a;
                 if (v == vPrev)
                     run++;
-                if (run > 0 && (run == 0x2020 || v != vPrev || imgEnd == imgEnd - 4))
+                if (run > 0 && (run == 0x2020 || v != vPrev || imgPos == imgEnd - 4))
                 {
                     if (run < 33)
                     {

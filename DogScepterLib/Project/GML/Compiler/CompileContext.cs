@@ -277,17 +277,21 @@ namespace DogScepterLib.Project.GML.Compiler
             Node = node;
         }
 
-        public void CheckForValue()
+        private void CheckForValue()
         {
-            if (Node != null && Node.Kind == NodeKind.Constant && (Node.Token.Value as TokenConstant).Kind != ConstantKind.String)
+            if (Node != null && Node.Kind == NodeKind.Constant)
             {
-                HasValue = true;
-
                 var constant = (Node.Token.Value as TokenConstant);
                 if (constant.Kind == ConstantKind.Number)
+                {
+                    HasValue = true;
                     Value = (long)constant.ValueNumber;
+                }
                 else if (constant.Kind == ConstantKind.Int64)
+                {
+                    HasValue = true;
                     Value = constant.ValueInt64;
+                }
             }
         }
     }
