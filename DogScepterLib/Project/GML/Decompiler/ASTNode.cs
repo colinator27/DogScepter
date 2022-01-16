@@ -863,6 +863,9 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode Clean(DecompileContext ctx)
         {
             Children[0] = Children[0].Clean(ctx);
+
+            MacroResolver.ResolveReturn(ctx, this);
+
             return this;
         }
     }
@@ -968,6 +971,13 @@ namespace DogScepterLib.Project.GML.Decompiler
                             break;
                     }
                 }
+                else if (Left.Kind == ASTNode.StatementKind.TypeInst && (Left as ASTTypeInst).IsRoomInstance)
+                {
+                    // This is a room instance ID; need to convert it here
+                    sb.Append('(');
+                    sb.Append(value + 100000);
+                    sb.Append(").");
+                }
                 else if (value < ctx.Project.Objects.Count)
                 {
                     // Object names
@@ -1038,6 +1048,12 @@ namespace DogScepterLib.Project.GML.Decompiler
                 Children[i] = Children[i].Clean(ctx);
             return this;
         }
+
+        // Used for macro type detection
+        public override string ToString()
+        {
+            return Variable.Name.Content;
+        }
     }
 
     public class ASTTypeInst : ASTNode
@@ -1050,8 +1066,13 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<ASTNode> Children { get; set; }
 
         public int Value;
+        public bool IsRoomInstance;
 
-        public ASTTypeInst(int value) => Value = value;
+        public ASTTypeInst(int value, bool isRoomInstance)
+        {
+            Value = value;
+            IsRoomInstance = isRoomInstance;
+        }
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {

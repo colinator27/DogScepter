@@ -51,5 +51,21 @@ namespace DogScepterLib.Core.Chunks
                 Locals.Unserialize(reader);
             }
         }
+
+        public GMFunctionEntry FindOrDefine(string name, GMData data)
+        {
+            foreach (var func in FunctionEntries)
+                if (func.Name.Content == name)
+                    return func;
+
+            var str = data.DefineString(name, out int id);
+            GMFunctionEntry res = new()
+            {
+                Name = str,
+                StringIndex = id
+            };
+            FunctionEntries.Add(res);
+            return res;
+        }
     }
 }

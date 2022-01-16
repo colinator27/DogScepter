@@ -30,7 +30,7 @@
 
   <ItemGroup>
     <None Update="GameConfigs\MacroTypes\DELTARUNE_Chapter2.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

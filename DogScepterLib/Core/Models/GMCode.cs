@@ -102,7 +102,7 @@ namespace DogScepterLib.Core.Models
         public class Bytecode : GMSerializable
         {
             public GMCode Parent;
-            public List<Instruction> Instructions = new List<Instruction>();
+            public List<Instruction> Instructions = new(64);
 
             public Bytecode(GMCode parent)
             {
@@ -138,7 +138,7 @@ namespace DogScepterLib.Core.Models
                 int end = begin + length;
                 while (reader.Offset < end)
                 {
-                    Instruction i = new Instruction(reader.Offset - begin);
+                    Instruction i = new(reader.Offset - begin);
                     i.Unserialize(reader);
                     Instructions.Add(i);
                 }

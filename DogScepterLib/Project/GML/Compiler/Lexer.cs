@@ -102,7 +102,7 @@ namespace DogScepterLib.Project.GML.Compiler
 
                             // Attempt adding the macro
                             string newMacroName = macroName.ToString(), newMacroContent = macroContent.ToString();
-                            CodeContext newMacro = new(ctx.BaseContext, $"macro \"{macroName}\" from \"{ctx.Name}\"", newMacroContent);
+                            CodeContext newMacro = new(ctx.BaseContext, $"macro \"{macroName}\" from \"{ctx.Name}\"", newMacroContent, false);
                             newMacro.Kind = CodeContext.CodeKind.Macro;
                             if (!ctx.BaseContext.Macros.TryAdd(newMacroName, newMacro))
                             {

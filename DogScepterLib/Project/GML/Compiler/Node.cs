@@ -92,6 +92,7 @@ namespace DogScepterLib.Project.GML.Compiler
 
     public class NodeFunctionInfo : INodeInfo
     {
+        public FunctionReference Reference { get; set; }
         public bool IsConstructor { get; set; }
         public List<string> LocalVars { get; set; }
         public List<string> StaticVars { get; set; }
@@ -99,8 +100,9 @@ namespace DogScepterLib.Project.GML.Compiler
         public int InheritingIndex { get; set; }
         public int OptionalArgsIndex { get; set; }
 
-        public NodeFunctionInfo(bool isConstructor, List<string> localVars, List<string> staticVars, List<string> arguments)
+        public NodeFunctionInfo(FunctionReference reference, bool isConstructor, List<string> localVars, List<string> staticVars, List<string> arguments)
         {
+            Reference = reference;
             IsConstructor = isConstructor;
             LocalVars = localVars;
             StaticVars = staticVars;

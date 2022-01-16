@@ -3,7 +3,6 @@ using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -54,6 +53,43 @@ namespace DogScepterLib.Project.GML.Decompiler
                 });
             }
         }
+
+        public static Dictionary<string, GMFunctionEntry> Find23FunctionsNotIncluded(ProjectFile pf, List<string> excludeList)
+        {
+            Dictionary<string, GMFunctionEntry> res = new();
+
+            // Find all function names in global scripts
+            GMChunkCODE code = pf.DataHandle.GetChunk<GMChunkCODE>();
+            Parallel.ForEach(pf.DataHandle.GetChunk<GMChunkGLOB>().List, scr =>
+            {
+                GMCode entry = code.List[scr];
+                if (excludeList.Contains(entry.Name?.Content))
+                    return;
+
+                // Find fragments
+                List<Fragment> fragments = Fragments.FindAndProcess(entry, false);
+
+                // Find blocks in the main fragment that come after another fagment
+                foreach (Block b in fragments[^1].Blocks.List)
+                {
+                    if (b.AfterFragment && b.Instructions.Count > 2 &&
+                        b.Instructions[0].Kind == GMCode.Bytecode.Instruction.Opcode.Push &&
+                        b.Instructions[0].Type1 == GMCode.Bytecode.Instruction.DataType.Int32 &&
+                        b.Instructions[0].Value == null)
+                    {
+                        string name = ASTBuilder.GetNameAfterFragment(b);
+                        if (name != null)
+                        {
+                            GMFunctionEntry func = b.Instructions[0].Function.Target;
+                            lock (res)
+                                res.Add(name, func);
+                        }
+                    }
+                }
+            });
+
+            return res;
+        }
     }
 
     public class DecompileContext
@@ -69,12 +105,12 @@ namespace DogScepterLib.Project.GML.Decompiler
                 _codeName = value;
                 if (Cache.Types.CodeEntries != null &&
                     Cache.Types.CodeEntries.TryGetValue(_codeName, out var data))
-                    CodeAssetTypes = data;
+                    CodeMacroTypes = data;
                 else
-                    CodeAssetTypes = null;
+                    CodeMacroTypes = null;
             }
         }
-        public MacroResolverTypes.MacroResolverTypeJson? CodeAssetTypes;
+        public MacroResolverTypes.MacroResolverTypeJson? CodeMacroTypes;
         public DecompileSettings Settings { get; set; }
         public DecompileCache Cache => Project.DecompileCache;
         public IList<GMString> Strings { get; set; }

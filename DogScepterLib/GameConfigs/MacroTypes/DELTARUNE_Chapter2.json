@@ -8,24 +8,50 @@
     "gml_Script_snd_play_x": [ "Sound" ],
     "gml_Script_snd_stop": [ "Sound" ],
     "gml_Script_snd_is_playing": [ "Sound" ],
+    "gml_Script_snd_play_pitch": [ "Sound" ],
+    "gml_Script_snd_volume": [ "Sound" ],
+    "gml_Script_snd_pitch": [ "Sound" ],
+    "gml_Script_snd_pitch_time": [ "Sound" ],
+    "gml_Script_snd_loop": [ "Sound" ],
     "gml_Script_c_soundplay": [ "Sound" ],
     "gml_Script_c_soundplay_x": [ "Sound" ],
     "gml_Script_c_soundplay_wait": [ "Sound" ],
     "gml_Script_c_sprite": [ "Sprite" ],
     "gml_Script_c_jump_sprite": [ "None", "None", "None", "None", "Sprite", "Sprite" ],
     "gml_Script_scr_marker": [ "None", "None", "Sprite" ],
+    "gml_Script_scr_marker_animated": [ "None", "None", "Sprite" ],
     "gml_Script_scr_dark_marker": [ "None", "None", "Sprite" ],
+    "gml_Script_scr_dark_marker_animated": [ "None", "None", "Sprite" ],
     "gml_Script_scr_dark_marker_depth": [ "None", "None", "None", "Sprite" ],
     "gml_Script_scr_battle_marker": [ "None", "None", "Sprite" ],
     "gml_Script_scr_act_charsprite": [ "None", "Sprite" ],
     "gml_Script_hexcolor": [ "Color" ],
+    "gml_Script_draw_sprite_ext_flash": [ "Sprite" ],
+    "gml_Script_draw_background_ext": [ "Sprite" ],
+    "gml_Script_draw_background_part_ext": [ "Sprite" ],
+    "gml_Script_scr_draw_sprite_tiled_area": [ "Sprite" ],
+    "gml_Script_draw_monster_body_part": [ "Sprite" ],
+    "gml_Script_draw_monster_body_part_ext": [ "Sprite" ],
+    "gml_Script_draw_background_tiled_ext": [ "Sprite" ],
+    "gml_Script_scr_draw_background_ps4": [ "Sprite" ],
+    "gml_Script_scr_draw_sprite_crop_ext": [ "Sprite" ],
+    "gml_Script_scr_textsetup": [ "None", "Color", "None", "None", "None", "None", "None", "Sound" ],
+    "gml_Script_draw_sprite_ext_glow": [ "Sprite" ],
+    "gml_Script_draw_sprite_part_ext_glow": [ "Sprite" ],
+    "gml_Script_scr_draw_outline_ext": [ "Sprite" ],
 
     "gml_Script_instance_create_ch1": [ "None", "None", "Object" ],
     "gml_Script_snd_play_ch1": [ "Sound" ],
     "gml_Script_snd_stop_ch1": [ "Sound" ],
     "gml_Script_snd_is_playing_ch1": [ "Sound" ],
+    "gml_Script_snd_loop_ch1": [ "Sound" ],
     "gml_Script_scr_marker_ch1": [ "None", "None", "Sprite" ],
-    "gml_Script_scr_dark_marker_ch1": [ "None", "None", "Sprite" ]
+    "gml_Script_scr_dark_marker_ch1": [ "None", "None", "Sprite" ],
+    "gml_Script_draw_background_ext_ch1": [ "Sprite" ],
+    "gml_Script_draw_background_part_ext_ch1": [ "Sprite" ],
+    "gml_Script_draw_background_tiled_ext_ch1": [ "Sprite" ],
+    "gml_Script_scr_draw_background_ps4_ch1": [ "Sprite" ],
+    "gml_Script_scr_textsetup_ch1": [ "None", "Color", "None", "None", "None", "None", "None", "Sound" ]
   },
   "FunctionArgsCond": {
     "gml_Script_c_var_instance": [
@@ -124,6 +150,12 @@
               "Index": 0,
               "NodeKind": "FunctionRef",
               "NodeValue": "snd_volume"
+            },
+            {
+              "Kind": "FunctionArg",
+              "Index": 0,
+              "NodeKind": "FunctionRef",
+              "NodeValue": "snd_play_pitch"
             }
           ]
         }
@@ -171,6 +203,43 @@
         ]
       }
     ],
+    "gml_Script_c_script_instance": [
+      {
+        "Kind": "None"
+      },
+      {
+        "Kind": "None"
+      },
+      {
+        "Kind": "None"
+      },
+      {
+        "Kind": "Sound",
+        "Condition": {
+          "Kind": "Any",
+          "Conditions": [
+            {
+              "Kind": "FunctionArg",
+              "Index": 1,
+              "NodeKind": "FunctionRef",
+              "NodeValue": "snd_play"
+            },
+            {
+              "Kind": "FunctionArg",
+              "Index": 1,
+              "NodeKind": "FunctionRef",
+              "NodeValue": "snd_volume"
+            },
+            {
+              "Kind": "FunctionArg",
+              "Index": 1,
+              "NodeKind": "FunctionRef",
+              "NodeValue": "snd_play_pitch"
+            }
+          ]
+        }
+      }
+    ],
     "gml_Script_c_actorsetsprites": [
       {
         "Kind": "None"
@@ -199,7 +268,25 @@
           "Kind": "Nonzero"
         }
       }
+    ],
+    "gml_Script_c_mus2": [
+      {
+        "Kind": "None"
+      },
+      {
+        "Kind": "Sound",
+        "Condition": {
+          "Kind": "FunctionArg",
+          "Index": 0,
+          "NodeKind": "String",
+          "NodeValue": "loopsfx"
+        }
+      }
     ]
+  },
+  "FunctionReturns": {
+    "gml_Script_scr_getbuttonsprite": "Sprite",
+    "gml_Script_scr_getbuttonsprite_ch1": "Sprite"
   },
   "VariableTypes": {
     "actor": "Object",
@@ -272,6 +359,8 @@
     "customSprite": "Sprite",
     "indsprite": "Sprite",
     "writerimg": "Sprite",
+    "partsprite": "Sprite",
+    "shieldpiece_sprite_index": "Sprite",
     "doorSound": "Sound",
     "doorSound2": "Sound",
     "writersnd": "Sound",
@@ -317,7 +406,58 @@
     "optionCommentAColor": "Color",
     "optionCommentBColor": "Color",
     "optionCommentCColor": "Color",
-    "menuHeaderColor": "Color"
+    "menuHeaderColor": "Color",
+    "hpcolor": "Color",
+    "gamepad_controls": "Gamepad",
+    "textsound": "Sound",
+    "coasterSprite": "Sprite",
+    "usprite_blush": "Sprite",
+    "dsprite_blush": "Sprite",
+    "rsprite_blush": "Sprite",
+    "lsprite_blush": "Sprite",
+    "specialsprite": "Sprite",
+    "default_sprite_front": "Sprite",
+    "default_sprite_back": "Sprite",
+    "hurt_sprite_front": "Sprite",
+    "hurt_sprite_back": "Sprite",
+    "_spr": "Sprite",
+    "current_sprites": "Sprite",
+    "fireworksprite": "Sprite",
+    "recruitSprite": "Sprite",
+    "pic": "Sprite",
+    "spriteindex1": "Sprite",
+    "spriteindex2": "Sprite",
+    "item0pic": "Sprite",
+    "item1pic": "Sprite",
+    "item2pic": "Sprite",
+    "item3pic": "Sprite",
+    "endanimation": "Sprite",
+    "sourceobject": "Object",
+    "_instruments": "Sound",
+    "_instrumentsB": "Sound",
+    "_instrumentsAlt": "Sound",
+    "_border_image": "Sprite",
+    "addison_sprites": "Sprite",
+    "sprite_type": "Sprite",
+    "krspr": "Sprite",
+    "suspr": "Sprite",
+    "raspr": "Sprite",
+    "actor_startsprite": "Sprite",
+    "actor_endsprite": "Sprite",
+    "msprite": "Sprite",
+    "layersprites": "Sprite",
+    "pushSound": "Sound",
+    "puzzle_icon": "Sprite",
+    "firstsound": "Sound",
+    "lastsound": "Sound",
+    "sparesprite": "Sprite",
+    "_rollSprites": "Sprite",
+    "voiceclips": "Sound",
+    "colClose": "Color",
+    "colFar": "Color",
+    "heroobj": "Object",
+    "facetype": "Sprite",
+    "face": "Sprite"
   },
   "VariableTypesCond": {
     "sprite": {
@@ -394,6 +534,33 @@
           }
         ]
       }
+    },
+    "shieldpiece_alpha": {
+      "Kind": "Sprite",
+      "Condition": {
+        "Kind": "All",
+        "EvaluateOnce": false,
+        "Conditions": [
+          {
+            "Kind": "NonNode",
+            "NodeKind": "Int16",
+            "NodeValue": "0"
+          },
+          {
+            "Kind": "NonNode",
+            "NodeKind": "Int16",
+            "NodeValue": "1"
+          }
+        ]
+      }
+    },
+    "parent": {
+      "Kind": "Object",
+      "Condition": {
+        "Kind": "NonNode",
+        "NodeKind": "Int16",
+        "NodeValue": "-1"
+      }
     }
   },
   "CodeEntries": {
@@ -417,7 +584,7 @@
         "color": "None"
       }
     },
-    "gml_GlobalScript_scr_heartcolor": {
+    "gml_Script_scr_heartcolor": {
       "VariableTypes": {
         "color": "None"
       }
@@ -442,6 +609,152 @@
             "NodeValue": "1"
           }
         }
+      }
+    },
+    "gml_Script_scr_getbuttonsprite": {
+      "VariableTypes": {
+        "control": "Gamepad",
+        "button": "Gamepad"
+      }
+    },
+    "gml_Script_scr_getbuttonsprite_ch1": {
+      "VariableTypes": {
+        "control": "Gamepad",
+        "button": "Gamepad"
+      }
+    },
+    "gml_Script_scr_debug_keycheck": {
+      "VariableTypes": {
+        "alt_key": "Gamepad"
+      }
+    },
+    "object: obj_finalchain_ch1": {
+      "VariableTypes": {
+        "box": "Object"
+      }
+    },
+    "gml_Object_obj_torielclass_event_Create_0": {
+      "VariableTypes": {
+        "fruit": "Sprite"
+      }
+    },
+    "gml_Script_scr_guardpeek": {
+      "VariableTypes": {
+        "argument0": "Object"
+      }
+    },
+    "object: obj_darkfountain": {
+      "VariableTypes": {
+        "bg": "Sprite"
+      }
+    },
+    "object: obj_darkfountain_ch1": {
+      "VariableTypes": {
+        "bg": "Sprite"
+      }
+    },
+    "object: obj_silhouette_cover": {
+      "VariableTypes": {
+        "top": "Sprite"
+      }
+    },
+    "object: obj_teacupParallaxer": {
+      "VariableTypes": {
+        "big": "Sprite",
+        "mid": "Sprite",
+        "smol": "Sprite"
+      }
+    },
+    "object: DEVICE_GONERMAKER": {
+      "VariableTypes": {
+        "img": "Sprite"
+      }
+    },
+    "object: DEVICE_GONERMAKER_ch1": {
+      "VariableTypes": {
+        "img": "Sprite"
+      }
+    },
+    "gml_Script_scr_84_init_localization": {
+      "FunctionArgsCond": {
+        "ds_map_add": [
+          {
+            "Kind": "None"
+          },
+          {
+            "Kind": "None"
+          },
+          {
+            "Kind": "Font",
+            "Condition": {
+              "Kind": "FunctionArg",
+              "Index": 0,
+              "NodeKind": "Variable",
+              "NodeValue": "fm"
+            },
+            "Alternatives": [
+              {
+                "Kind": "Sprite",
+                "Condition": {
+                  "Kind": "FunctionArg",
+                  "Index": 0,
+                  "NodeKind": "Variable",
+                  "NodeValue": "sm"
+                }
+              },
+              {
+                "Kind": "Sound",
+                "Condition": {
+                  "Kind": "FunctionArg",
+                  "Index": 0,
+                  "NodeKind": "Variable",
+                  "NodeValue": "sndm"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "gml_Script_scr_84_init_localization_ch1": {
+      "FunctionArgsCond": {
+        "ds_map_add": [
+          {
+            "Kind": "None"
+          },
+          {
+            "Kind": "None"
+          },
+          {
+            "Kind": "Font",
+            "Condition": {
+              "Kind": "FunctionArg",
+              "Index": 0,
+              "NodeKind": "Variable",
+              "NodeValue": "fm"
+            },
+            "Alternatives": [
+              {
+                "Kind": "Sprite",
+                "Condition": {
+                  "Kind": "FunctionArg",
+                  "Index": 0,
+                  "NodeKind": "Variable",
+                  "NodeValue": "sm"
+                }
+              },
+              {
+                "Kind": "Sound",
+                "Condition": {
+                  "Kind": "FunctionArg",
+                  "Index": 0,
+                  "NodeKind": "Variable",
+                  "NodeValue": "sndm"
+                }
+              }
+            ]
+          }
+        ]
       }
     }
   }

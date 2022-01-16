@@ -200,6 +200,8 @@ namespace DogScepterLib.Project.GML.Decompiler
         public Dictionary<int, string> ColorMacros;
         public Dictionary<int, string> KeyboardMacros;
         public Dictionary<int, string> PathEndActionMacros;
+        public Dictionary<int, string> GamepadMacros;
+        public Dictionary<int, string> OSTypeMacros;
 
         public MacroResolverTypes(ProjectFile pf)
         {
@@ -343,7 +345,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 { "audio_play_sound_on", new[] { MacroType.None, MacroType.Sound, MacroType.Boolean, MacroType.None } },
                 { "audio_play_in_sync_group", new[] { MacroType.None, MacroType.Sound } },
 
-                { "path_start", new[] { MacroType.Path, MacroType.None, MacroType.Macro_PathEndAction, MacroType.Boolean } },
+                { "path_start", new[] { MacroType.Path, MacroType.None, MacroType.PathEndAction, MacroType.Boolean } },
                 { "path_end", Array.Empty<MacroType>() },
 
                 { "path_exists", new[] { MacroType.Path } },
@@ -379,6 +381,15 @@ namespace DogScepterLib.Project.GML.Decompiler
                 { "path_set_kind", new[] { MacroType.Path, MacroType.None } },
                 { "path_set_precision", new[] { MacroType.Path, MacroType.None } },
                 { "path_shift", new[] { MacroType.Path, MacroType.None, MacroType.None } },
+
+                { "gamepad_axis_value", new[] { MacroType.None, MacroType.Gamepad } },
+                { "gamepad_button_check", new[] { MacroType.None, MacroType.Gamepad } },
+                { "gamepad_button_check_pressed", new[] { MacroType.None, MacroType.Gamepad } },
+
+                { "layer_sprite_change", new[] { MacroType.None, MacroType.Sprite } },
+                { "layer_background_create", new[] { MacroType.None, MacroType.Sprite } },
+
+                { "font_add_sprite_ext", new[] { MacroType.Sprite } }
             };
 
             FunctionReturns = new Dictionary<string, MacroType>()
@@ -401,6 +412,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 { "room", MacroType.Room },
                 { "image_blend", MacroType.Color },
                 { "path_index", MacroType.Path },
+                { "os_type", MacroType.OSType },
             };
 
             ColorMacros = new Dictionary<int, string>()
@@ -491,6 +503,59 @@ namespace DogScepterLib.Project.GML.Decompiler
                 { 1, "path_action_restart" },
                 { 2, "path_action_continue" },
                 { 3, "path_action_reverse" }
+            };
+
+            GamepadMacros = new Dictionary<int, string>()
+            {
+                { 32769, "gp_face1" },
+                { 32770, "gp_face2" },
+                { 32771, "gp_face3" },
+                { 32772, "gp_face4" },
+                { 32773, "gp_shoulderl" },
+                { 32774, "gp_shoulderr" },
+                { 32775, "gp_shoulderlb" },
+                { 32776, "gp_shoulderrb" },
+                { 32777, "gp_select" },
+                { 32778, "gp_start" },
+                { 32779, "gp_stickl" },
+                { 32780, "gp_stickr" },
+                { 32781, "gp_padu" },
+                { 32782, "gp_padd" },
+                { 32783, "gp_padl" },
+                { 32784, "gp_padr" },
+                { 32785, "gp_axislh" },
+                { 32786, "gp_axislv" },
+                { 32787, "gp_axisrh" },
+                { 32788, "gp_axisrv" }
+            };
+
+            OSTypeMacros = new Dictionary<int, string>()
+            {
+                { -1, "os_unknown" },
+                { 0, "os_windows" },
+                { 1, "os_macosx" },
+                { 2, "os_psp" },
+                { 3, "os_ios" },
+                { 4, "os_android" },
+                { 5, "os_symbian" },
+                { 6, "os_linux" },
+                { 7, "os_winphone" },
+                { 8, "os_tizen" },
+                { 9, "os_win8native" },
+                { 10, "os_wiiu" },
+                { 11, "os_3ds" },
+                { 12, "os_psvita" },
+                { 13, "os_bb10" },
+                { 14, "os_ps4" },
+                { 15, "os_xboxone" },
+                { 16, "os_ps3" },
+                { 17, "os_xbox360" },
+                { 18, "os_uwp" },
+                { 20, "os_tvos" },
+                { 21, "os_switch" },
+                { 22, "os_ps5" },
+                { 23, "os_xboxseriesxs" },
+                { 24, "os_operagx" }
             };
         }
 

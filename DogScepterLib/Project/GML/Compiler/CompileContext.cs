@@ -1,8 +1,12 @@
-﻿using System;
+﻿using DogScepterLib.Core.Chunks;
+using DogScepterLib.Core.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static DogScepterLib.Core.Models.GMCode.Bytecode;
+using static DogScepterLib.Core.Models.GMCode.Bytecode.Instruction;
 
 namespace DogScepterLib.Project.GML.Compiler
 {
@@ -20,6 +24,8 @@ namespace DogScepterLib.Project.GML.Compiler
         public HashSet<string> ReferencedEnums { get; init; } = new();
         public Dictionary<string, int> AssetIds = new();
         public Dictionary<string, int> VariableIds = new();
+        public Dictionary<string, FunctionReference> Functions = new();
+        public List<string> Scripts = new();
 
         public CompileContext(ProjectFile pf)
         {
@@ -46,13 +52,15 @@ namespace DogScepterLib.Project.GML.Compiler
                 AssetIds[asset.Name] = asset.DataIndex;
         }
 
-        public void AddCode(string name, string code)
+        public void AddCode(string name, string code, bool isScript = false)
         {
-            Code.Add(new CodeContext(this, name, code));
+            Code.Add(new CodeContext(this, name, code, isScript));
         }
 
         public bool Compile()
         {
+            BuildFunctionInformation();
+
             // Tokenize all of the code
             foreach (var code in Code)
                 Lexer.LexCode(code);
@@ -139,6 +147,54 @@ namespace DogScepterLib.Project.GML.Compiler
             return true;
         }
 
+        private void BuildFunctionInformation()
+        {
+            if (IsGMS23)
+            {
+                // Add all 2.3 function declarations NOT included in scripts we're compiling now
+                List<string> codeEntryNames = new(Code.Count);
+                foreach (var code in Code)
+                    codeEntryNames.Add(code.Name);
+                foreach (var func in Decompiler.DecompileCache.Find23FunctionsNotIncluded(Project, codeEntryNames))
+                    Functions.Add(func.Key, new FunctionReference(func.Value));
+
+                // Now add scripts--extension functions will count as functions, while scripts will not
+                foreach (var ext in Project.DataHandle.GetChunk<GMChunkEXTN>().List)
+                {
+                    foreach (GMExtension.ExtensionFile file in ext.Files)
+                    {
+                        foreach (GMExtension.ExtensionFunction func in file.Functions)
+                        {
+                            Scripts.Add(func.Name.Content);
+                            Functions.Add(func.Name.Content, new FunctionReference(func.Name.Content));
+                        }
+                    }
+                }
+                var globalList = Project.DataHandle.GetChunk<GMChunkGLOB>().List;
+                foreach (var scr in Project.DataHandle.GetChunk<GMChunkSCPT>().List)
+                {
+                    if (globalList.Contains(scr.CodeID))
+                        Scripts.Add(scr.Name.Content);
+                }
+            }
+            else
+            {
+                // Scripts and extension functions are all functions prior to 2.3
+                foreach (var scr in Project.DataHandle.GetChunk<GMChunkSCPT>().List)
+                    Scripts.Add(scr.Name.Content);
+                foreach (var ext in Project.DataHandle.GetChunk<GMChunkEXTN>().List)
+                {
+                    foreach (GMExtension.ExtensionFile file in ext.Files)
+                    {
+                        foreach (GMExtension.ExtensionFunction func in file.Functions)
+                            Scripts.Add(func.Name.Content);
+                    }
+                }
+                foreach (var scr in Scripts)
+                    Functions.Add(scr, new FunctionReference(scr));
+            }
+        }
+
         private void ExpandMacro(CodeContext macro, HashSet<string> referenced)
         {
             for (int i = 0; i < macro.Tokens.Count; i++)
@@ -174,6 +230,7 @@ namespace DogScepterLib.Project.GML.Compiler
         public CodeKind Kind { get; set; } = CodeKind.Script;
         public string Name { get; init; }
         public string Code { get; init; }
+        public bool IsScript { get; init; }
 
         public int Position { get; set; } = 0;
         public List<Token> Tokens { get; set; } = null;
@@ -182,14 +239,22 @@ namespace DogScepterLib.Project.GML.Compiler
         public List<string> LocalVars { get; set; } = new();
         public List<string> StaticVars { get; set; } = new();
         public List<string> ArgumentVars { get; set; } = new();
+        public string CurrentName { get; set; }
         public Node FunctionBeginBlock { get; set; } = null;
         public Node FunctionStatic { get; set; } = null;
 
-        public CodeContext(CompileContext baseContext, string name, string code)
+        // For bytecode
+        public List<Instruction> Instructions { get; set; } = new(64);
+        public int BytecodeLength { get; set; } = 0;
+        public Stack<DataType> TypeStack { get; set; } = new();
+
+        public CodeContext(CompileContext baseContext, string name, string code, bool isScript)
         {
             BaseContext = baseContext;
             Name = name;
+            CurrentName = name;
             Code = code;
+            IsScript = isScript;
         }
 
         public void Error(string message, int index)
@@ -293,6 +358,52 @@ namespace DogScepterLib.Project.GML.Compiler
                     Value = constant.ValueInt64;
                 }
             }
+        }
+    }
+
+    public class FunctionReference
+    {
+        public string Name { get; init; }
+        public bool Resolved { get; set; } = false;
+        public bool Anonymous { get; init; }
+        public GMFunctionEntry DataEntry { get; set; } = null;
+
+        // Used for pre-2.3 scripts and extension functions
+        public FunctionReference(string name)
+        {
+            Name = name;
+            Anonymous = false;
+        }
+
+        // Used for pre-existing function declarations (found by light decompilation)
+        public FunctionReference(GMFunctionEntry entry)
+        {
+            Name = entry.Name.Content;
+            Resolved = true;
+            DataEntry = entry;
+            Anonymous = false;
+        }
+
+        // Used for function declarations
+        public FunctionReference(CompileContext ctx, string internalName, bool anonymous)
+        {
+            Name = internalName;
+            Anonymous = anonymous;
+
+            // All function declarations are referenced (by at least their own declaration),
+            // so we should resolve them.
+            Resolve(ctx); 
+        }
+
+        // Called when a function is referenced (i.e. should be added to function list)
+        public void Resolve(CompileContext ctx)
+        {
+            if (Resolved)
+                return;
+
+            var func = ctx.Project.DataHandle.GetChunk<GMChunkFUNC>();
+            DataEntry = func.FindOrDefine(Name, ctx.Project.DataHandle);
+            Resolved = true;
         }
     }
 }

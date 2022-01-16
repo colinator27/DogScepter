@@ -359,6 +359,11 @@ namespace DogScepterLib.Project.GML.Compiler
                                 }
                                 else if (curr.Kind != TokenKind.ArrayOpen && curr.Kind != TokenKind.ArrayGridOpen)
                                     ctx.Error("Invalid accessor (only takes 1 argument, supplied 2)", curr);
+
+                                // TODO: Need to remove this once functionality exists
+                                if (curr.Kind != TokenKind.ArrayOpen)
+                                    ctx.Error("Accessor syntax currently unsupported (use functions for now)", curr);
+
                                 accessor.Children.Add(ParseExpression(ctx));
                             }
                             ExpectToken(ctx, TokenKind.ArrayClose, "']'");
@@ -777,10 +782,11 @@ namespace DogScepterLib.Project.GML.Compiler
             Node res = new(NodeKind.FunctionCall, new Token(ctx, TokenKind.FunctionCall, -1) { Value = new TokenFunction("@@NewGMLObject@@", null) });
             Node decl = new(NodeKind.FunctionDecl, ctx.Tokens[ctx.Position++]);
             res.Children.Add(decl);
+            string structFuncName = $"___struct___{++ctx.BaseContext.Project.DataHandle.Stats.LastStructID}";
             decl.Children.Add(new Node(NodeKind.Variable,
                                         new Token(ctx, TokenKind.Variable, -1)
                                         {
-                                            Value = new TokenVariable($"___struct___{++ctx.BaseContext.Project.DataHandle.Stats.LastStructID}", null),
+                                            Value = new TokenVariable(structFuncName, null),
                                             ID = -16 // static
                                         }));
             decl.Children.Add(new Node(NodeKind.Group)); // no arguments
@@ -792,6 +798,10 @@ namespace DogScepterLib.Project.GML.Compiler
             var outerStaticVars = ctx.StaticVars;
             ctx.LocalVars = new();
             ctx.StaticVars = new();
+
+            FunctionReference reference = new FunctionReference(ctx.BaseContext, $"gml_Script_{structFuncName}_{ctx.CurrentName}", false);
+            string prevName = ctx.CurrentName;
+            ctx.CurrentName = structFuncName + ctx.CurrentName;
 
             // Read variables, and add assignments to function body
             Token curr = ctx.Tokens[ctx.Position];
@@ -858,8 +868,10 @@ namespace DogScepterLib.Project.GML.Compiler
 
             ExpectToken(ctx, TokenKind.End, "'}'");
 
+            ctx.CurrentName = prevName;
+
             // Create info for this declaration
-            decl.Info = new NodeFunctionInfo(true, ctx.LocalVars, ctx.StaticVars, new());
+            decl.Info = new NodeFunctionInfo(reference, true, ctx.LocalVars, ctx.StaticVars, new());
 
             // Restore local/static vars from outer scope
             ctx.LocalVars = outerLocalVars;
@@ -878,7 +890,7 @@ namespace DogScepterLib.Project.GML.Compiler
             {
                 case TokenKind.FunctionCall:
                     ctx.Position++;
-                    res.Children.Add(new Node(NodeKind.Variable, 
+                    res.Children.Add(new Node(NodeKind.Variable,
                                         new Token(ctx, new TokenVariable((curr.Value as TokenFunction).Name, null), curr.Index)));
                     break;
                 case TokenKind.Variable:
@@ -1009,15 +1021,48 @@ namespace DogScepterLib.Project.GML.Compiler
                 }
             }
 
+            FunctionReference reference;
+            string name;
+            bool anonymous;
+            if (res.Children[0].Kind == NodeKind.Variable)
+            {
+                name = (res.Children[0].Token.Value as TokenVariable).Name;
+                anonymous = false;
+            }
+            else
+            {
+                name = $"anon_{res.Children[0].Token.Index}";
+                anonymous = true;
+            }
+            if (ctx.IsScript && !anonymous)
+            {
+                // Add named function declaration to global scope if this is in a script
+                if (ctx.BaseContext.Functions.TryGetValue(name, out reference))
+                    ctx.Error($"Redefining function '{name}'", res.Children[0].Token);
+                else
+                {
+                    reference = new FunctionReference(ctx.BaseContext, $"gml_Script_{name}", false);
+                    ctx.BaseContext.Functions[name] = reference;
+                }
+            }
+            else
+            {
+                // This isn't in a script (or is anonymous), so we're not in global scope--but we should make the reference anyway, for later (and to add to data)
+                reference = new FunctionReference(ctx.BaseContext, $"gml_Script_{name}_{ctx.CurrentName}", anonymous);
+            }
+
             // Create info for this declaration
-            res.Info = new NodeFunctionInfo(isConstructor, ctx.LocalVars, ctx.StaticVars, ctx.ArgumentVars)
+            res.Info = new NodeFunctionInfo(reference, isConstructor, ctx.LocalVars, ctx.StaticVars, ctx.ArgumentVars)
             {
                 InheritingIndex = inheriting ? 2 : -1,
                 OptionalArgsIndex = optionalArgs ? (inheriting ? 3 : 2) : -1
             };
 
             // Parse actual block
+            string prevName = ctx.CurrentName;
+            ctx.CurrentName = name + ctx.CurrentName;
             res.Children.Add(ParseBlock(ctx, true));
+            ctx.CurrentName = prevName;
 
             // Restore local/static AND argument vars from outer scope
             ctx.LocalVars = outerLocalVars;

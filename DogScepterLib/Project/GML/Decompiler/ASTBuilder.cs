@@ -332,7 +332,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                         variable.Left = stack.Pop();
                                     }
                                     else
-                                        variable.Left = new ASTTypeInst((int)inst.TypeInst);
+                                        variable.Left = new ASTTypeInst((int)inst.TypeInst, inst.Variable.Type == Instruction.VariableType.Instance);
 
                                     if (variable.Variable.VariableType == Instruction.InstanceType.Local)
                                         ctx.RemainingLocals.Add(variable.Variable.Name?.Content);
@@ -484,7 +484,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 variable.Left = stack.Pop();
                             }
                             else
-                                variable.Left = new ASTTypeInst((int)inst.TypeInst);
+                                variable.Left = new ASTTypeInst((int)inst.TypeInst, inst.Variable.Type == Instruction.VariableType.Instance);
 
                             // 2.3 stacktop instance
                             if (variable.Left.Kind == ASTNode.StatementKind.Int16 &&
@@ -507,7 +507,11 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 if (value.Kind == ASTNode.StatementKind.Binary && value.Children[0].Kind == ASTNode.StatementKind.Variable)
                                 {
                                     ASTBinary binary = value as ASTBinary;
-                                    current.Children.Add(new ASTAssign(variable, binary.Children[1], binary.Instruction));
+                                    if (binary.Children[1].Kind == ASTNode.StatementKind.Int16 &&
+                                        (binary.Children[1] as ASTInt16).PotentialContext == ASTInt16.Context.Postfix)
+                                        current.Children.Add(new ASTAssign(binary.Instruction, variable, false)); // Add this as postfix
+                                    else
+                                        current.Children.Add(new ASTAssign(variable, binary.Children[1], binary.Instruction));
                                     break;
                                 }
                             }
@@ -617,7 +621,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                             break; // This occasionally happens in switch statements; this is probably the fastest way to handle it
                         {
                             ASTNode node = stack.Pop();
-                            if (!node.Duplicated)
+                            if (!node.Duplicated && node.Kind != ASTNode.StatementKind.Variable /* occasionally 2.3 emits garbage statements?? */)
                                 current.Children.Add(node);
                         }
                         break;

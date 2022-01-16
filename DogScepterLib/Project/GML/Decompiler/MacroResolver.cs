@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Globalization;
 using static DogScepterLib.Project.GML.Decompiler.MacroResolverTypes;
 
 namespace DogScepterLib.Project.GML.Decompiler
@@ -24,7 +19,9 @@ namespace DogScepterLib.Project.GML.Decompiler
             Color,
             Keyboard,
 
-            Macro_PathEndAction,
+            PathEndAction,
+            Gamepad,
+            OSType,
         }
 
         public static ASTNode ResolveAny(DecompileContext ctx, ASTNode node, ASTNode parent, ConditionalMacroType type)
@@ -82,7 +79,9 @@ namespace DogScepterLib.Project.GML.Decompiler
                     node.Children[1] = ResolveAny(ctx, node.Children[1], node, type);
                     break;
                 case ASTNode.StatementKind.Function:
-                    if ((node as ASTFunction).Function.Name.Content == "@@NewGMLArray@@")
+                    // Check for functions that have the same type in all arguments generally (variable arguments usually)
+                    string name = (node as ASTFunction).Function.Name.Content;
+                    if (name == "@@NewGMLArray@@" || name == "choose")
                     {
                         for (int i = 0; i < node.Children.Count; i++)
                             node.Children[i] = ResolveAny(ctx, node.Children[i], node, type);
@@ -155,9 +154,23 @@ namespace DogScepterLib.Project.GML.Decompiler
                             return new ASTAsset("ord(\"" + (char)value + "\")");
                     }
                     break;
-                case MacroType.Macro_PathEndAction:
+                case MacroType.PathEndAction:
                     {
                         if (ctx.Cache.Types.PathEndActionMacros.TryGetValue(value, out string macro))
+                            return new ASTAsset(macro);
+                    }
+                    break;
+                case MacroType.Gamepad:
+                    {
+                        if (ctx.Cache.Types.GamepadMacros.TryGetValue(value, out string macro))
+                            return new ASTAsset(macro);
+                        else if (value == -4)
+                            return new ASTAsset("noone");
+                    }
+                    break;
+                case MacroType.OSType:
+                    {
+                        if (ctx.Cache.Types.OSTypeMacros.TryGetValue(value, out string macro))
                             return new ASTAsset(macro);
                     }
                     break;
@@ -168,18 +181,18 @@ namespace DogScepterLib.Project.GML.Decompiler
         public static void ResolveFunction(DecompileContext ctx, ASTFunction func)
         {
             // Handle code-entry-specific types
-            if (ctx.CodeAssetTypes.HasValue)
+            if (ctx.CodeMacroTypes.HasValue)
             {
-                if (ctx.CodeAssetTypes.Value.FunctionArgs != null &&
-                    ctx.CodeAssetTypes.Value.FunctionArgs.TryGetValue(func.Function.Name.Content, out MacroType[] types))
+                if (ctx.CodeMacroTypes.Value.FunctionArgs != null &&
+                    ctx.CodeMacroTypes.Value.FunctionArgs.TryGetValue(func.Function.Name.Content, out MacroType[] types))
                 {
                     for (int i = 0; i < func.Children.Count && i < types.Length; i++)
                         func.Children[i] = ResolveAny(ctx, func.Children[i], func, new(types[i]));
                     return;
                 }
 
-                if (ctx.CodeAssetTypes.Value.FunctionArgsCond != null &&
-                         ctx.CodeAssetTypes.Value.FunctionArgsCond.TryGetValue(func.Function.Name.Content, out var cond))
+                if (ctx.CodeMacroTypes.Value.FunctionArgsCond != null &&
+                         ctx.CodeMacroTypes.Value.FunctionArgsCond.TryGetValue(func.Function.Name.Content, out var cond))
                 {
                     for (int i = 0; i < func.Children.Count && i < cond.Length; i++)
                         func.Children[i] = ResolveAny(ctx, func.Children[i], func, cond[i]);
@@ -236,6 +249,25 @@ namespace DogScepterLib.Project.GML.Decompiler
             }
         }
 
+        public static void ResolveReturn(DecompileContext ctx, ASTReturn ret)
+        {
+            // Check for script return types
+            MacroType type = MacroType.None;
+
+            // ... code-entry-specific types
+            if (ctx.CodeMacroTypes.HasValue)
+                ctx.CodeMacroTypes.Value.FunctionReturns?.TryGetValue(ctx.CodeName, out type);
+
+            // ... global types
+            if (type == MacroType.None)
+                ctx.Cache.Types.FunctionReturns.TryGetValue(ctx.CodeName, out type);
+
+            // Then, actually apply the type if found
+            if (type != MacroType.None)
+                ret.Children[0] = ResolveAny(ctx, ret.Children[0], ret, new(type));
+        }
+
+        // Checks a node for a known/registered type (such as variables/function returns)
         public static ConditionalMacroType GetExpressionType(DecompileContext ctx, ASTNode node)
         {
             switch (node.Kind)
@@ -245,13 +277,13 @@ namespace DogScepterLib.Project.GML.Decompiler
                         ASTVariable variable = node as ASTVariable;
 
                         // Handle code-entry-specific types
-                        if (ctx.CodeAssetTypes.HasValue)
+                        if (ctx.CodeMacroTypes.HasValue)
                         {
-                            if (ctx.CodeAssetTypes.Value.VariableTypes != null &&
-                                ctx.CodeAssetTypes.Value.VariableTypes.TryGetValue(variable.Variable.Name.Content, out MacroType type))
+                            if (ctx.CodeMacroTypes.Value.VariableTypes != null &&
+                                ctx.CodeMacroTypes.Value.VariableTypes.TryGetValue(variable.Variable.Name.Content, out MacroType type))
                                 return new(type);
-                            if (ctx.CodeAssetTypes.Value.VariableTypesCond != null &&
-                                ctx.CodeAssetTypes.Value.VariableTypesCond.TryGetValue(variable.Variable.Name.Content, out var cond))
+                            if (ctx.CodeMacroTypes.Value.VariableTypesCond != null &&
+                                ctx.CodeMacroTypes.Value.VariableTypesCond.TryGetValue(variable.Variable.Name.Content, out var cond))
                                 return cond;
                         }
 
@@ -276,10 +308,10 @@ namespace DogScepterLib.Project.GML.Decompiler
                         ASTFunction func = node as ASTFunction;
 
                         // Handle code-entry-specific types
-                        if (ctx.CodeAssetTypes.HasValue)
+                        if (ctx.CodeMacroTypes.HasValue)
                         {
-                            if (ctx.CodeAssetTypes.Value.FunctionReturns != null &&
-                                ctx.CodeAssetTypes.Value.FunctionReturns.TryGetValue(func.Function.Name.Content, out MacroType type))
+                            if (ctx.CodeMacroTypes.Value.FunctionReturns != null &&
+                                ctx.CodeMacroTypes.Value.FunctionReturns.TryGetValue(func.Function.Name.Content, out MacroType type))
                                 return new(type);
                         }
 

@@ -166,10 +166,93 @@ namespace DogScepterLib.Core
                     }
                 }
 
-                GMString res = new GMString();
+                GMString res = new();
                 res.Content = content;
                 list.Add(res);
                 return res;
+            }
+        }
+
+        public GMString DefineString(string content, out int index)
+        {
+            if (content == null)
+            {
+                index = -1;
+                return null;
+            }
+
+            var list = ((GMChunkSTRG)Chunks["STRG"]).List;
+
+            lock (list)
+            {
+                if (StringCache != null)
+                {
+                    if (StringCache.TryGetValue(content, out int stringIndex))
+                    {
+                        index = stringIndex;
+                        return list[stringIndex];
+                    }
+
+                    for (int i = StringCache.Count; i < list.Count; i++)
+                    {
+                        if (list[i].Content == content)
+                        {
+                            index = i;
+                            return list[i];
+                        }
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        if (list[i].Content == content)
+                        {
+                            index = i;
+                            return list[i];
+                        }
+                    }
+                }
+
+                GMString res = new();
+                res.Content = content;
+                list.Add(res);
+                index = list.Count - 1;
+                return res;
+            }
+        }
+
+        public int DefineStringIndex(string content)
+        {
+            if (content == null)
+                return -1;
+
+            var list = ((GMChunkSTRG)Chunks["STRG"]).List;
+
+            lock (list)
+            {
+                if (StringCache != null)
+                {
+                    if (StringCache.TryGetValue(content, out int stringIndex))
+                        return stringIndex;
+
+                    for (int i = StringCache.Count; i < list.Count; i++)
+                        if (list[i].Content == content)
+                            return i;
+                }
+                else
+                {
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        if (list[i].Content == content)
+                            return i;
+                    }
+                }
+
+                GMString res = new();
+                res.Content = content;
+                list.Add(res);
+                return list.Count - 1;
             }
         }
 
