@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using DogScepterLib.Project.GML.Analysis;
+using System.Globalization;
 using static DogScepterLib.Project.GML.Decompiler.MacroResolverTypes;
 
 namespace DogScepterLib.Project.GML.Decompiler
@@ -24,12 +25,12 @@ namespace DogScepterLib.Project.GML.Decompiler
             OSType,
         }
 
-        public static ASTNode ResolveAny(DecompileContext ctx, ASTNode node, ASTNode parent, ConditionalMacroType type)
+        public static ASTNode ResolveAny(DecompileContext ctx, ASTNode node, ConditionalMacroType type)
         {
             // Check if this type has a condition that needs to be satisfied
             if (type.Condition != null)
             {
-                if (type.Condition.Evaluate(ctx, node, parent))
+                if (type.Condition.Evaluate(ctx.ConditionContext, node))
                 {
                     if (type.Condition.EvaluateOnce)
                         type = new(type); // Make a new type without the condition (it has been satisfied)
@@ -43,7 +44,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         for (int i = 0; i < type.Alternatives.Length; i++)
                         {
                             var curr = type.Alternatives[i];
-                            if (curr.Condition == null || curr.Condition.Evaluate(ctx, node, parent))
+                            if (curr.Condition == null || curr.Condition.Evaluate(ctx.ConditionContext, node))
                             {
                                 evaluated = true;
                                 if (curr.Condition != null && curr.Condition.EvaluateOnce)
@@ -70,21 +71,27 @@ namespace DogScepterLib.Project.GML.Decompiler
                 case ASTNode.StatementKind.IfStatement:
                     if (node.Children.Count == 5)
                     {
-                        node.Children[3] = ResolveAny(ctx, node.Children[3], node, type);
-                        node.Children[4] = ResolveAny(ctx, node.Children[4], node, type);
+                        ctx.ConditionContext.Parents.Push(node);
+                        node.Children[3] = ResolveAny(ctx, node.Children[3], type);
+                        node.Children[4] = ResolveAny(ctx, node.Children[4], type);
+                        ctx.ConditionContext.Parents.Pop();
                     }
                     break;
                 case ASTNode.StatementKind.Binary:
-                    node.Children[0] = ResolveAny(ctx, node.Children[0], node, type);
-                    node.Children[1] = ResolveAny(ctx, node.Children[1], node, type);
+                    ctx.ConditionContext.Parents.Push(node);
+                    node.Children[0] = ResolveAny(ctx, node.Children[0], type);
+                    node.Children[1] = ResolveAny(ctx, node.Children[1], type);
+                    ctx.ConditionContext.Parents.Pop();
                     break;
                 case ASTNode.StatementKind.Function:
                     // Check for functions that have the same type in all arguments generally (variable arguments usually)
                     string name = (node as ASTFunction).Function.Name.Content;
                     if (name == "@@NewGMLArray@@" || name == "choose")
                     {
+                        ctx.ConditionContext.Parents.Push(node);
                         for (int i = 0; i < node.Children.Count; i++)
-                            node.Children[i] = ResolveAny(ctx, node.Children[i], node, type);
+                            node.Children[i] = ResolveAny(ctx, node.Children[i], type);
+                        ctx.ConditionContext.Parents.Pop();
                     }
                     break;
             }
@@ -186,16 +193,20 @@ namespace DogScepterLib.Project.GML.Decompiler
                 if (ctx.CodeMacroTypes.Value.FunctionArgs != null &&
                     ctx.CodeMacroTypes.Value.FunctionArgs.TryGetValue(func.Function.Name.Content, out MacroType[] types))
                 {
+                    ctx.ConditionContext.Parents.Push(func);
                     for (int i = 0; i < func.Children.Count && i < types.Length; i++)
-                        func.Children[i] = ResolveAny(ctx, func.Children[i], func, new(types[i]));
+                        func.Children[i] = ResolveAny(ctx, func.Children[i], new(types[i]));
+                    ctx.ConditionContext.Parents.Pop();
                     return;
                 }
 
                 if (ctx.CodeMacroTypes.Value.FunctionArgsCond != null &&
                          ctx.CodeMacroTypes.Value.FunctionArgsCond.TryGetValue(func.Function.Name.Content, out var cond))
                 {
+                    ctx.ConditionContext.Parents.Push(func);
                     for (int i = 0; i < func.Children.Count && i < cond.Length; i++)
-                        func.Children[i] = ResolveAny(ctx, func.Children[i], func, cond[i]);
+                        func.Children[i] = ResolveAny(ctx, func.Children[i], cond[i]);
+                    ctx.ConditionContext.Parents.Pop();
                     return;
                 }
             }
@@ -204,15 +215,19 @@ namespace DogScepterLib.Project.GML.Decompiler
             {
                 if (ctx.Cache.Types.FunctionArgs.TryGetValue(func.Function.Name.Content, out MacroType[] types))
                 {
+                    ctx.ConditionContext.Parents.Push(func);
                     for (int i = 0; i < func.Children.Count && i < types.Length; i++)
-                        func.Children[i] = ResolveAny(ctx, func.Children[i], func, new(types[i]));
+                        func.Children[i] = ResolveAny(ctx, func.Children[i], new(types[i]));
+                    ctx.ConditionContext.Parents.Pop();
                     return;
                 }
 
                 if (ctx.Cache.Types.FunctionArgsCond.TryGetValue(func.Function.Name.Content, out var cond))
                 {
+                    ctx.ConditionContext.Parents.Push(func);
                     for (int i = 0; i < func.Children.Count && i < cond.Length; i++)
-                        func.Children[i] = ResolveAny(ctx, func.Children[i], func, cond[i]);
+                        func.Children[i] = ResolveAny(ctx, func.Children[i], cond[i]);
+                    ctx.ConditionContext.Parents.Pop();
                     return;
                 }
             }
@@ -222,7 +237,11 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             ConditionalMacroType left = GetExpressionType(ctx, assign.Children[0]);
             if (left.Kind != MacroType.None)
-                assign.Children[1] = ResolveAny(ctx, assign.Children[1], assign, left);
+            {
+                ctx.ConditionContext.Parents.Push(assign);
+                assign.Children[1] = ResolveAny(ctx, assign.Children[1], left);
+                ctx.ConditionContext.Parents.Pop();
+            }
         }
 
         public static void ResolveBinary(DecompileContext ctx, ASTBinary bin)
@@ -230,9 +249,17 @@ namespace DogScepterLib.Project.GML.Decompiler
             ConditionalMacroType left = GetExpressionType(ctx, bin.Children[0]);
             ConditionalMacroType right = GetExpressionType(ctx, bin.Children[1]);
             if (left.Kind != MacroType.None && right.Kind == MacroType.None)
-                bin.Children[1] = ResolveAny(ctx, bin.Children[1], bin, left);
+            {
+                ctx.ConditionContext.Parents.Push(bin);
+                bin.Children[1] = ResolveAny(ctx, bin.Children[1], left);
+                ctx.ConditionContext.Parents.Pop();
+            }
             else if (left.Kind == MacroType.None && right.Kind != MacroType.None)
-                bin.Children[0] = ResolveAny(ctx, bin.Children[0], bin, right);
+            {
+                ctx.ConditionContext.Parents.Push(bin);
+                bin.Children[0] = ResolveAny(ctx, bin.Children[0], right);
+                ctx.ConditionContext.Parents.Pop();
+            }
         }
 
         public static void ResolveSwitch(DecompileContext ctx, ASTSwitchStatement sw)
@@ -240,12 +267,14 @@ namespace DogScepterLib.Project.GML.Decompiler
             ConditionalMacroType expr = GetExpressionType(ctx, sw.Children[0]);
             if (expr.Kind != MacroType.None)
             {
+                ctx.ConditionContext.Parents.Push(sw);
                 for (int i = 1; i < sw.Children.Count; i++)
                 {
                     var curr = sw.Children[i];
                     if (curr.Kind == ASTNode.StatementKind.SwitchCase)
-                        curr.Children[0] = ResolveAny(ctx, curr.Children[0], sw, expr);
+                        curr.Children[0] = ResolveAny(ctx, curr.Children[0], expr);
                 }
+                ctx.ConditionContext.Parents.Pop();
             }
         }
 
@@ -264,7 +293,11 @@ namespace DogScepterLib.Project.GML.Decompiler
 
             // Then, actually apply the type if found
             if (type != MacroType.None)
-                ret.Children[0] = ResolveAny(ctx, ret.Children[0], ret, new(type));
+            {
+                ctx.ConditionContext.Parents.Push(ret);
+                ret.Children[0] = ResolveAny(ctx, ret.Children[0], new(type));
+                ctx.ConditionContext.Parents.Pop();
+            }
         }
 
         // Checks a node for a known/registered type (such as variables/function returns)

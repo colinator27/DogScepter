@@ -1,6 +1,7 @@
 ﻿using DogScepterLib.Core;
 using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
+using DogScepterLib.Project.GML.Analysis;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -139,6 +140,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<DecompileContext> SubContexts;
         public Fragment Fragment;
         public List<ASTNode> StructArguments;
+        public ConditionContext ConditionContext;
 
         public DecompileContext(ProjectFile pf, DecompileSettings settings = null)
         {
@@ -151,6 +153,8 @@ namespace DogScepterLib.Project.GML.Decompiler
             Data = pf.DataHandle;
             Strings = Data.GetChunk<GMChunkSTRG>().List;
             Settings = settings ?? new DecompileSettings();
+
+            ConditionContext = new(this);
         }
 
         public DecompileContext(DecompileContext existing, Fragment fragment)
@@ -171,9 +175,17 @@ namespace DogScepterLib.Project.GML.Decompiler
 
 
             CodeName = fragment.Name;
+
+            ConditionContext = existing.ConditionContext;
         }
 
-        public string DecompileWholeEntry(GMCode codeEntry)
+        public string DecompileWholeEntryString(GMCode codeEntry)
+        {
+            DecompileWholeEntry(codeEntry);
+            return ASTNode.WriteFromContext(this);
+        }
+
+        public void DecompileWholeEntry(GMCode codeEntry)
         {
             CodeName = codeEntry.Name?.Content;
 
@@ -190,7 +202,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             }
 
             // Then decompile the main fragment
-            return DecompileSegmentString(codeEntry, fragments[^1].Blocks);
+            DecompileSegment(codeEntry, fragments[^1].Blocks);
         }
 
         public void DecompileSegment(GMCode codeEntry, BlockList existingList = null)
@@ -233,12 +245,6 @@ namespace DogScepterLib.Project.GML.Decompiler
             AllLocals = new HashSet<string>(RemainingLocals);
             BaseASTBlock.Clean(this);
             ParentCall?.Clean(this);
-        }
-
-        public string DecompileSegmentString(GMCode codeEntry, BlockList existingList = null)
-        {
-            DecompileSegment(codeEntry, existingList);
-            return ASTNode.WriteFromContext(this);
         }
     }
 }

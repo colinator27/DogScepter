@@ -20,6 +20,8 @@ namespace DogScepterLib.Project.GML.Decompiler
     {
         public enum StatementKind
         {
+            None,
+
             Block,
 
             Int16,
@@ -774,6 +776,11 @@ namespace DogScepterLib.Project.GML.Decompiler
 
             MacroResolver.ResolveFunction(ctx, this);
             return this;
+        }
+
+        public override string ToString()
+        {
+            return Function.Name.Content;
         }
     }
 
@@ -1839,6 +1846,11 @@ namespace DogScepterLib.Project.GML.Decompiler
         public ASTNode Clean(DecompileContext ctx)
         {
             return this;
+        }
+
+        public override string ToString()
+        {
+            return AssetName;
         }
     }
 

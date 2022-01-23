@@ -139,7 +139,7 @@ namespace DogScepterCLI.Commands
                     try
                     {
                         File.WriteAllText(Path.Combine(codeOutputDir, elem.Name.Content[0..Math.Min(elem.Name.Content.Length, 128)] + ".gml"),
-                                          new DecompileContext(pf).DecompileWholeEntry(elem));
+                                          new DecompileContext(pf).DecompileWholeEntryString(elem));
                     }
                     catch (Exception e)
                     {
