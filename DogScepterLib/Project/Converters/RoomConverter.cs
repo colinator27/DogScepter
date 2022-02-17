@@ -146,6 +146,7 @@ namespace DogScepterLib.Project.Converters
             if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
             {
                 projectAsset.Layers = new List<AssetRoom.Layer>(asset.Layers.Count);
+
                 foreach (var layer in asset.Layers)
                 {
                     var newLayer = new AssetRoom.Layer()
@@ -159,6 +160,25 @@ namespace DogScepterLib.Project.Converters
                         VSpeed = layer.VSpeed,
                         Visible = layer.Visible
                     };
+
+                    if (pf.DataHandle.VersionInfo.Major >= 2022)
+                    {
+                        newLayer.EffectNew = new()
+                        {
+                            Enabled = layer.EffectEnabled,
+                            Type = layer.EffectType?.Content,
+                            Properties = new()
+                        };
+                        foreach (var prop in layer.EffectProperties)
+                        {
+                            newLayer.Effect.Properties.Add(new()
+                            {
+                                Kind = prop.Kind,
+                                Name = prop.Name?.Content,
+                                Value = prop.Value?.Content
+                            });
+                        }
+                    }
 
                     switch (layer.Kind)
                     {
@@ -279,6 +299,16 @@ namespace DogScepterLib.Project.Converters
                             };
                             break;
                         case GMRoom.Layer.LayerKind.Effect:
+                            if (pf.DataHandle.VersionInfo.Major >= 2022)
+                            {
+                                newLayer.Effect = new()
+                                {
+                                    EffectType = null,
+                                    Properties = null
+                                };
+                                break;
+                            }
+
                             newLayer.Effect = new()
                             {
                                 EffectType = layer.Effect.EffectType?.Content,
@@ -474,6 +504,22 @@ namespace DogScepterLib.Project.Converters
                             Visible = layer.Visible
                         };
 
+                        if (pf.DataHandle.VersionInfo.Major >= 2022)
+                        {
+                            newLayer.EffectEnabled = layer.EffectNew.Enabled;
+                            newLayer.EffectType = pf.DataHandle.DefineString(layer.EffectNew.Type);
+
+                            foreach (var prop in layer.EffectNew.Properties)
+                            {
+                                newLayer.EffectProperties.Add(new()
+                                {
+                                    Kind = prop.Kind,
+                                    Name = pf.DataHandle.DefineString(prop.Name),
+                                    Value = pf.DataHandle.DefineString(prop.Value)
+                                });
+                            }
+                        }
+
                         if (layer.Background != null)
                         {
                             newLayer.Kind = GMRoom.Layer.LayerKind.Background;
@@ -598,20 +644,23 @@ namespace DogScepterLib.Project.Converters
                         else if (layer.Effect != null)
                         {
                             newLayer.Kind = GMRoom.Layer.LayerKind.Effect;
-                            newLayer.Effect = new()
+                            if (pf.DataHandle.VersionInfo.Major < 2022)
                             {
-                                EffectType = pf.DataHandle.DefineString(layer.Effect.EffectType),
-                                Properties = new(layer.Effect.Properties.Count)
-                            };
-
-                            foreach (var prop in layer.Effect.Properties)
-                            {
-                                newLayer.Effect.Properties.Add(new()
+                                newLayer.Effect = new()
                                 {
-                                    Kind = prop.Kind,
-                                    Name = pf.DataHandle.DefineString(prop.Name),
-                                    Value = pf.DataHandle.DefineString(prop.Value)
-                                });
+                                    EffectType = pf.DataHandle.DefineString(layer.Effect.EffectType),
+                                    Properties = new(layer.Effect.Properties.Count)
+                                };
+
+                                foreach (var prop in layer.Effect.Properties)
+                                {
+                                    newLayer.Effect.Properties.Add(new()
+                                    {
+                                        Kind = prop.Kind,
+                                        Name = pf.DataHandle.DefineString(prop.Name),
+                                        Value = pf.DataHandle.DefineString(prop.Value)
+                                    });
+                                }
                             }
                         }
                         // maybe throw exception if nothing else matched?

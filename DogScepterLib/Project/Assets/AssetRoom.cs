@@ -155,6 +155,7 @@ namespace DogScepterLib.Project.Assets
             public LayerAssets Assets { get; set; }
             public LayerTiles Tiles { get; set; }
             public LayerEffect Effect { get; set; }
+            public EffectsSettings EffectNew { get; set; }
 
             public class LayerBackground
             {
@@ -212,6 +213,13 @@ namespace DogScepterLib.Project.Assets
                     public string Name { get; set; }
                     public string Value { get; set; }
                 }
+            }
+
+            public struct EffectsSettings
+            {
+                public bool Enabled { get; set; }
+                public string Type { get; set; }
+                public List<Layer.LayerEffect.EffectProperty> Properties { get; set; }
             }
         }
     }
