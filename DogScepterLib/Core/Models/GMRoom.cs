@@ -132,6 +132,53 @@ namespace DogScepterLib.Core.Models
             PixelsToMeters = reader.ReadSingle();
             if (reader.VersionInfo.IsNumberAtLeast(2))
             {
+                // First, need to do a length check on one of the layers to see if this is 2022.1 or higher
+                if (!reader.VersionInfo.IsNumberAtLeast(2022))
+                {
+                    int returnTo = reader.Offset;
+                    reader.Offset = reader.ReadInt32();
+                    int layerCount = reader.ReadInt32();
+                    if (layerCount >= 0)
+                    {
+                        int jumpOffset = reader.ReadInt32() + 8;
+                        int nextOffset = reader.ReadInt32();
+                        reader.Offset = jumpOffset;
+                        switch ((Layer.LayerKind)reader.ReadInt32())
+                        {
+                            case Layer.LayerKind.Background:
+                                if (nextOffset - reader.Offset > 16*4)
+                                    reader.VersionInfo.SetNumber(2022, 1);
+                                break;
+                            case Layer.LayerKind.Instances:
+                                reader.Offset += 6*4;
+                                int instanceCount = reader.ReadInt32();
+                                if (nextOffset - reader.Offset != (instanceCount * 4))
+                                    reader.VersionInfo.SetNumber(2022, 1);
+                                break;
+                            case Layer.LayerKind.Assets:
+                                reader.Offset += 6*4;
+                                int tileOffset = reader.ReadInt32();
+                                if (tileOffset != tileOffset + 8)
+                                    reader.VersionInfo.SetNumber(2022, 1);
+                                break;
+                            case Layer.LayerKind.Tiles:
+                                reader.Offset += 7*4;
+                                int tileMapWidth = reader.ReadInt32();
+                                int tileMapHeight = reader.ReadInt32();
+                                if (nextOffset - reader.Offset != (tileMapWidth * tileMapHeight * 4))
+                                    reader.VersionInfo.SetNumber(2022, 1);
+                                break;
+                            case Layer.LayerKind.Effect:
+                                reader.Offset += 7*4;
+                                int propertyCount = reader.ReadInt32();
+                                if (nextOffset - reader.Offset != (propertyCount * 3 * 4))
+                                    reader.VersionInfo.SetNumber(2022, 1);
+                                break;
+                        }
+                    }
+                    reader.Offset = returnTo;
+                }
+
                 Layers = reader.ReadPointerObjectUnique<GMUniquePointerList<Layer>>();
                 if (reader.VersionInfo.IsNumberAtLeast(2, 3))
                 {
@@ -362,6 +409,10 @@ namespace DogScepterLib.Core.Models
             public float HSpeed, VSpeed;
             public bool Visible;
 
+            public bool EffectEnabled;
+            public GMString EffectType;
+            public GMList<EffectProperty> EffectProperties;
+
             // Only one of these aren't null at a time
             public LayerBackground Background;
             public LayerInstances Instances;
@@ -378,6 +429,14 @@ namespace DogScepterLib.Core.Models
                 writer.Write(OffsetX); writer.Write(OffsetY);
                 writer.Write(HSpeed); writer.Write(VSpeed);
                 writer.WriteWideBoolean(Visible);
+
+                if (writer.VersionInfo.Major >= 2022)
+                {
+                    writer.WriteWideBoolean(EffectEnabled);
+                    writer.WritePointerString(EffectType);
+                    EffectProperties.Serialize(writer);
+                }
+
                 switch (Kind)
                 {
                     case LayerKind.Background:
@@ -410,6 +469,15 @@ namespace DogScepterLib.Core.Models
                 OffsetX = reader.ReadSingle(); OffsetY = reader.ReadSingle();
                 HSpeed = reader.ReadSingle(); VSpeed = reader.ReadSingle();
                 Visible = reader.ReadWideBoolean();
+
+                if (reader.VersionInfo.Major >= 2022)
+                {
+                    EffectEnabled = reader.ReadWideBoolean();
+                    EffectType = reader.ReadStringPointerObject();
+                    EffectProperties = new GMList<EffectProperty>();
+                    EffectProperties.Unserialize(reader);
+                }
+
                 switch (Kind)
                 {
                     case LayerKind.Background:
