@@ -138,7 +138,7 @@ namespace DogScepterLib.Core.Models
                     int returnTo = reader.Offset;
                     reader.Offset = reader.ReadInt32();
                     int layerCount = reader.ReadInt32();
-                    if (layerCount >= 0)
+                    if (layerCount >= 1)
                     {
                         int jumpOffset = reader.ReadInt32() + 8;
                         int nextOffset = reader.ReadInt32();
