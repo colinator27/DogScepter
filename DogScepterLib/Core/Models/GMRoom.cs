@@ -158,7 +158,7 @@ namespace DogScepterLib.Core.Models
                             case Layer.LayerKind.Assets:
                                 reader.Offset += 6*4;
                                 int tileOffset = reader.ReadInt32();
-                                if (tileOffset != tileOffset + 8)
+                                if (tileOffset != reader.Offset + (reader.VersionInfo.IsNumberAtLeast(2, 3) ? 8 : 4))
                                     reader.VersionInfo.SetNumber(2022, 1);
                                 break;
                             case Layer.LayerKind.Tiles:
