@@ -37,6 +37,8 @@ namespace DogScepterLib.Project
 
         public ProjectJson JsonFile;
 
+        public bool HackyComparisonMode { get; set; } = false; // Set to true to enable features more useful for comparing versions of a game
+
         public Dictionary<string, object> Info { get; set; } = new Dictionary<string, object>();
         public ProjectJson.OptionsSettings Options { get; set; }
         public ProjectJson.AudioGroupSettings AudioGroupSettings { get; set; }

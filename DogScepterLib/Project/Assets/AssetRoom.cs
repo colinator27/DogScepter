@@ -39,7 +39,7 @@ namespace DogScepterLib.Project.Assets
         protected override byte[] WriteInternal(ProjectFile pf, string assetPath, bool actuallyWrite)
         {
             var options = new JsonSerializerOptions(ProjectFile.JsonOptions);
-            options.WriteIndented = false;
+            options.WriteIndented = pf.HackyComparisonMode;
             byte[] buff = JsonSerializer.SerializeToUtf8Bytes(this, options);
             if (actuallyWrite)
             {

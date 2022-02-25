@@ -106,7 +106,7 @@ namespace DogScepterLib.Project.Converters
                     X = obj.X,
                     Y = obj.Y,
                     Asset = obj.ObjectID >= 0 ? pf.Objects[obj.ObjectID].Name : null,
-                    InstanceID = obj.InstanceID,
+                    InstanceID = pf.HackyComparisonMode ? -1 : obj.InstanceID,
                     CreationCode = getCode(obj.CreationCodeID),
                     ScaleX = obj.ScaleX,
                     ScaleY = obj.ScaleY,
@@ -152,7 +152,7 @@ namespace DogScepterLib.Project.Converters
                     var newLayer = new AssetRoom.Layer()
                     {
                         Name = layer.Name?.Content,
-                        ID = layer.ID,
+                        ID = pf.HackyComparisonMode ? -1 : layer.ID,
                         Depth = layer.Depth,
                         OffsetX = layer.OffsetX,
                         OffsetY = layer.OffsetY,
@@ -179,6 +179,15 @@ namespace DogScepterLib.Project.Converters
                             });
                         }
                     }
+                    else if (pf.HackyComparisonMode)
+                    {
+                        newLayer.EffectNew = new()
+                        {
+                            Enabled = true,
+                            Type = null,
+                            Properties = new()
+                        };
+                    }
 
                     switch (layer.Kind)
                     {
@@ -198,7 +207,10 @@ namespace DogScepterLib.Project.Converters
                             };
                             break;
                         case GMRoom.Layer.LayerKind.Instances:
-                            newLayer.Instances = layer.Instances;
+                            if (pf.HackyComparisonMode)
+                                newLayer.Instances = new() { Instances = new List<int>(layer.Instances.Instances.Count) };
+                            else
+                                newLayer.Instances = layer.Instances;
                             break;
                         case GMRoom.Layer.LayerKind.Assets:
                             newLayer.Assets = new AssetRoom.Layer.LayerAssets()

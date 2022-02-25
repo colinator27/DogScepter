@@ -4,6 +4,7 @@ using CliFx.Infrastructure;
 using DogScepterLib.Core;
 using DogScepterLib.Core.Chunks;
 using DogScepterLib.Project;
+using DogScepterLib.Project.Converters;
 using DogScepterLib.Project.GML.Decompiler;
 using DogScepterLib.Project.Util;
 using DogScepterLib.User;
@@ -39,6 +40,12 @@ namespace DogScepterCLI.Commands
         [CommandOption("code", Description = "Dump decompiled code.")]
         public bool DumpCode { get; private set; }
 
+        [CommandOption("rooms", Description = "Dump room JSON.")]
+        public bool DumpRooms { get; private set; }
+
+        [CommandOption("hackycompare", Description = "Enables hacky comparison mode.")]
+        public bool ComparisonMode { get; private set; }
+
         [CommandOption("config", Description = "Set the configuration to use.")]
         public string Config { get; private set; } = null;
 
@@ -55,6 +62,7 @@ namespace DogScepterCLI.Commands
             ProjectFile pf = console.OpenProject(data, dir);
             if (data == null)
                 return default;
+            pf.HackyComparisonMode = ComparisonMode;
 
             if (!Directory.Exists(dir))
             {
@@ -146,6 +154,28 @@ namespace DogScepterCLI.Commands
                         console.Output.WriteLine($"Failed to decompile code for \"{elem.Name.Content}\": {e}");
                     }
                 });
+            }
+
+            if (DumpRooms)
+            {
+                didAnything = true;
+                console.Output.WriteLine("Dumping rooms...");
+
+                string roomOutputDir = Path.Combine(dir, "rooms");
+                Directory.CreateDirectory(roomOutputDir);
+
+                for (int i = 0; i < pf.Rooms.Count; i++)
+                {
+                    try
+                    {
+                        pf.GetConverter<RoomConverter>().ConvertData(pf, i);
+                        pf.Rooms[i].Asset.Write(pf, Path.Combine(roomOutputDir, pf.Rooms[i].Name + ".json"));
+                    }
+                    catch (Exception e)
+                    {
+                        console.Output.WriteLine($"Failed to export room data for \"{pf.Rooms[i].Name}\": {e}");
+                    }
+                }
             }
 
             if (didAnything)
