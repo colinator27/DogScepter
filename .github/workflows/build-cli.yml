@@ -18,9 +18,16 @@ jobs:
     - name: Build
       run: dotnet build DogScepterCLI --no-restore
     - name: Publish
-      run: dotnet publish DogScepterCLI -c Release -r win-x64 --self-contained true -p:PublishSingleFile=false --output cli_win_x64
+      run: dotnet publish DogScepterCLI -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true --output cli_win_x64
     - name: Upload
       uses: actions/upload-artifact@v2
       with:
         name: DogScepterCLI_win_x64
         path: cli_win_x64
+    - name: Publish self-contained
+      run: dotnet publish DogScepterCLI -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true --output cli_win_x64_selfcontained
+    - name: Upload self-contained
+      uses: actions/upload-artifact@v2
+      with:
+        name: DogScepterCLI_win_x64_selfcontained
+        path: cli_win_x64_selfcontained
