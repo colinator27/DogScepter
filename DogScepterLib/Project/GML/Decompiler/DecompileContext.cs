@@ -217,7 +217,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
             // Find loops first to eliminate backwards branches (mostly), and differentiate `bt` instructions
             LoopNodes = Loops.Find(Blocks);
-            ShortCircuitNodes = ShortCircuits.Find(Blocks);
+            ShortCircuitNodes = ShortCircuits.Find(Blocks, Data.VersionInfo.FormatID <= 14);
 
             // Now actually insert the nodes for them
             Loops.InsertNodes(this);

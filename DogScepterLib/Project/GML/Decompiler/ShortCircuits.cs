@@ -11,7 +11,7 @@ namespace DogScepterLib.Project.GML.Decompiler
     public static class ShortCircuits
     {
         /// Finds all the short-circuit operations within a list of nodes
-        public static List<ShortCircuit> Find(BlockList blocks)
+        public static List<ShortCircuit> Find(BlockList blocks, bool oldBytecode)
         {
             List<ShortCircuit> res = new List<ShortCircuit>();
 
@@ -20,7 +20,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                 if (b.Instructions.Count == 1)
                 {
                     var instr = b.Instructions[0];
-                    if (instr.Kind == Instruction.Opcode.Push && instr.Type1 == Instruction.DataType.Int16)
+                    if (instr.Kind == (oldBytecode ? Instruction.Opcode.PushI : Instruction.Opcode.Push) && instr.Type1 == Instruction.DataType.Int16)
                     {
                         // This is a new short circuit.
                         // This block's first predecessor is the first condition, and the instruction Value determines whether it's && or ||.
