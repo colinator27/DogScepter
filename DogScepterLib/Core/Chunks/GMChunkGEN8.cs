@@ -171,7 +171,9 @@ namespace DogScepterLib.Core.Chunks
                 // Write random UID
                 Random random = new Random((int)(Timestamp & 4294967295L));
                 long firstRandom = (long)random.Next() << 32 | (long)random.Next();
-                long infoNumber = Timestamp - 1000;
+                long infoNumber = Timestamp;
+                if (!writer.VersionInfo.RunFromIDE)
+                    infoNumber -= 1000;
                 ulong temp = (ulong)infoNumber;
                 temp = ((temp << 56 & 18374686479671623680UL) | (temp >> 8 & 71776119061217280UL) |
                         (temp << 32 & 280375465082880UL) | (temp >> 16 & 1095216660480UL) | (temp << 8 & 4278190080UL) |
@@ -260,20 +262,6 @@ namespace DogScepterLib.Core.Chunks
                 long firstRandom = (long)random.Next() << 32 | (long)random.Next();
                 if (reader.ReadInt64() != firstRandom)
                     reader.Warnings.Add(new GMWarning("Unexpected random UID", GMWarning.WarningLevel.Info));
-                long infoNumber = Timestamp - 1000;
-                ulong temp = (ulong)infoNumber;
-                temp = ((temp << 56 & 18374686479671623680UL) | (temp >> 8 & 71776119061217280UL) | 
-                        (temp << 32 & 280375465082880UL) | (temp >> 16 & 1095216660480UL) | (temp << 8 & 4278190080UL) | 
-                        (temp >> 24 & 16711680UL) | (temp >> 16 & 65280UL) | (temp >> 32 & 255UL));
-                infoNumber = (long)temp;
-                infoNumber ^= firstRandom;
-                infoNumber = ~infoNumber;
-                infoNumber ^= ((long)GameID << 32 | (long)GameID);
-                infoNumber ^= ((long)(DefaultWindowWidth + (int)Info) << 48 | 
-                               (long)(DefaultWindowHeight + (int)Info) << 32 | 
-                               (long)(DefaultWindowHeight + (int)Info) << 16 | 
-                               (long)(DefaultWindowWidth + (int)Info));
-                infoNumber ^= FormatID;
                 int infoLocation = Math.Abs((int)(Timestamp & 65535L) / 7 + (GameID - DefaultWindowWidth) + RoomOrder.Count) % 4;
                 for (int i = 0; i < 4; i++)
                 {
@@ -281,8 +269,13 @@ namespace DogScepterLib.Core.Chunks
                     {
                         long curr = reader.ReadInt64();
                         GMS2_RandomUID.Add(curr);
-                        if (curr != infoNumber)
-                            reader.Warnings.Add(new GMWarning("Unexpected random UID info", GMWarning.WarningLevel.Info));
+                        if (curr != GetInfoNumber(firstRandom, false))
+                        {
+                            if (curr != GetInfoNumber(firstRandom, true))
+                                reader.Warnings.Add(new GMWarning("Unexpected random UID info", GMWarning.WarningLevel.Info));
+                            else
+                                reader.VersionInfo.RunFromIDE = true;
+                        }
                     }
                     else
                     {
@@ -301,6 +294,27 @@ namespace DogScepterLib.Core.Chunks
                 GMS2_AllowStatistics = reader.ReadWideBoolean();
                 GMS2_GameGUID = new Guid(reader.ReadBytes(16).Memory.ToArray());
             }
+        }
+
+        private long GetInfoNumber(long firstRandom, bool runFromIDE)
+        {
+            long infoNumber = Timestamp;
+            if (!runFromIDE)
+                infoNumber -= 1000;
+            ulong temp = (ulong)infoNumber;
+            temp = ((temp << 56 & 18374686479671623680UL) | (temp >> 8 & 71776119061217280UL) |
+                    (temp << 32 & 280375465082880UL) | (temp >> 16 & 1095216660480UL) | (temp << 8 & 4278190080UL) |
+                    (temp >> 24 & 16711680UL) | (temp >> 16 & 65280UL) | (temp >> 32 & 255UL));
+            infoNumber = (long)temp;
+            infoNumber ^= firstRandom;
+            infoNumber = ~infoNumber;
+            infoNumber ^= ((long)GameID << 32 | (long)GameID);
+            infoNumber ^= ((long)(DefaultWindowWidth + (int)Info) << 48 |
+                           (long)(DefaultWindowHeight + (int)Info) << 32 |
+                           (long)(DefaultWindowHeight + (int)Info) << 16 |
+                           (long)(DefaultWindowWidth + (int)Info));
+            infoNumber ^= FormatID;
+            return infoNumber;
         }
     }
 }

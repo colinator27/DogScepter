@@ -26,6 +26,8 @@ namespace DogScepterLib.Project
 
             public int Border { get; set; } = 2;
             public bool AllowCrop { get; set; } = true;
+            public bool UseQOI { get; set; } = false;
+            public bool UseBZ2 { get; set; } = false;
 
             public bool Dirty = false;
             public List<(TexturePacker.Page, byte[])> GeneratedPages = new List<(TexturePacker.Page, byte[])>();
@@ -83,6 +85,7 @@ namespace DogScepterLib.Project
             Project = project;
 
             FindTextureGroups();
+            DetermineTextureFormats();
 
             if (fast)
                 return;
@@ -142,7 +145,7 @@ namespace DogScepterLib.Project
                     Parallel.ForEach(result, page =>
                     {
                         byte[] res;
-                        if (Project.DataHandle.VersionInfo.UseQoiFormat)
+                        if (g.UseQOI)
                         {
                             res = QoiConverter.GetArrayFromImage(DrawPage(g, page));
                         }
@@ -179,9 +182,8 @@ namespace DogScepterLib.Project
             {
                 var texData = txtrList[dataIndex].TextureData;
                 texData.Data = new BufferRegion(page.Item2);
-                if (Project.DataHandle.VersionInfo.UseQoiFormat)
+                if (texData.IsQoi)
                 {
-                    texData.IsQoi = true;
                     texData.QoiWidth = (short)page.Item1.Width;
                     texData.QoiHeight = (short)page.Item1.Height;
                 }
@@ -487,14 +489,31 @@ namespace DogScepterLib.Project
             }
         }
 
+        public void DetermineTextureFormats()
+        {
+            var textures = Project.DataHandle.GetChunk<GMChunkTXTR>().List;
+            foreach (var group in TextureGroups)
+            {
+                foreach (int page in group.Pages)
+                {
+                    var data = textures[page].TextureData;
+                    if (data.IsQoi)
+                        group.UseQOI = true;
+                    if (data.IsBZip2)
+                        group.UseBZ2 = true;
+                }
+            }
+        }
+
         public DSImage GetTexture(int ind)
         {
             lock (CachedTextures)
             {
                 if (CachedTextures[ind] != null)
                     return CachedTextures[ind];
-                using Stream s = Project.DataHandle.GetChunk<GMChunkTXTR>().List[ind].TextureData.Data.Memory.AsStream();
-                if (Project.DataHandle.VersionInfo.UseQoiFormat)
+                var data = Project.DataHandle.GetChunk<GMChunkTXTR>().List[ind].TextureData;
+                using Stream s = data.Data.Memory.AsStream();
+                if (data.IsQoi)
                     return CachedTextures[ind] = QoiConverter.GetImageFromStream(s);
                 else
                     return CachedTextures[ind] = new DSImage(s);
@@ -507,7 +526,7 @@ namespace DogScepterLib.Project
             Parallel.ForEach(Project.DataHandle.GetChunk<GMChunkTXTR>().List, (elem, _, i) =>
             {
                 using Stream s = elem.TextureData.Data.Memory.AsStream();
-                if (Project.DataHandle.VersionInfo.UseQoiFormat)
+                if (elem.TextureData.IsQoi)
                     CachedTextures[i] = QoiConverter.GetImageFromStream(s);
                 else
                     CachedTextures[i] = new DSImage(s);

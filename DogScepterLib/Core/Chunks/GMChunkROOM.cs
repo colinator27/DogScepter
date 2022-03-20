@@ -21,6 +21,14 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
+            DoFormatCheck(reader);
+
+            List = new GMUniquePointerList<GMRoom>();
+            List.Unserialize(reader);
+        }
+
+        private static void DoFormatCheck(GMDataReader reader)
+        {
             // Do a length check on one of the layers to see if this is 2022.1 or higher
             if (reader.VersionInfo.IsNumberAtLeast(2, 3) && !reader.VersionInfo.IsNumberAtLeast(2022))
             {
@@ -97,9 +105,6 @@ namespace DogScepterLib.Core.Chunks
 
                 reader.Offset = returnTo;
             }
-
-            List = new GMUniquePointerList<GMRoom>();
-            List.Unserialize(reader);
         }
     }
 }

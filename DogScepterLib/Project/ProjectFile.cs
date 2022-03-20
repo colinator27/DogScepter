@@ -540,6 +540,8 @@ namespace DogScepterLib.Project
             public string Name { get; set; } // note/todo: when changed, this needs to be updated in actual relevant group class
             public int Border { get; set; }
             public bool AllowCrop { get; set; }
+            public bool UseQOI { get; set; }
+            public bool UseBZ2 { get; set; }
         }
 
         public class TextureGroupByID : TextureGroup

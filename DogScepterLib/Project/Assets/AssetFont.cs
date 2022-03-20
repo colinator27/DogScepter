@@ -25,6 +25,7 @@ namespace DogScepterLib.Project.Assets
         public float ScaleX { get; set; }
         public float ScaleY { get; set; }
         public int? AscenderOffset { get; set; }
+        public int? Ascender { get; set; }
         public string TextureGroup { get; set; } = "";
         public List<GMGlyph> Glyphs { get; set; }
 

@@ -49,6 +49,8 @@ namespace DogScepterLib.Project.Converters
                         Name = resultInfo?.Name?.Content ?? $"unknown_group_{i}",
                         Border = group.Border,
                         AllowCrop = group.AllowCrop,
+                        UseQOI = group.UseQOI,
+                        UseBZ2 = group.UseBZ2,
                         ID = i
                     };
                     group.Name = newEntry.Name;
@@ -65,6 +67,8 @@ namespace DogScepterLib.Project.Converters
                         Name = $"group{i}",
                         Border = group.Border,
                         AllowCrop = group.AllowCrop,
+                        UseQOI = group.UseQOI,
+                        UseBZ2 = group.UseBZ2,
                         ID = i
                     };
                     group.Name = newEntry.Name;
@@ -113,6 +117,8 @@ namespace DogScepterLib.Project.Converters
                         Dirty = true,
                         Border = groupInfo.Border,
                         AllowCrop = groupInfo.AllowCrop,
+                        UseQOI = groupInfo.UseQOI,
+                        UseBZ2 = groupInfo.UseBZ2,
                         Name = groupInfo.Name
                     });
                 }
@@ -122,11 +128,14 @@ namespace DogScepterLib.Project.Converters
                 {
                     var groupInfo = newGroups[newGroupIDs[i]];
                     var group = pf.Textures.TextureGroups[i];
-                    if (group.Border != groupInfo.Border || group.AllowCrop != groupInfo.AllowCrop)
+                    if (group.Border != groupInfo.Border || group.AllowCrop != groupInfo.AllowCrop ||
+                        group.UseQOI != groupInfo.UseQOI || group.UseBZ2 != groupInfo.UseBZ2)
                     {
                         group.Dirty = true;
                         group.Border = groupInfo.Border;
                         group.AllowCrop = groupInfo.AllowCrop;
+                        group.UseQOI = groupInfo.UseQOI;
+                        group.UseBZ2 = groupInfo.UseBZ2;
                     }
                     group.Name = groupInfo.Name;
                 }
@@ -141,6 +150,8 @@ namespace DogScepterLib.Project.Converters
                         Dirty = true,
                         Border = group.Border,
                         AllowCrop = group.AllowCrop,
+                        UseQOI = group.UseQOI,
+                        UseBZ2 = group.UseBZ2,
                         Name = group.Name
                     });
                 }

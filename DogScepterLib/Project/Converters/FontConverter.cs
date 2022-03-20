@@ -51,7 +51,11 @@ namespace DogScepterLib.Project.Converters
                 projectAsset.Size = asset.Size;
 
             if (pf.DataHandle.VersionInfo.FormatID >= 17)
+            {
                 projectAsset.AscenderOffset = asset.AscenderOffset;
+                if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2022, 2))
+                    projectAsset.Ascender = asset.Ascender;
+            }
 
             pf.Fonts[index].Asset = projectAsset;
         }
@@ -136,6 +140,8 @@ namespace DogScepterLib.Project.Converters
 
                 if (projectAsset.AscenderOffset != null)
                     dataAsset.AscenderOffset = (int)projectAsset.AscenderOffset;
+                if (projectAsset.Ascender != null)
+                    dataAsset.Ascender = (int)projectAsset.Ascender;
 
                 newList.Add(dataAsset);
             }

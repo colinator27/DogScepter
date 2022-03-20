@@ -131,7 +131,7 @@ namespace DogScepterLib.Project.Util
 
         public unsafe static byte[] GetArrayFromImage(DSImage img)
         {
-            byte[] res = new byte[(img.Width * img.Height * 4 * 12) + 4]; // default capacity
+            byte[] res = new byte[(img.Width * img.Height * 4) + 12 + 4 + 128]; // default capacity (extra 128 bytes to be safe)
             res[0] = 102; // f
             res[1] = 105; // o
             res[2] = 111; // i

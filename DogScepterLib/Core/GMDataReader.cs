@@ -1,11 +1,13 @@
-﻿using System;
+﻿using DogScepterLib.Core.Models;
+using DogScepterLib.Core.Util;
+using ICSharpCode.SharpZipLib.BZip2;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using DogScepterLib.Core.Models;
-using DogScepterLib.Core.Util;
+using System.Threading.Tasks;
 
 namespace DogScepterLib.Core
 {
@@ -17,6 +19,7 @@ namespace DogScepterLib.Core
 
         public Dictionary<int, GMSerializable> PointerOffsets;
         public Dictionary<int, GMCode.Bytecode.Instruction> Instructions;
+        public List<(GMTextureData, int)> TexturesToDecompress;
 
         public GMDataReader(Stream stream, string path) : base(stream)
         {
@@ -38,6 +41,7 @@ namespace DogScepterLib.Core
             Warnings = new List<GMWarning>();
             PointerOffsets = new Dictionary<int, GMSerializable>(65536);
             Instructions = new Dictionary<int, GMCode.Bytecode.Instruction>(1024 * 1024);
+            TexturesToDecompress = new List<(GMTextureData, int)>(64);
         }
 
         public void Unserialize(bool clearData = true)
@@ -57,6 +61,20 @@ namespace DogScepterLib.Core
             {
                 PointerOffsets.Clear();
                 Instructions.Clear();
+            }
+
+            if (TexturesToDecompress.Count > 0)
+            {
+                Data.Logger?.Invoke("Decompressing BZ2 textures...");
+                Parallel.ForEach(TexturesToDecompress, tex =>
+                {
+                    // Decompress BZip2 data, leaving just QOI data
+                    using MemoryStream bufferWrapper = new(Buffer);
+                    bufferWrapper.Seek(tex.Item2, SeekOrigin.Begin);
+                    using MemoryStream result = new(1024);
+                    BZip2.Decompress(bufferWrapper, result, false);
+                    tex.Item1.Data = new BufferRegion(result.ToArray());
+                });
             }
 
 #if DEBUG
