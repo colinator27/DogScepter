@@ -855,8 +855,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                         {
                             // This is an anonymous function (it's not duplicated)
                             i--;
-                            stack.Push(new ASTFunctionDecl(
-                                ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content), null));
+                            stack.Push(new ASTFunctionDecl(ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content)));
                         }
                         else
                         {
@@ -898,8 +897,8 @@ namespace DogScepterLib.Project.GML.Decompiler
                             // This is an anonymous function constructor (it's not duplicated)
                             i--;
                             stack.Push(new ASTFunctionDecl(
-                                ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content), null)
-                            { IsConstructor = true });
+                                ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content)) 
+                                    { IsConstructor = true });
                         }
                         else
                         {
@@ -928,7 +927,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                 stack.Push(new ASTFunctionDecl(
                                     ctx.SubContexts.Find(subContext => subContext.Fragment.Name == function.Name.Content),
                                     block.Instructions[i].Variable.Target.Name.Content)
-                                { IsConstructor = true });
+                                        { IsConstructor = true });
                             }
                         }
                     }

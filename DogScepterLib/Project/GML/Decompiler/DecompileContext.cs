@@ -142,6 +142,8 @@ namespace DogScepterLib.Project.GML.Decompiler
         public List<ASTNode> StructArguments;
         public ConditionContext ConditionContext;
 
+        public string FunctionName = null;
+
         public DecompileContext(ProjectFile pf, DecompileSettings settings = null)
         {
 #if DEBUG

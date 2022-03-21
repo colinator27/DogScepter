@@ -734,7 +734,21 @@ namespace DogScepterLib.Project.GML.Decompiler
                 if (ctx.Cache.GlobalFunctionNames.TryGetValue(Function, out string name))
                     sb.Append(name);
                 else
-                    sb.Append(Function.Name.Content);
+                {
+                    string funcName = Function.Name.Content;
+
+                    // Search for functions defined inside this code entry
+                    foreach (var subCtx in ctx.SubContexts)
+                    {
+                        if (funcName == subCtx.CodeName && subCtx.FunctionName != null)
+                        {
+                            funcName = subCtx.FunctionName;
+                            break;
+                        }
+                    }
+
+                    sb.Append(funcName);
+                }
                 sb.Append('(');
             }
 
@@ -1801,9 +1815,6 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public ASTNode Clean(DecompileContext ctx)
         {
-            for (int i = 0; i < Children.Count; i++)
-                Children[i] = Children[i].Clean(ctx);
-
             // Rework pop in catch block
             if (!Cleaned)
             {
@@ -1818,6 +1829,12 @@ namespace DogScepterLib.Project.GML.Decompiler
                 }
                 Cleaned = true;
             }
+
+            for (int i = 0; i < Children.Count; i++)
+                Children[i] = Children[i].Clean(ctx);
+
+            // The local variable for the exception doesn't need to get defined
+            ctx.RemainingLocals.Remove((Children[2] as ASTVariable).Variable.Name.Content);
 
             return this;
         }
@@ -1876,6 +1893,16 @@ namespace DogScepterLib.Project.GML.Decompiler
 
         public void Write(DecompileContext ctx, StringBuilder sb)
         {
+            // Search for functions defined inside this code entry
+            foreach (var subCtx in ctx.SubContexts)
+            {
+                if (Name == subCtx.CodeName && subCtx.FunctionName != null)
+                {
+                    Name = subCtx.FunctionName;
+                    break;
+                }
+            }
+
             sb.Append(Name);
         }
 
@@ -1946,10 +1973,16 @@ namespace DogScepterLib.Project.GML.Decompiler
         public DecompileContext SubContext { get; set; }
         public bool IsConstructor { get; set; } = false;
 
+        public ASTFunctionDecl(DecompileContext subContext)
+        {
+            SubContext = subContext;
+        }
+
         public ASTFunctionDecl(DecompileContext subContext, string functionName)
         {
             SubContext = subContext;
             FunctionName = functionName;
+            subContext.FunctionName = functionName;
         }
 
         public void Write(DecompileContext ctx, StringBuilder sb)

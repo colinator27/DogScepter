@@ -215,7 +215,13 @@ namespace DogScepterLib.Project.GML.Decompiler
                             if (curr != loop.Tail &&
                                 curr.Kind == Node.NodeType.Block && (curr as Block).LastInstr?.Kind == Instruction.Opcode.B)
                             {
-                                if (branch == loop.Tail && branch is Block b &&
+                                if (branch == loop.Tail && (curr as Block).ControlFlow == Block.ControlFlowType.Break)
+                                {
+                                    // Can be seen in some rare cases? This might be able to be more generalized, but not sure
+                                    // Don't need to really do anything here
+                                    // This basically prevents erroneous continue statements, which breaks things
+                                }
+                                else if (branch == loop.Tail && branch is Block b &&
                                     b.Instructions.FirstOrDefault()?.Kind == Instruction.Opcode.Popz)
                                 {
                                     // This is actually a break statement inside of a switch, inside of a loop
