@@ -28,6 +28,8 @@ namespace DogScepterLib.Core.Models
         public int AudioID;
         public int GroupID; // In older versions this can also be a "preload" boolean, but it's always true and for now we don't care
 
+        public bool Preload; // legacy (format ID < 14)
+
         public void Serialize(GMDataWriter writer)
         {
             writer.WritePointerString(Name);
@@ -37,8 +39,17 @@ namespace DogScepterLib.Core.Models
             writer.Write(Effects);
             writer.Write(Volume);
             writer.Write(Pitch);
-            writer.Write(GroupID);
-            writer.Write(AudioID);
+            if (writer.VersionInfo.FormatID >= 14)
+            {
+                writer.Write(GroupID);
+                writer.Write(AudioID);
+            }
+            else
+            {
+                // Legacy
+                writer.Write(AudioID);
+                writer.WriteWideBoolean(Preload);
+            }
         }
 
         public void Unserialize(GMDataReader reader)
@@ -50,8 +61,18 @@ namespace DogScepterLib.Core.Models
             Effects = reader.ReadUInt32();
             Volume = reader.ReadSingle();
             Pitch = reader.ReadSingle();
-            GroupID = reader.ReadInt32();
-            AudioID = reader.ReadInt32();
+            if (reader.VersionInfo.FormatID >= 14)
+            {
+                GroupID = reader.ReadInt32();
+                AudioID = reader.ReadInt32();
+            }
+            else
+            {
+                // Legacy
+                GroupID = -1;
+                AudioID = reader.ReadInt32();
+                Preload = reader.ReadWideBoolean();
+            }
         }
 
         public override string ToString()

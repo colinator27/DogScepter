@@ -109,7 +109,9 @@ namespace DogScepterLib.Project.Converters
                 }
                 else
                 {
-                    if (pf._CachedAudioChunks.TryGetValue(sound.GroupID, out var chunk))
+                    if (pf._CachedAudioChunks == null)
+                        buff = pf.DataHandle.GetChunk<GMChunkAUDO>().List[sound.AudioID].Data; // legacy versions don't have audio groups
+                    else if (pf._CachedAudioChunks.TryGetValue(sound.GroupID, out var chunk))
                         buff = chunk.List[sound.AudioID].Data;
                     else
                     {
@@ -131,7 +133,7 @@ namespace DogScepterLib.Project.Converters
         {
             var dataAssets = pf.DataHandle.GetChunk<GMChunkSOND>().List;
             var agrp = pf.DataHandle.GetChunk<GMChunkAGRP>();
-            var groups = agrp.List;
+            var groups = agrp?.List;
 
             bool updatedVersion = pf.DataHandle.VersionInfo.IsNumberAtLeast(1, 0, 0, 9999);
 
@@ -143,7 +145,7 @@ namespace DogScepterLib.Project.Converters
             defaultChunk.List.Clear();
             Dictionary<string, GMChunkAUDO> audioChunks = new Dictionary<string, GMChunkAUDO>();
             Dictionary<string, int> audioChunkIndices = new Dictionary<string, int>();
-            if (agrp.AudioData != null)
+            if (agrp?.AudioData != null)
             {
                 for (int i = 1; i < groups.Count; i++)
                 {
