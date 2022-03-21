@@ -86,6 +86,7 @@ namespace DogScepterLib.Project
 
             FindTextureGroups();
             DetermineTextureFormats();
+            DetermineGroupBorders();
 
             if (fast)
                 return;
@@ -97,7 +98,6 @@ namespace DogScepterLib.Project
         {
             // Finds borders and tiled entries to at least somewhat recreate the original texture
             // This isn't totally accurate to every version, but it's hopefully close enough to look normal
-            DetermineGroupBorders();
             ParseAllTextures();
             DetermineTiledEntries();
             FillHashTable();

@@ -53,7 +53,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                             empty = false;
 
                             // Do check for exit
-                            if (b.Instructions.Count > 2 && b.Instructions[^1].Kind == Instruction.Opcode.Exit)
+                            if (b.Instructions.Count >= 2 && b.Instructions[^1].Kind == Instruction.Opcode.Exit)
                             {
                                 bool shouldAbort = true;
                                 for (int i = 0; i < b.Instructions.Count - 1; i++)
@@ -304,7 +304,15 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                     // Remove some instructions, mark as a case block
                     curr.ControlFlow = Block.ControlFlowType.SwitchCase;
-                    curr.Instructions.RemoveAt(curr.Instructions.Count - 4); // Should be `dup`, TODO? Constant should always take one instruction, right?
+
+                    // We want to remove a `dup` instruction so we don't deal with it later on
+                    // Constants should always take one instruction, but GML is weird so you can sometimes use variables too
+                    // This is just a hacky fix to account for certain array accesses; might not work for everything
+                    int dupIndex = curr.Instructions.Count - 4;
+                    while (curr.Instructions[dupIndex].Kind != Instruction.Opcode.Dup)
+                        dupIndex--;
+                    curr.Instructions.RemoveAt(dupIndex);
+
                     curr.Instructions.RemoveRange(curr.Instructions.Count - 2, 2); // Should be `cmp` and `bt`
 
                     // Insert the case node

@@ -32,6 +32,7 @@ namespace DogScepterLib.Project.GML.Analysis
             NonNode,
             Child,
             Parent,
+            ValueContains,
         }
 
         public ConditionType Kind { get; set; }
@@ -291,6 +292,23 @@ namespace DogScepterLib.Project.GML.Analysis
         }
     }
 
+    // Evaluates to true if this node's value contains a substring. Evaluates once.
+    public class ConditionValueContains : Condition
+    {
+        public Condition.ConditionType Kind { get; set; } = Condition.ConditionType.ValueContains;
+        public bool EvaluateOnce { get; set; } = true;
+        
+        public string Substring { get; set; }
+        public bool CaseSensitive { get; set; } = true;
+
+        public bool Evaluate(ConditionContext ctx, ASTNode node)
+        {
+            if (node.ToString().Contains(Substring, CaseSensitive ? StringComparison.InvariantCulture : StringComparison.InvariantCultureIgnoreCase))
+                return true;
+            return false;
+        }
+    }
+
     public class ConditionConverter : JsonConverter<Condition>
     {
         public override bool CanConvert(Type typeToConvert) =>
@@ -321,6 +339,7 @@ namespace DogScepterLib.Project.GML.Analysis
                     Condition.ConditionType.NonNode => JsonSerializer.Deserialize<ConditionNonNode>(ref reader, options),
                     Condition.ConditionType.Child => JsonSerializer.Deserialize<ConditionChild>(ref reader, options),
                     Condition.ConditionType.Parent => JsonSerializer.Deserialize<ConditionParent>(ref reader, options),
+                    Condition.ConditionType.ValueContains => JsonSerializer.Deserialize<ConditionValueContains>(ref reader, options),
                     _ => throw new JsonException()
                 };
             }

@@ -102,7 +102,7 @@ namespace DogScepterLib.Core.Models
             writer.Write(Shift);
             writer.Write(Offset);
             writer.Write((ushort)Kerning.Count);
-            for (int i = Kerning.Count; i > 0; i--)
+            for (int i = 0; i < Kerning.Count; i++)
                 Kerning[i].Serialize(writer);
         }
 

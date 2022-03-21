@@ -55,15 +55,6 @@ namespace DogScepterCLI.Commands
 
             string dir = OutputDirectory ?? Environment.CurrentDirectory;
 
-            // Initialize the project file
-            GMData data = console.LoadDataFile(DataFile, Verbose);
-            if (data == null)
-                return default;
-            ProjectFile pf = console.OpenProject(data, dir);
-            if (data == null)
-                return default;
-            pf.HackyComparisonMode = ComparisonMode;
-
             if (!Directory.Exists(dir))
             {
                 if (console.PromptYesNo($"Directory \"{dir}\" does not exist. Create it?"))
@@ -74,6 +65,15 @@ namespace DogScepterCLI.Commands
                     return default;
                 }
             }
+
+            // Initialize the project file
+            GMData data = console.LoadDataFile(DataFile, Verbose);
+            if (data == null)
+                return default;
+            ProjectFile pf = console.OpenProject(data, dir);
+            if (data == null)
+                return default;
+            pf.HackyComparisonMode = ComparisonMode;
 
             bool didAnything = false;
 
