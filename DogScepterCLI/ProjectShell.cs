@@ -58,7 +58,7 @@ namespace DogScepterCLI
                             continue;
                     }
                     indices.Add(ind);
-                }   
+                }
             }
 
             pf.AddAssetsToJSON(list, indices, true);
@@ -119,9 +119,10 @@ namespace DogScepterCLI
                 args =>
                 {
                     // TODO prompt to save anything? maybe not?
-                    return Command.CommandResult.Quit; 
+                    return Command.CommandResult.Quit;
                 }),
 
+                //TODO: don't just straight up crash, if project file doesn't exist anymore, needs to be fixed in OpenProject
                 new Command(new[] { "reload" },
                 "Reloads the project as it currently is on disk.",
                 "reload <optional:data>",
@@ -244,7 +245,7 @@ namespace DogScepterCLI
 
                         foreach (var cmd in commands)
                         {
-                            console.Output.WriteLine(cmd.Usage + new string(' ', helpLength - cmd.Usage.Length) + 
+                            console.Output.WriteLine(cmd.Usage + new string(' ', helpLength - cmd.Usage.Length) +
                                                         " |  " + cmd.Description);
                         }
                     }
