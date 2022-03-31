@@ -7,7 +7,11 @@ using System.Threading.Tasks;
 
 namespace DogScepterCLI.Commands
 {
+    /// <summary>
+    /// The "configs" command, which lists available configuration files.
+    /// </summary>
     [Command("configs", Description = "Lists available configuration files.")]
+    // ReSharper disable once UnusedType.Global
     public class ConfigsCommand : ICommand
     {
         public ValueTask ExecuteAsync(IConsole console)
