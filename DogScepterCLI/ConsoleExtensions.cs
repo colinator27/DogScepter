@@ -92,6 +92,13 @@ namespace DogScepterCLI
             return file;
         }
 
+        /// <summary>
+        /// Loads a GameMaker data file, parses it and returns it as a <see cref="GMData"/> representation.
+        /// </summary>
+        /// <param name="console">The console on where to output messages to.</param>
+        /// <param name="file">The path to the GameMaker data file.</param>
+        /// <param name="verbose">Whether to show verbose output.</param>
+        /// <returns>A GameMaker data file as <see cref="GMData"/>.</returns>
         public static GMData LoadDataFile(this IConsole console, string file, bool verbose = false)
         {
             console.Output.WriteLine("Loading data file...");
@@ -118,7 +125,7 @@ namespace DogScepterCLI
         /// <summary>
         /// Opens a new DogScepter project and returns it as a <see cref="ProjectFile"/>.
         /// </summary>
-        /// <param name="console">The console from where the DogScepter project should be opened..</param>
+        /// <param name="console">The console on where to output messages to.</param>
         /// <param name="data">The GameMaker data file that should be associated for the project.</param>
         /// <param name="directory">The directory path to where the DogScepter project is located.</param>
         /// <returns>The opened DogScepter project as a <see cref="ProjectFile"/>.</returns>
@@ -145,7 +152,7 @@ namespace DogScepterCLI
         /// <summary>
         /// Saves a DogScepter project file.
         /// </summary>
-        /// <param name="console">The console from where the DogScepter project file should be saved..</param>
+        /// <param name="console">The console on where output messages to.</param>
         /// <param name="projectFile">The DogScepter project file that should get saved.</param>
         /// <returns><see langword="true"/> if saving was successful, otherwise <see langword="false"/>.</returns>
         public static bool SaveProject(this IConsole console, ProjectFile projectFile)

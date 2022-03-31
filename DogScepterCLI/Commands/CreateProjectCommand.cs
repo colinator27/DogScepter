@@ -54,22 +54,21 @@ namespace DogScepterCLI.Commands
         {
             console.Output.WriteLine();
 
-            string dir = ProjectDirectory ?? Environment.CurrentDirectory;
-            if (!Util.CheckExistingProject(console, dir))
-                return default;
+            // The project directory where we want to check for. Will get asked on / set depending on if we're in Interactive mode or not.
+            string dir;
 
             if (Interactive)
             {
                 // Perform basic prompts to initialize the project
                 DataFile ??= console.PromptFile("Enter location of data file");
+                dir = ProjectDirectory ?? console.PromptDirectory("Enter location of the project directory (\".\" for current directory)");
                 CompiledOutputDirectory ??= console.PromptDirectory("Enter directory to output compiled files to");
-                //TODO: ask for different project directory.
 
                 console.Output.WriteLine();
                 console.Output.WriteLine("Project details");
                 console.Output.WriteLine("===============");
-                console.Output.WriteLine($"Directory: {dir}");
                 console.Output.WriteLine($"Data file: {DataFile}");
+                console.Output.WriteLine($"Project directory: {dir}");
                 console.Output.WriteLine($"Output directory for compiled files: {CompiledOutputDirectory}");
                 console.Output.WriteLine();
                 if (!console.PromptYesNo("Are these details correct?"))
@@ -80,6 +79,8 @@ namespace DogScepterCLI.Commands
             }
             else
             {
+                dir = ProjectDirectory ?? Environment.CurrentDirectory;
+
                 if (DataFile == null || CompiledOutputDirectory == null)
                 {
                     console.Error.WriteLine("Missing arguments. Data file and output directory for compiled files must be set.");
@@ -90,6 +91,7 @@ namespace DogScepterCLI.Commands
                     console.Error.WriteLine("Data file does not exist.");
                     return default;
                 }
+                //TODO: maybe have feature to automatically create folders that don't exist?
                 if (!Directory.Exists(CompiledOutputDirectory))
                 {
                     console.Error.WriteLine("Output directory for compiled files does not exist.");
@@ -97,9 +99,10 @@ namespace DogScepterCLI.Commands
                 }
             }
 
-            if (!Util.CheckExistingProject(console, dir))
+            if (Util.CheckIfProjectExists(console, dir))
                 return default;
 
+            console.Output.WriteLine("Creating project...");
             // Initialize the project file
             GMData data = console.LoadDataFile(DataFile, Verbose);
             if (data == null)

@@ -55,17 +55,19 @@ namespace DogScepterCLI.Commands
             console.Output.WriteLine();
 
             string dir = ProjectDirectory ?? Environment.CurrentDirectory;
-            if (!Util.CheckExistingProject(console, dir))
+            if (!Util.CheckIfProjectExists(console, dir))
                 return default;
 
             MachineConfig cfg = MachineConfig.Load();
             if (cfg.Projects.TryGetValue(dir, out ProjectConfig pcfg))
             {
                 // We have a config for this project, but we need to verify it
+
+                // Verify that the data file associated with the project still exists,
+                // if not prompt for new data file / read it from arguments
                 if (!File.Exists(pcfg.InputFile))
                 {
-                    //TODO: this is slightly confusing. Read this later and comment on what this actually is supposed to do.
-                    console.Error.WriteLine("Data file no longer exists!");
+                    console.Error.WriteLine("Data file linked to the project no longer exists!");
                     if (Interactive)
                         DataFile ??= console.PromptFile("Enter new location of data file");
                     else if (DataFile == null)
@@ -82,9 +84,10 @@ namespace DogScepterCLI.Commands
                 else
                     DataFile = pcfg.InputFile;
 
+                // Verify that the compiled output directory associated with the project still exists,
+                // if not prompt for new directory / read from arguments
                 if (!Directory.Exists(pcfg.OutputDirectory))
                 {
-                    //TODO: see above todo
                     console.Error.WriteLine("Output directory no longer exists!");
                     if (Interactive)
                         CompiledOutputDirectory ??= console.PromptDirectory("Enter new directory to output files to");
@@ -130,7 +133,7 @@ namespace DogScepterCLI.Commands
                 }
             }
 
-            if (!Util.CheckExistingProject(console, dir))
+            if (!Util.CheckIfProjectExists(console, dir))
                 return default;
 
             // Save potential changes to config
@@ -143,6 +146,8 @@ namespace DogScepterCLI.Commands
             if (data == null)
                 return default;
             ProjectFile pf = console.OpenProject(data, dir);
+            if (pf == null)
+                return default;
 
             if (Interactive)
                 ProjectShell.Run(console, pf, newPcfg, Verbose);

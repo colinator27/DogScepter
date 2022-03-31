@@ -105,13 +105,16 @@ namespace DogScepterCLI.Commands
             if (data == null)
                 return default;
             ProjectFile pf = console.OpenProject(data, dir);
+            if (pf == null)
+                return default;
             pf.HackyComparisonMode = ComparisonMode;
 
-            // If any dump options were specified, set to true, otherwise false.
-            bool didAnything = (DumpTextures || DumpStrings || DumpCode || DumpRooms);
+            // If any dump options were specified, overwrite to true, otherwise false.
+            bool didAnything = false;
 
             if (DumpTextures)
             {
+                didAnything = true;
                 console.Output.WriteLine("Dumping textures...");
                 pf.Textures.ParseAllTextures();
                 for (int i = 0; i < pf.Textures.CachedTextures.Length; i++)
@@ -132,6 +135,7 @@ namespace DogScepterCLI.Commands
 
             if (DumpStrings)
             {
+                didAnything = true;
                 console.Output.WriteLine("Dumping strings...");
 
                 StringBuilder sb = new StringBuilder();
@@ -149,6 +153,7 @@ namespace DogScepterCLI.Commands
 
             if (DumpCode)
             {
+                didAnything = true;
                 console.Output.WriteLine("Dumping code...");
 
                 pf.DecompileCache = new DecompileCache(pf);
@@ -188,6 +193,7 @@ namespace DogScepterCLI.Commands
 
             if (DumpRooms)
             {
+                didAnything = true;
                 console.Output.WriteLine("Dumping rooms...");
 
                 string roomOutputDir = Path.Combine(dir, "rooms");

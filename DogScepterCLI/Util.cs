@@ -28,24 +28,24 @@ namespace DogScepterCLI
         /// <summary>
         /// Check whether a DogScepter project already exists in a certain location.
         /// </summary>
-        /// <param name="console">The console to use for </param>
-        /// <param name="dir"></param>
-        /// <returns><see langword="false"/> if the project exists at that location or the project directory does not exist, otherwise <see langword="true"/>.</returns>
-        //TODO: rename function to be more clear
-        public static bool CheckExistingProject(IConsole console, string dir)
+        /// <param name="console">The console to use for outputting Errors to.</param>
+        /// <param name="dir">The directory to check if it contains a DogScepter project.</param>
+        /// <returns><see langword="false"/> if the project does not exist at that location or the project directory does not exist, otherwise <see langword="true"/>.</returns>
+        public static bool CheckIfProjectExists(IConsole console, string dir)
         {
             if (!Directory.Exists(dir))
             {
-                console.Error.WriteLine("Project directory does not exist.");
+                console.Error.WriteLine($"{dir} does not exist.");
                 return false;
             }
 
             if (!File.Exists(Path.Combine(dir, "project.json")))
             {
-                console.Error.WriteLine("No project exists in this location.");
+                console.Error.WriteLine($"No project exists in {dir}.");
                 return false;
             }
 
+            console.Output.WriteLine($"Project exists at {dir}");
             return true;
         }
     }
