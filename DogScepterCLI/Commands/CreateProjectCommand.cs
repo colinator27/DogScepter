@@ -99,7 +99,7 @@ namespace DogScepterCLI.Commands
                 }
             }
 
-            if (Util.CheckIfProjectExists(console, dir))
+            if (!Util.CheckIfProjectExists(console, dir))
                 return default;
 
             console.Output.WriteLine("Creating project...");
