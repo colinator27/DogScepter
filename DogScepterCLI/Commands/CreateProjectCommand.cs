@@ -99,11 +99,11 @@ namespace DogScepterCLI.Commands
                 }
             }
 
-            if (!Util.CheckIfProjectExists(console, dir))
+            if (Util.CheckIfProjectExists(console, dir, true))
                 return default;
 
-            console.Output.WriteLine("Creating project...");
             // Initialize the project file
+            console.Output.WriteLine("Creating project...");
             GMData data = console.LoadDataFile(DataFile, Verbose);
             if (data == null)
                 return default;
