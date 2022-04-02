@@ -38,7 +38,8 @@ namespace DogScepterLib.Core.Chunks
             UseRearTouch = 0x2000000,
             UseFastCollision = 0x4000000,
             FastCollisionCompatibility = 0x8000000,
-            DisableSandbox = 0x10000000
+            DisableSandbox = 0x10000000,
+            CopyOnWriteEnabled = 0x20000000
         }
 
         public ulong Unknown;

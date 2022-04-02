@@ -24,8 +24,39 @@ namespace DogScepterLib.Core.Chunks
         {
             base.Unserialize(reader);
 
+            DoFormatCheck(reader);
+
             List = new GMUniquePointerList<GMTexturePage>();
             List.Unserialize(reader);
+        }
+
+        private static void DoFormatCheck(GMDataReader reader)
+        {
+            // Perform checks to see if this is 2022.3 or higher
+            if (reader.VersionInfo.IsNumberAtLeast(2, 3) && !reader.VersionInfo.IsNumberAtLeast(2022, 3))
+            {
+                int returnPos = reader.Offset;
+
+                int textureCount = reader.ReadInt32();
+                if (textureCount == 1)
+                {
+                    // If there isn't a 0 after the first texture, then this is 2022.3
+                    // (the pointer was shifted back by 4 bytes, where alignment padding used to always be)
+                    reader.Offset += 16;
+                    if (reader.ReadInt32() != 0)
+                        reader.VersionInfo.SetNumber(2022, 3);
+                }
+                else if (textureCount >= 2)
+                {
+                    // If the difference between the first two pointers is 16, then this is 2022.3
+                    int first = reader.ReadInt32();
+                    int second = reader.ReadInt32();
+                    if (second - first == 16)
+                        reader.VersionInfo.SetNumber(2022, 3);
+                }
+
+                reader.Offset = returnPos;
+            }
         }
     }
 }

@@ -21,6 +21,11 @@ namespace DogScepterLib.Core.Models
             writer.Write(Scaled);
             if (writer.VersionInfo.Major >= 2) 
                 writer.Write(GeneratedMips);
+            if (writer.VersionInfo.IsNumberAtLeast(2022, 3))
+            {
+                TextureData.WriteLengthOffset = writer.Offset;
+                writer.Write(0);
+            }
             writer.WritePointer(TextureData);
         }
 
@@ -29,6 +34,8 @@ namespace DogScepterLib.Core.Models
             Scaled = reader.ReadUInt32();
             if (reader.VersionInfo.Major >= 2) 
                 GeneratedMips = reader.ReadUInt32();
+            if (reader.VersionInfo.IsNumberAtLeast(2022, 3))
+                reader.ReadInt32(); // Ignore the data length (for now, at least)
             TextureData = reader.ReadPointerObjectUnique<GMTextureData>();
         }
     }
@@ -48,6 +55,22 @@ namespace DogScepterLib.Core.Models
         private static readonly byte[] QOIandBZip2Header = new byte[4] { 50, 122, 111, 113 };
         private static readonly byte[] QOIHeader = new byte[4] { 102, 105, 111, 113 };
 
+        // Offset to write the data length to when serializing
+        public int WriteLengthOffset = -1;
+
+        private void WriteLength(GMDataWriter writer, int length)
+        {
+            if (writer.VersionInfo.IsNumberAtLeast(2022, 3))
+            {
+                int returnTo = writer.Offset;
+
+                writer.Offset = WriteLengthOffset;
+                writer.Write(length);
+
+                writer.Offset = returnTo;
+            }
+        }
+
         public void Serialize(GMDataWriter writer)
         {
             writer.Pad(128);
@@ -61,10 +84,15 @@ namespace DogScepterLib.Core.Models
                 using MemoryStream input = new MemoryStream(Data.Memory.ToArray());
                 using MemoryStream output = new MemoryStream(1024);
                 BZip2.Compress(input, output, false, 9);
-                writer.Write(output.ToArray());
+                byte[] final = output.ToArray();
+                writer.Write(final);
+                WriteLength(writer, final.Length + 8);
             }
             else
+            {
                 writer.Write(Data);
+                WriteLength(writer, Data.Length);
+            }
         }
 
         public void Unserialize(GMDataReader reader)

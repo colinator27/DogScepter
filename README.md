@@ -8,7 +8,7 @@ DogScepter is a work-in-progress modding tool geared toward (but not limited to)
 \* Join the Underminers community Discord server! https://discord.gg/RxXpdwJ
 
 ## Features
-* Fully supports serializing/deserializing GameMaker data format ID 13 (an unknown version of GM:S 1) up to the GMS 2022.2 runtime (format ID 17).
+* Fully supports serializing/deserializing GameMaker data format ID 13 (an unknown version of GM:S 1) up to the GMS 2022.3 runtime (format ID 17).
 	* Note: There are some exceptions to this, with certain versions being undocumented or using unknown features.
 * An "abstract"/"project" mode that deals with a custom project format on disk for ease in modding, even with multiple versions of a game.
 * GML VM decompilation, for use in re-compiling back for modding purposes.
