@@ -11,7 +11,7 @@ namespace DogScepterCLI.Commands;
 /// The "configs" command, which lists available configuration files.
 /// </summary>
 [Command("configs", Description = "Lists available configuration files.")]
-// ReSharper disable once UnusedType.Global
+// ReSharper disable once UnusedType.Global - used as a Command for CliFix
 public class ConfigsCommand : ICommand
 {
     public ValueTask ExecuteAsync(IConsole console)
