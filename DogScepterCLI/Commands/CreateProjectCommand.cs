@@ -93,11 +93,25 @@ public class CreateProjectCommand : ICommand
                 console.Error.WriteLine("Data file does not exist.");
                 return default;
             }
-            //TODO: maybe have feature to automatically create folders that don't exist?
+
+            // If directory does not exist, prompt to create it on interactive mode, otherwise error.
             if (!Directory.Exists(CompiledOutputDirectory))
             {
-                console.Error.WriteLine("Output directory for compiled files does not exist.");
-                return default;
+                if (Interactive)
+                {
+                    if (console.PromptYesNo($"Output directory for compiled files does not exist. Do you want to create it?"))
+                        Directory.CreateDirectory(dir);
+                    else
+                    {
+                        console.Output.WriteLine("Bailing.");
+                        return default;
+                    }
+                }
+                else
+                {
+                    console.Error.WriteLine("Output directory for compiled files does not exist.");
+                    return default;
+                }
             }
         }
 

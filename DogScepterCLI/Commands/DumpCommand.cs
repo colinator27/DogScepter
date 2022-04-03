@@ -117,10 +117,10 @@ public class DumpCommand : ICommand
         GMData data = console.LoadDataFile(DataFile, Verbose);
         if (data == null)
             return default;
-        ProjectFile pf = console.OpenProject(data, dir);
-        if (pf == null)
+        ProjectFile projectFile = console.OpenProject(data, dir);
+        if (projectFile == null)
             return default;
-        pf.HackyComparisonMode = ComparisonMode;
+        projectFile.HackyComparisonMode = ComparisonMode;
 
         // If any dump options were specified, overwrite to true, otherwise false.
         bool didAnything = false;
@@ -129,10 +129,10 @@ public class DumpCommand : ICommand
         {
             didAnything = true;
             console.Output.WriteLine("Dumping textures...");
-            pf.Textures.ParseAllTextures();
-            for (int i = 0; i < pf.Textures.CachedTextures.Length; i++)
+            projectFile.Textures.ParseAllTextures();
+            for (int i = 0; i < projectFile.Textures.CachedTextures.Length; i++)
             {
-                DSImage curr = pf.Textures.CachedTextures[i];
+                DSImage curr = projectFile.Textures.CachedTextures[i];
                 if (curr == null)
                     continue;
                 try
@@ -152,7 +152,7 @@ public class DumpCommand : ICommand
             console.Output.WriteLine("Dumping strings...");
 
             StringBuilder sb = new StringBuilder();
-            foreach (GMString str in pf.DataHandle.GetChunk<GMChunkSTRG>().List)
+            foreach (GMString str in projectFile.DataHandle.GetChunk<GMChunkSTRG>().List)
                 sb.AppendLine(str.ToString());
             try
             {
@@ -169,13 +169,13 @@ public class DumpCommand : ICommand
             didAnything = true;
             console.Output.WriteLine("Dumping code...");
 
-            pf.DecompileCache = new DecompileCache(pf);
+            projectFile.DecompileCache = new DecompileCache(projectFile);
 
             if (Config != null)
             {
                 try
                 {
-                    if (!pf.DecompileCache.Types.AddFromConfigFile(Config))
+                    if (!projectFile.DecompileCache.Types.AddFromConfigFile(Config))
                         console.Error.WriteLine($"Didn't find a macro type config named \"{Config}\".");
                 }
                 catch (Exception ex)
@@ -187,7 +187,7 @@ public class DumpCommand : ICommand
             string codeOutputDir = Path.Combine(dir, "code");
             Directory.CreateDirectory(codeOutputDir);
 
-            GMUniquePointerList<GMCode> codeList = pf.DataHandle.GetChunk<GMChunkCODE>().List;
+            GMUniquePointerList<GMCode> codeList = projectFile.DataHandle.GetChunk<GMChunkCODE>().List;
             Parallel.ForEach(codeList, elem =>
             {
                 if (elem.ParentEntry != null)
@@ -195,7 +195,7 @@ public class DumpCommand : ICommand
                 try
                 {
                     File.WriteAllText(Path.Combine(codeOutputDir, elem.Name.Content[0..Math.Min(elem.Name.Content.Length, 128)] + ".gml"),
-                        new DecompileContext(pf).DecompileWholeEntryString(elem));
+                        new DecompileContext(projectFile).DecompileWholeEntryString(elem));
                 }
                 catch (Exception e)
                 {
@@ -212,16 +212,16 @@ public class DumpCommand : ICommand
             string roomOutputDir = Path.Combine(dir, "rooms");
             Directory.CreateDirectory(roomOutputDir);
 
-            for (int i = 0; i < pf.Rooms.Count; i++)
+            for (int i = 0; i < projectFile.Rooms.Count; i++)
             {
                 try
                 {
-                    pf.GetConverter<RoomConverter>().ConvertData(pf, i);
-                    pf.Rooms[i].Asset.Write(pf, Path.Combine(roomOutputDir, pf.Rooms[i].Name + ".json"));
+                    projectFile.GetConverter<RoomConverter>().ConvertData(projectFile, i);
+                    projectFile.Rooms[i].Asset.Write(projectFile, Path.Combine(roomOutputDir, projectFile.Rooms[i].Name + ".json"));
                 }
                 catch (Exception e)
                 {
-                    console.Error.WriteLine($"Failed to export room data for \"{pf.Rooms[i].Name}\": {e}");
+                    console.Error.WriteLine($"Failed to export room data for \"{projectFile.Rooms[i].Name}\": {e}");
                 }
             }
         }
