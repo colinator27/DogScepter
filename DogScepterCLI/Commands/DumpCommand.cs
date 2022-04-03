@@ -67,7 +67,7 @@ public class DumpCommand : ICommand
     /// <summary>
     /// Whether to dump rooms as JSON.
     /// </summary>
-    [CommandOption("rooms", 'r', Description = "Dump room JSON.")]
+    [CommandOption("rooms", 'r', Description = "Dump rooms as JSON.")]
     // ReSharper disable once MemberCanBePrivate.Global - used as an Option for CliFix
     public bool DumpRooms { get; private set; }
 
@@ -98,6 +98,15 @@ public class DumpCommand : ICommand
             if (console.PromptYesNo($"Directory \"{dir}\" does not exist. Create it?"))
                 Directory.CreateDirectory(dir);
             else
+            {
+                console.Output.WriteLine("Bailing.");
+                return default;
+            }
+        }
+
+        if (Util.IsDirectoryEmpty(dir))
+        {
+            if (!console.PromptYesNo($"Directory \"{dir}\" contains existing contents. Are you sure you want to potentially overwrite it?"))
             {
                 console.Output.WriteLine("Bailing.");
                 return default;
