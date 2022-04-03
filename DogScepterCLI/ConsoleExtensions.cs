@@ -97,6 +97,16 @@ public static class ConsoleExtensions
     }
 
     /// <summary>
+    /// Prints a <see cref="GMWarning"/> on a console.
+    /// </summary>
+    /// <param name="console">The console on where to display the GMWarning.</param>
+    /// <param name="warning">The warning to display.</param>
+    public static void PrintGMWarning(this IConsole console, GMWarning warning)
+    {
+        console.Output.WriteLine($"[WARN: {warning.Level}] {warning.Message}"); // todo formatting
+    }
+
+    /// <summary>
     /// Loads a GameMaker data file, parses it and returns it as a <see cref="GMData"/> representation.
     /// </summary>
     /// <param name="console">The console on where to output messages to.</param>
@@ -115,8 +125,8 @@ public static class ConsoleExtensions
             else
                 reader.Data.Logger = null;
             reader.Unserialize();
-            foreach (GMWarning w in reader.Warnings)
-                console.Output.WriteLine($"[WARN: {w.Level}] {w.Message}"); // todo formatting
+            foreach (GMWarning warning in reader.Warnings)
+                console.PrintGMWarning(warning);
             return reader.Data;
         }
         catch (Exception e)

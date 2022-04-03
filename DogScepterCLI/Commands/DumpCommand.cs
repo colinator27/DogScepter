@@ -83,7 +83,7 @@ public class DumpCommand : ICommand
     /// <summary>
     /// The name of the macro config that should be used.
     /// </summary>
-    [CommandOption("config", 'f', Description = "Set the configuration to use.")]
+    [CommandOption("config", 'n', Description = "Set the configuration to use.")]
     // ReSharper disable once MemberCanBePrivate.Global - used as an Option for CliFix
     public string Config { get; private set; } = null;
 
