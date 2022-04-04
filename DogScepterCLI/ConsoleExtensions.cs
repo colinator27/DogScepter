@@ -14,7 +14,7 @@ public static class ConsoleExtensions
     /// </summary>
     /// <param name="console">The console from where the string will be read from.</param>
     /// <param name="message">The message to display.</param>
-    /// <returns></returns>
+    /// <returns>The string that was inputted, or <see langword="null"/> if the prompt was cancelled.</returns>
     public static string ReadString(this IConsole console, string message)
     {
         console.Output.Write($"> {message}: ");
@@ -40,7 +40,7 @@ public static class ConsoleExtensions
     /// </summary>
     /// <param name="console">The console from where the directory prompt will be done from.</param>
     /// <param name="message">The message to display.</param>
-    /// <returns>The directory path that was inputted.</returns>
+    /// <returns>The directory path that was inputted, or <see langword="null"/> if the prompt was cancelled.</returns>
     /// <remarks>This method will be in a <c>do...while</c> loop until a directory path that exists was inputted. <br/>
     /// Should the directory path not exist, another prompt will appear to create the directory. An affirmative input will create that directory,
     /// while ignoring all exceptions that could occur. A negative input will continue to prompt for another directory.</remarks>
@@ -50,6 +50,10 @@ public static class ConsoleExtensions
 
         while (!Directory.Exists(dir))
         {
+            // ReadString can return null, if it does we cancel this prompt and return null as well.
+            if (dir == null)
+                return null;
+
             console.Output.WriteLine("The specified directory does not exist.");
             if (console.PromptYesNo("Create the directory?"))
             {
@@ -93,6 +97,16 @@ public static class ConsoleExtensions
     }
 
     /// <summary>
+    /// Prints a <see cref="GMWarning"/> on a console.
+    /// </summary>
+    /// <param name="console">The console on where to display the GMWarning.</param>
+    /// <param name="warning">The warning to display.</param>
+    public static void PrintGMWarning(this IConsole console, GMWarning warning)
+    {
+        console.Output.WriteLine($"[WARN: {warning.Level}] {warning.Message}"); // todo formatting
+    }
+
+    /// <summary>
     /// Loads a GameMaker data file, parses it and returns it as a <see cref="GMData"/> representation.
     /// </summary>
     /// <param name="console">The console on where to output messages to.</param>
@@ -111,8 +125,8 @@ public static class ConsoleExtensions
             else
                 reader.Data.Logger = null;
             reader.Unserialize();
-            foreach (GMWarning w in reader.Warnings)
-                console.Output.WriteLine($"[WARN: {w.Level}] {w.Message}"); // todo formatting
+            foreach (GMWarning warning in reader.Warnings)
+                console.PrintGMWarning(warning);
             return reader.Data;
         }
         catch (Exception e)

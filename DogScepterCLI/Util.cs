@@ -54,4 +54,19 @@ public static class Util
             console.Output.WriteLine($"Project exists at {dir}");
         return true;
     }
+
+    /// <summary>
+    /// Checks if a given directory is empty or not.
+    /// </summary>
+    /// <param name="directory">The directory path to check for.</param>
+    /// <returns><see langword="true"/> if it is empty, otherwise <see langword="false"/>.</returns>
+    public static bool IsDirectoryEmpty(string directory)
+    {
+        DirectoryInfo dir = new DirectoryInfo(directory);
+        if (dir.GetFiles().Length > 0 || dir.GetDirectories().Length > 0)
+            return false;
+        return true;
+    }
+
+
 }

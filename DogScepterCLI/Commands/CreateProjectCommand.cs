@@ -14,37 +14,42 @@ namespace DogScepterCLI.Commands;
 /// The "create" command, which creates a new DogScepter project.
 /// </summary>
 [Command("create", Description = "Creates a new DogScepter project.")]
-// ReSharper disable once UnusedType.Global
+// ReSharper disable once UnusedType.Global - used as a Command for CliFix
 public class CreateProjectCommand : ICommand
 {
     /// <summary>
     /// The path to a GameMaker data file, which will be associated with the DogScepter project.
     /// </summary>
     [CommandOption("input", 'i', Description = "Input data file path.")]
+    // ReSharper disable once MemberCanBePrivate.Global RedundantDefaultMemberInitializer - used as an Option for CliFix
     public string DataFile { get; private set; } = null;
 
     /// <summary>
     /// The path where compiled files will be generated.
     /// </summary>
     [CommandOption("output", 'o', Description = "Output directory for compiled files.")]
+    // ReSharper disable once MemberCanBePrivate.Global RedundantDefaultMemberInitializer - used as an Option for CliFix
     public string CompiledOutputDirectory { get; private set; } = null;
 
     /// <summary>
     /// Whether to show verbose output from operations.
     /// </summary>
     [CommandOption("verbose", 'v', Description = "Whether to show verbose output from operations.")]
+    // ReSharper disable once MemberCanBePrivate.Global - used as an Option for CliFix
     public bool Verbose { get; init; } = false;
 
     /// <summary>
     /// The path where the DogScepter project gets created. If <see langword="null"/>, then the current working directory should be used.
     /// </summary>
     [CommandOption("dir", 'd', Description = "If not the working directory, specifies the project location.")]
+    // ReSharper disable once MemberCanBePrivate.Global - used as an Option for CliFix
     public string ProjectDirectory { get; init; } = null;
 
     /// <summary>
     /// Whether to use an interactive mode.
     /// </summary>
     [CommandOption("int", Description = "Whether to use interactive shell.")]
+    // ReSharper disable once MemberCanBePrivate.Global - used as an Option for CliFix
     public bool Interactive { get; init; } = true;
 
     public ValueTask ExecuteAsync(IConsole console)
@@ -88,11 +93,25 @@ public class CreateProjectCommand : ICommand
                 console.Error.WriteLine("Data file does not exist.");
                 return default;
             }
-            //TODO: maybe have feature to automatically create folders that don't exist?
+
+            // If directory does not exist, prompt to create it on interactive mode, otherwise error.
             if (!Directory.Exists(CompiledOutputDirectory))
             {
-                console.Error.WriteLine("Output directory for compiled files does not exist.");
-                return default;
+                if (Interactive)
+                {
+                    if (console.PromptYesNo($"Output directory for compiled files does not exist. Do you want to create it?"))
+                        Directory.CreateDirectory(dir);
+                    else
+                    {
+                        console.Output.WriteLine("Bailing.");
+                        return default;
+                    }
+                }
+                else
+                {
+                    console.Error.WriteLine("Output directory for compiled files does not exist.");
+                    return default;
+                }
             }
         }
 
@@ -104,20 +123,20 @@ public class CreateProjectCommand : ICommand
         GMData data = console.LoadDataFile(DataFile, Verbose);
         if (data == null)
             return default;
-        ProjectFile pf = console.OpenProject(data, dir);
-        if (pf == null)
+        ProjectFile projectFile = console.OpenProject(data, dir);
+        if (projectFile == null)
             return default;
-        if (!console.SaveProject(pf))
+        if (!console.SaveProject(projectFile))
             return default;
 
         // Update machine config file
-        MachineConfig cfg = MachineConfig.Load();
-        var pcfg = new ProjectConfig(DataFile, CompiledOutputDirectory);
-        cfg.EditProject(dir, pcfg);
-        MachineConfig.Save(cfg);
+        MachineConfig machineCfg = MachineConfig.Load();
+        ProjectConfig projectCfg = new ProjectConfig(DataFile, CompiledOutputDirectory);
+        machineCfg.EditProject(dir, projectCfg);
+        MachineConfig.Save(machineCfg);
 
         if (Interactive)
-            ProjectShell.Run(console, pf, pcfg, Verbose);
+            ProjectShell.Run(console, projectFile, projectCfg, Verbose);
 
         return default;
     }
