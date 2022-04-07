@@ -38,15 +38,15 @@ namespace DogScepterLib.Core.Chunks
             }
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             if (Length == 0)
                 return; // In YYC, before bytecode 17, CODE is empty
 
             List = new GMUniquePointerList<GMCode>();
-            List.Unserialize(reader);
+            List.Deserialize(reader);
         }
     }
 }

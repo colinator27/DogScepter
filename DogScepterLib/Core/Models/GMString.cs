@@ -10,7 +10,7 @@ namespace DogScepterLib.Core.Models
     /// A UTF-8 string, usually contained within the STRG chunk.
     /// </summary>
     [DebuggerDisplay("{Content}")]
-    public class GMString : GMSerializable
+    public class GMString : IGMSerializable
     {
         public string Content;
 
@@ -19,7 +19,7 @@ namespace DogScepterLib.Core.Models
             writer.WriteGMString(Content);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Content = reader.ReadGMString();
         }

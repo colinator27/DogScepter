@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker script.
     /// </summary>
-    public class GMScript : GMSerializable
+    public class GMScript : IGMSerializable
     {
         public GMString Name;
         public int CodeID;
@@ -22,7 +22,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write(CodeID);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
             CodeID = reader.ReadInt32();

@@ -132,9 +132,9 @@ namespace DogScepterLib.Core.Chunks
                 Options |= flag;
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             reader.VersionInfo.OptionBitflag = (reader.ReadInt32() == int.MinValue);
             reader.Offset -= 4;
@@ -195,10 +195,10 @@ namespace DogScepterLib.Core.Chunks
                 ReadOption(reader, OptionsFlags.CreationEventOrder);
             }
             Constants = new GMList<Constant>();
-            Constants.Unserialize(reader);
+            Constants.Deserialize(reader);
         }
 
-        public class Constant : GMSerializable
+        public class Constant : IGMSerializable
         {
             public GMString Name;
             public GMString Value;
@@ -209,7 +209,7 @@ namespace DogScepterLib.Core.Chunks
                 writer.WritePointerString(Value);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Name = reader.ReadStringPointerObject();
                 Value = reader.ReadStringPointerObject();

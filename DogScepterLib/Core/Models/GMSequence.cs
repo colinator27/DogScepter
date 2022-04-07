@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker sequence.
     /// </summary>
-    public class GMSequence : GMSerializable
+    public class GMSequence : IGMSerializable
     {
         public enum PlaybackTypeEnum : uint
         {
@@ -55,7 +55,7 @@ namespace DogScepterLib.Core.Models
             Moments.Serialize(writer);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
             PlaybackType = (PlaybackTypeEnum)reader.ReadUInt32();
@@ -67,10 +67,10 @@ namespace DogScepterLib.Core.Models
             Volume = reader.ReadSingle();
 
             BroadcastMessages = new GMList<Keyframe<BroadcastMessage>>();
-            BroadcastMessages.Unserialize(reader);
+            BroadcastMessages.Deserialize(reader);
 
             Tracks = new GMList<Track>();
-            Tracks.Unserialize(reader);
+            Tracks.Deserialize(reader);
 
             FunctionIDs = new Dictionary<int, GMString>();
             int count = reader.ReadInt32();
@@ -81,7 +81,7 @@ namespace DogScepterLib.Core.Models
             }
 
             Moments = new GMList<Keyframe<Moment>>();
-            Moments.Unserialize(reader);
+            Moments.Deserialize(reader);
 
         }
 
@@ -90,7 +90,7 @@ namespace DogScepterLib.Core.Models
             return (Name.Content == string.Empty) ? "Sequence" : $"Sequence: \"{Name.Content}\"";
         }
 
-        public class Keyframe<T> : GMSerializable where T : GMSerializable, new()
+        public class Keyframe<T> : IGMSerializable where T : IGMSerializable, new()
         {
             public float Key;
             public float Length;
@@ -112,7 +112,7 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Key = reader.ReadSingle();
                 Length = reader.ReadSingle();
@@ -125,7 +125,7 @@ namespace DogScepterLib.Core.Models
                 {
                     int channel = reader.ReadInt32();
                     T data = new T();
-                    data.Unserialize(reader);
+                    data.Deserialize(reader);
                     Channels[channel] = data;
                 }
             }
@@ -136,7 +136,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public class BroadcastMessage : GMSerializable
+        public class BroadcastMessage : IGMSerializable
         {
             public List<GMString> List;
 
@@ -149,7 +149,7 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 List = new List<GMString>();
                 int count = reader.ReadInt32();
@@ -160,7 +160,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public class Track : GMSerializable
+        public class Track : IGMSerializable
         {
             [Flags]
             public enum TraitsEnum
@@ -177,7 +177,7 @@ namespace DogScepterLib.Core.Models
             public List<int> Tags;
             public List<Track> Tracks;
             public TrackKeyframes Keyframes;
-            public List<GMSerializable> OwnedResources;
+            public List<IGMSerializable> OwnedResources;
             public List<GMString> OwnedResourceTypes;
 
             public void Serialize(GMDataWriter writer)
@@ -244,7 +244,7 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 ModelName = reader.ReadStringPointerObject();
                 Name = reader.ReadStringPointerObject();
@@ -262,7 +262,7 @@ namespace DogScepterLib.Core.Models
                     Tags.Add(reader.ReadInt32());
                 }
 
-                OwnedResources = new List<GMSerializable>();
+                OwnedResources = new List<IGMSerializable>();
                 OwnedResourceTypes = new List<GMString>();
                 for (int i = 0; i < ownedResourceCount; i++)
                 {
@@ -272,7 +272,7 @@ namespace DogScepterLib.Core.Models
                     {
                         case "GMAnimCurve":
                             GMAnimCurve curve = new GMAnimCurve();
-                            curve.Unserialize(reader);
+                            curve.Deserialize(reader);
                             OwnedResources.Add(curve);
                             break;
 
@@ -286,7 +286,7 @@ namespace DogScepterLib.Core.Models
                 for (int i = 0; i < trackCount; i++)
                 {
                     Track track = new Track();
-                    track.Unserialize(reader);
+                    track.Deserialize(reader);
                     Tracks.Add(track);
                 }
 
@@ -295,7 +295,7 @@ namespace DogScepterLib.Core.Models
                     case "GMAudioTrack":
                         {
                             AudioKeyframes keyframes = new AudioKeyframes();
-                            keyframes.Unserialize(reader);
+                            keyframes.Deserialize(reader);
                             Keyframes = keyframes;
                         }
                         break;
@@ -304,7 +304,7 @@ namespace DogScepterLib.Core.Models
                     case "GMSequenceTrack":
                         {
                             IDKeyframes keyframes = new IDKeyframes();
-                            keyframes.Unserialize(reader);
+                            keyframes.Deserialize(reader);
                             Keyframes = keyframes;
                         }
                         break;
@@ -312,14 +312,14 @@ namespace DogScepterLib.Core.Models
                     case "GMBoolTrack":
                         {
                             ValueKeyframes keyframes = new ValueKeyframes();
-                            keyframes.Unserialize(reader);
+                            keyframes.Deserialize(reader);
                             Keyframes = keyframes;
                         }
                         break;
                     case "GMStringTrack":
                         {
                             StringValueKeyframes keyframes = new StringValueKeyframes();
-                            keyframes.Unserialize(reader);
+                            keyframes.Deserialize(reader);
                             Keyframes = keyframes;
                         }
                         break;
@@ -327,7 +327,7 @@ namespace DogScepterLib.Core.Models
                     case "GMRealTrack":
                         {
                             ValueInterpolatedKeyframes keyframes = new ValueInterpolatedKeyframes();
-                            keyframes.Unserialize(reader);
+                            keyframes.Deserialize(reader);
                             Keyframes = keyframes;
                         }
                         break;
@@ -338,15 +338,15 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
-            public class TrackKeyframes : GMSerializable
+            public class TrackKeyframes : IGMSerializable
             {
                 public virtual void Serialize(GMDataWriter writer) {}
-                public virtual void Unserialize(GMDataReader reader) {}
+                public virtual void Deserialize(GMDataReader reader) {}
             }
 
             public class AudioKeyframes : TrackKeyframes
             {
-                public class Data : GMSerializable
+                public class Data : IGMSerializable
                 {
                     public int ID;
                     public int Mode;
@@ -358,7 +358,7 @@ namespace DogScepterLib.Core.Models
                         writer.Write(Mode);
                     }
 
-                    public void Unserialize(GMDataReader reader)
+                    public void Deserialize(GMDataReader reader)
                     {
                         ID = reader.ReadInt32();
                         reader.Offset += 4;
@@ -373,16 +373,16 @@ namespace DogScepterLib.Core.Models
                     List.Serialize(writer);
                 }
 
-                public override void Unserialize(GMDataReader reader)
+                public override void Deserialize(GMDataReader reader)
                 {
                     List = new GMList<Keyframe<Data>>();
-                    List.Unserialize(reader);
+                    List.Deserialize(reader);
                 }
             }
 
             public class IDKeyframes : TrackKeyframes
             {
-                public class Data : GMSerializable
+                public class Data : IGMSerializable
                 {
                     public int ID;
 
@@ -391,7 +391,7 @@ namespace DogScepterLib.Core.Models
                         writer.Write(ID);
                     }
 
-                    public void Unserialize(GMDataReader reader)
+                    public void Deserialize(GMDataReader reader)
                     {
                         ID = reader.ReadInt32();
                     }
@@ -404,16 +404,16 @@ namespace DogScepterLib.Core.Models
                     List.Serialize(writer);
                 }
 
-                public override void Unserialize(GMDataReader reader)
+                public override void Deserialize(GMDataReader reader)
                 {
                     List = new GMList<Keyframe<Data>>();
-                    List.Unserialize(reader);
+                    List.Deserialize(reader);
                 }
             }
 
             public class ValueKeyframes : TrackKeyframes
             {
-                public class Data : GMSerializable
+                public class Data : IGMSerializable
                 {
                     public int Value;
 
@@ -422,7 +422,7 @@ namespace DogScepterLib.Core.Models
                         writer.Write(Value);
                     }
 
-                    public void Unserialize(GMDataReader reader)
+                    public void Deserialize(GMDataReader reader)
                     {
                         Value = reader.ReadInt32();
                     }
@@ -435,10 +435,10 @@ namespace DogScepterLib.Core.Models
                     List.Serialize(writer);
                 }
 
-                public override void Unserialize(GMDataReader reader)
+                public override void Deserialize(GMDataReader reader)
                 {
                     List = new GMList<Keyframe<Data>>();
-                    List.Unserialize(reader);
+                    List.Deserialize(reader);
                 }
             }
 
@@ -451,16 +451,16 @@ namespace DogScepterLib.Core.Models
                     List.Serialize(writer);
                 }
 
-                public override void Unserialize(GMDataReader reader)
+                public override void Deserialize(GMDataReader reader)
                 {
                     List = new GMList<Keyframe<GMString>>();
-                    List.Unserialize(reader);
+                    List.Deserialize(reader);
                 }
             }
 
             public class ValueInterpolatedKeyframes : TrackKeyframes
             {
-                public class Data : GMSerializable
+                public class Data : IGMSerializable
                 {
                     public int Value;
                     public bool IsCurveEmbedded;
@@ -482,7 +482,7 @@ namespace DogScepterLib.Core.Models
                         }
                     }
 
-                    public void Unserialize(GMDataReader reader)
+                    public void Deserialize(GMDataReader reader)
                     {
                         Value = reader.ReadInt32();
                         if (reader.ReadWideBoolean())
@@ -492,7 +492,7 @@ namespace DogScepterLib.Core.Models
                                 reader.Warnings.Add(new GMWarning("Expected -1 at interpolated value keyframe"));
 
                             GMAnimCurve curve = new GMAnimCurve();
-                            curve.Unserialize(reader, false);
+                            curve.Deserialize(reader, false);
                             AnimCurve = curve;
                         }
                         else
@@ -519,18 +519,18 @@ namespace DogScepterLib.Core.Models
                     List.Serialize(writer);
                 }
 
-                public override void Unserialize(GMDataReader reader)
+                public override void Deserialize(GMDataReader reader)
                 {
                     Interpolation = (InterpolationEnum)reader.ReadInt32();
 
                     List = new GMList<Keyframe<Data>>();
-                    List.Unserialize(reader);
+                    List.Deserialize(reader);
                 }
             }
 
         }
 
-        public class Moment : GMSerializable
+        public class Moment : IGMSerializable
         {
             public int InternalCount; // Should be 0 if none, 1 if there's a message?
             public GMString Event;
@@ -542,7 +542,7 @@ namespace DogScepterLib.Core.Models
                     writer.WritePointerString(Event);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 InternalCount = reader.ReadInt32();
                 if (InternalCount > 0)

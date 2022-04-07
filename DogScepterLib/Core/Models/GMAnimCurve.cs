@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker sequence.
     /// </summary>
-    public class GMAnimCurve : GMSerializable
+    public class GMAnimCurve : IGMSerializable
     {
         public enum GraphTypeEnum
         {
@@ -33,19 +33,19 @@ namespace DogScepterLib.Core.Models
             Channels.Serialize(writer);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
-            Unserialize(reader, true);
+            Deserialize(reader, true);
         }
 
-        public void Unserialize(GMDataReader reader, bool includeName)
+        public void Deserialize(GMDataReader reader, bool includeName)
         {
             if (includeName)
                 Name = reader.ReadStringPointerObject();
             GraphType = (GraphTypeEnum)reader.ReadUInt32();
 
             Channels = new GMList<Channel>();
-            Channels.Unserialize(reader);
+            Channels.Deserialize(reader);
         }
 
         public override string ToString()
@@ -53,7 +53,7 @@ namespace DogScepterLib.Core.Models
             return $"Animation Curve: \"{Name.Content}\"";
         }
 
-        public class Channel : GMSerializable
+        public class Channel : IGMSerializable
         {
             public enum FunctionTypeEnum
             {
@@ -76,14 +76,14 @@ namespace DogScepterLib.Core.Models
                 Points.Serialize(writer);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Name = reader.ReadStringPointerObject();
                 FunctionType = (FunctionTypeEnum)reader.ReadUInt32();
                 Iterations = (ushort)reader.ReadUInt32();
 
                 Points = new GMList<Point>();
-                Points.Unserialize(reader);
+                Points.Deserialize(reader);
             }
 
             public override string ToString()
@@ -91,7 +91,7 @@ namespace DogScepterLib.Core.Models
                 return $"Animation Curve Channel: \"{Name.Content}\"";
             }
 
-            public class Point : GMSerializable
+            public class Point : IGMSerializable
             {
                 public float X;
                 public float Value;
@@ -117,7 +117,7 @@ namespace DogScepterLib.Core.Models
                         writer.Write(0);
                 }
 
-                public void Unserialize(GMDataReader reader)
+                public void Deserialize(GMDataReader reader)
                 {
                     X = reader.ReadSingle();
                     Value = reader.ReadSingle();

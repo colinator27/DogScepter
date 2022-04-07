@@ -44,7 +44,7 @@ namespace DogScepter
             {
                 Logger = new Logger();
                 Settings = Settings.Load();
-            } 
+            }
             catch (Exception e)
             {
                 HandleException(e);
@@ -55,7 +55,7 @@ namespace DogScepter
             {
                 TextData = new TextData();
                 TextData.LoadLanguage(Settings.Language);
-            } 
+            }
             catch (Exception e)
             {
                 HandleException(e);
@@ -191,7 +191,7 @@ namespace DogScepter
                                     Logger.WriteLine(string.Format("[WARN: {0}] {1}", w.Level, w.Message));
                                 DataFile = reader.Data;
                                 DataFile.Logger = Logger.WriteLine;
-                                reader.Unserialize();
+                                reader.Deserialize();
 
                                 Logger.WriteLine("Finished loading data file");
 

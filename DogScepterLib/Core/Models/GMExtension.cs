@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker extension.
     /// </summary>
-    public class GMExtension : GMSerializable
+    public class GMExtension : IGMSerializable
     {
         public GMString EmptyString;
         public GMString Name;
@@ -39,14 +39,14 @@ namespace DogScepterLib.Core.Models
             Files.Serialize(writer);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             EmptyString = reader.ReadStringPointerObject();
             Name = reader.ReadStringPointerObject();
             ClassName = reader.ReadStringPointerObject();
 
             Files = new GMPointerList<ExtensionFile>();
-            Files.Unserialize(reader);
+            Files.Deserialize(reader);
         }
 
         public override string ToString()
@@ -54,7 +54,7 @@ namespace DogScepterLib.Core.Models
             return $"Extension: \"{Name.Content}\"";
         }
 
-        public class ExtensionFile : GMSerializable
+        public class ExtensionFile : IGMSerializable
         {
             public GMString Filename;
             public GMString FinalFunction;
@@ -71,14 +71,14 @@ namespace DogScepterLib.Core.Models
                 Functions.Serialize(writer);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Filename = reader.ReadStringPointerObject();
                 FinalFunction = reader.ReadStringPointerObject();
                 InitFunction = reader.ReadStringPointerObject();
                 Kind = (ExtensionKind)reader.ReadUInt32();
                 Functions = new GMPointerList<ExtensionFunction>();
-                Functions.Unserialize(reader);
+                Functions.Deserialize(reader);
             }
 
             public override string ToString()
@@ -87,7 +87,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public class ExtensionFunction : GMSerializable
+        public class ExtensionFunction : IGMSerializable
         {
             public GMString Name;
             public int ID;
@@ -109,7 +109,7 @@ namespace DogScepterLib.Core.Models
                     writer.Write((uint)ArgumentTypes[i]);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Name = reader.ReadStringPointerObject();
                 ID = reader.ReadInt32();

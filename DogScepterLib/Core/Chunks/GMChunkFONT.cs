@@ -28,14 +28,14 @@ namespace DogScepterLib.Core.Chunks
                 writer.Write(Padding);
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             DoFormatCheck(reader);
 
             List = new GMUniquePointerList<GMFont>();
-            List.Unserialize(reader);
+            List.Deserialize(reader);
 
             Padding = reader.ReadBytes(512);
         }

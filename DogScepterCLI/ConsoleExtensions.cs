@@ -124,7 +124,7 @@ public static class ConsoleExtensions
                 reader.Data.Logger = console.Output.WriteLine;
             else
                 reader.Data.Logger = null;
-            reader.Unserialize();
+            reader.Deserialize();
             foreach (GMWarning warning in reader.Warnings)
                 console.PrintGMWarning(warning);
             return reader.Data;

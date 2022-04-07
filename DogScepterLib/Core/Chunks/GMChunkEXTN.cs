@@ -22,12 +22,12 @@ namespace DogScepterLib.Core.Chunks
             }
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             List = new GMUniquePointerList<GMExtension>();
-            List.Unserialize(reader);
+            List.Deserialize(reader);
 
             // Product ID information for each extension
             if (reader.VersionInfo.IsNumberAtLeast(1, 0, 0, 9999))

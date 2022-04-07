@@ -23,9 +23,9 @@ namespace DogScepterLib.Core.Chunks
             }
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             reader.Offset -= 4;
             int chunkEnd = reader.Offset + 4 + reader.ReadInt32();
@@ -40,9 +40,9 @@ namespace DogScepterLib.Core.Chunks
                 GMShader s = new GMShader();
                 reader.Offset = ptrs[i];
                 if (i < count - 1)
-                    s.Unserialize(reader, ptrs[i + 1]);
+                    s.Deserialize(reader, ptrs[i + 1]);
                 else
-                    s.Unserialize(reader, chunkEnd);
+                    s.Deserialize(reader, chunkEnd);
                 List.Add(s);
             }
         }

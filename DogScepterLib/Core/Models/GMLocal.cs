@@ -8,7 +8,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a list of local variables, per script entry (Assigned to scripts by having the same Name property).
     /// </summary>
-    public class GMLocalsEntry : GMSerializable
+    public class GMLocalsEntry : IGMSerializable
     {
         public GMString Name;
         public List<GMLocal> Entries;
@@ -23,7 +23,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Entries = new List<GMLocal>();
 
@@ -33,7 +33,7 @@ namespace DogScepterLib.Core.Models
             for (int i = 0; i < count; i++)
             {
                 GMLocal local = new GMLocal();
-                local.Unserialize(reader);
+                local.Deserialize(reader);
                 Entries.Add(local);
             }
         }
@@ -45,7 +45,7 @@ namespace DogScepterLib.Core.Models
     }
 
     [DebuggerDisplay("{Name.Content}")]
-    public class GMLocal : GMSerializable
+    public class GMLocal : IGMSerializable
     {
         public uint Index;
         public GMString Name;
@@ -56,7 +56,7 @@ namespace DogScepterLib.Core.Models
             writer.WritePointerString(Name);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Index = reader.ReadUInt32();
             Name = reader.ReadStringPointerObject();

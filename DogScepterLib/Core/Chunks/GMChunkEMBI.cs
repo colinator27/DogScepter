@@ -18,19 +18,19 @@ namespace DogScepterLib.Core.Chunks
             List.Serialize(writer);
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             int chunkVersion = reader.ReadInt32();
             if (chunkVersion != 1)
                 reader.Warnings.Add(new GMWarning($"EMBI version is {chunkVersion}, expected 1"));
 
             List = new GMList<EmbeddedImage>();
-            List.Unserialize(reader);
+            List.Deserialize(reader);
         }
 
-        public class EmbeddedImage : GMSerializable
+        public class EmbeddedImage : IGMSerializable
         {
             public GMString Name;
             public GMTextureItem TextureItem;
@@ -41,7 +41,7 @@ namespace DogScepterLib.Core.Chunks
                 writer.WritePointer(TextureItem);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Name = reader.ReadStringPointerObject();
                 TextureItem = reader.ReadPointer<GMTextureItem>();

@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains binary audio data.
     /// </summary>
-    public class GMAudio : GMSerializable
+    public class GMAudio : IGMSerializable
     {
         public BufferRegion Data;
 
@@ -17,7 +17,7 @@ namespace DogScepterLib.Core.Models
             writer.Write(Data);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             int length = reader.ReadInt32();
             Data = reader.ReadBytes(length);

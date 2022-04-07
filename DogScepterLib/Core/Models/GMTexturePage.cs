@@ -10,7 +10,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker texture page.
     /// </summary>
-    public class GMTexturePage : GMSerializable
+    public class GMTexturePage : IGMSerializable
     {
         public uint Scaled;
         public uint GeneratedMips;
@@ -29,7 +29,7 @@ namespace DogScepterLib.Core.Models
             writer.WritePointer(TextureData);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Scaled = reader.ReadUInt32();
             if (reader.VersionInfo.Major >= 2) 
@@ -40,7 +40,7 @@ namespace DogScepterLib.Core.Models
         }
     }
 
-    public class GMTextureData : GMSerializable
+    public class GMTextureData : IGMSerializable
     {
         // The PNG or QOI+BZip2 data
         public BufferRegion Data;
@@ -95,7 +95,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             int startOffset = reader.Offset;
 

@@ -8,7 +8,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains information about a GameMaker variable.
     /// </summary>
-    public class GMVariable : GMSerializable
+    public class GMVariable : IGMSerializable
     {
         public GMString Name;
         public GMCode.Bytecode.Instruction.InstanceType VariableType;
@@ -56,7 +56,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write((int)-1);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
 

@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker shader.
     /// </summary>
-    public class GMShader : GMSerializable
+    public class GMShader : IGMSerializable
     {
         public GMString Name;
         public ShaderType Type;
@@ -137,12 +137,12 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             throw new NotImplementedException();
         }
 
-        public void Unserialize(GMDataReader reader, int endPos)
+        public void Deserialize(GMDataReader reader, int endPos)
         {
             Name = reader.ReadStringPointerObject();
             Type = (ShaderType)(reader.ReadUInt32() & 0x7FFFFFFF);
@@ -206,9 +206,9 @@ namespace DogScepterLib.Core.Models
             reader.Offset = ptr;
 
             if (length == -1)
-                buf.Unserialize(reader, end - ptr);
+                buf.Deserialize(reader, end - ptr);
             else
-                buf.Unserialize(reader, length);
+                buf.Deserialize(reader, length);
 
             reader.Offset = returnTo;
         }
@@ -221,7 +221,7 @@ namespace DogScepterLib.Core.Models
         /// <summary>
         /// Contains compiled shader data.
         /// </summary>
-        public class ShaderBuffer : GMSerializable
+        public class ShaderBuffer : IGMSerializable
         {
             public BufferRegion Buffer;
 
@@ -230,12 +230,12 @@ namespace DogScepterLib.Core.Models
                 writer.Write(Buffer);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 throw new NotImplementedException();
             }
 
-            public void Unserialize(GMDataReader reader, int length)
+            public void Deserialize(GMDataReader reader, int length)
             {
                 Buffer = reader.ReadBytes(length);
             }

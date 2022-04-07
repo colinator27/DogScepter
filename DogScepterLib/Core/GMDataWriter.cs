@@ -16,8 +16,8 @@ namespace DogScepterLib.Core
         public List<GMWarning> Warnings;
 
         /// Maps used for tracking locations of pointer-referenced objects and the locations to patch
-        public Dictionary<GMSerializable, int> PointerOffsets = new Dictionary<GMSerializable, int>();
-        public Dictionary<GMSerializable, List<int>> PendingPointerWrites = new Dictionary<GMSerializable, List<int>>();
+        public Dictionary<IGMSerializable, int> PointerOffsets = new Dictionary<IGMSerializable, int>();
+        public Dictionary<IGMSerializable, List<int>> PendingPointerWrites = new Dictionary<IGMSerializable, List<int>>();
         public Dictionary<GMString, List<int>> PendingStringPointerWrites = new Dictionary<GMString, List<int>>();
 
         public Dictionary<GMVariable, List<int>> VariableReferences = new Dictionary<GMVariable, List<int>>();
@@ -125,7 +125,7 @@ namespace DogScepterLib.Core
         /// <summary>
         /// Write a 32-bit pointer value in this position, for an object
         /// </summary>
-        public void WritePointer(GMSerializable obj)
+        public void WritePointer(IGMSerializable obj)
         {
             if (obj == null)
             {
@@ -171,7 +171,7 @@ namespace DogScepterLib.Core
         /// <summary>
         /// Sets the current offset to be the pointer location for the specified object
         /// </summary>
-        public void WriteObjectPointer(GMSerializable obj)
+        public void WriteObjectPointer(IGMSerializable obj)
         {
             PointerOffsets.Add(obj, Offset);
         }

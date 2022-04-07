@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains name of a GameMaker audio group.
     /// </summary>
-    public class GMAudioGroup : GMSerializable
+    public class GMAudioGroup : IGMSerializable
     {
         public GMString Name;
 
@@ -16,7 +16,7 @@ namespace DogScepterLib.Core.Models
             writer.WritePointerString(Name);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
         }

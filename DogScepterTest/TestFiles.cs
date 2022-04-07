@@ -33,14 +33,14 @@ namespace DogScepterTest
         }
 
         [Fact]
-        public void UnserializeTestFiles()
+        public void DeserializeTestFiles()
         {
             Assert.All(_testFiles, file =>
             {
                 using FileStream fs = new(file, FileMode.Open);
 
                 GMDataReader reader = new(fs, fs.Name);
-                reader.Unserialize();
+                reader.Deserialize();
 
                 foreach (var warning in reader.Warnings)
                     _output.WriteLine($"[WARN: {warning.Level}] {warning.Message}");
@@ -55,7 +55,7 @@ namespace DogScepterTest
                 using FileStream fs = new(file, FileMode.Open);
 
                 GMDataReader reader = new(fs, fs.Name);
-                reader.Unserialize();
+                reader.Deserialize();
 
                 foreach (var warning in reader.Warnings)
                     _output.WriteLine($"[WARN: {warning.Level}] {warning.Message}");
@@ -70,15 +70,15 @@ namespace DogScepterTest
         }
 
         [Fact]
-        public void UnserializeAndSerializeTestFiles()
+        public void DeserializeAndSerializeTestFiles()
         {
             Assert.All(_testFiles, file =>
             {
-                // Unserialize
+                // Deserialize
                 using FileStream fs = new(file, FileMode.Open);
 
                 GMDataReader reader = new(fs, fs.Name);
-                reader.Unserialize();
+                reader.Deserialize();
 
                 foreach (var warning in reader.Warnings)
                     _output.WriteLine($"[WARN: {warning.Level}] {warning.Message}");
@@ -98,11 +98,11 @@ namespace DogScepterTest
         {
             Assert.All(_testFiles, file =>
             {
-                // Unserialize
+                // Deserialize
                 using FileStream fs = new(file, FileMode.Open);
 
                 GMDataReader reader = new(fs, fs.Name);
-                reader.Unserialize();
+                reader.Deserialize();
 
                 foreach (var warning in reader.Warnings)
                     _output.WriteLine($"[WARN: {warning.Level}] {warning.Message}");
@@ -133,11 +133,11 @@ namespace DogScepterTest
         {
             Assert.All(_testFiles, file =>
             {
-                // Unserialize
+                // Deserialize
                 using FileStream fs = new(file, FileMode.Open);
 
                 GMDataReader reader = new(fs, fs.Name);
-                reader.Unserialize();
+                reader.Deserialize();
 
                 foreach (var warning in reader.Warnings)
                     _output.WriteLine($"[WARN: {warning.Level}] {warning.Message}");

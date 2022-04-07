@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker sprite.
     /// </summary>
-    public class GMSprite : GMNamedSerializable
+    public class GMSprite : IGMNamedSerializable
     {
         public GMString Name { get; set; }
         public int Width;
@@ -139,7 +139,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
             Width = reader.ReadInt32();
@@ -182,14 +182,14 @@ namespace DogScepterLib.Core.Models
                 switch (S_SpriteType)
                 {
                     case SpriteType.Normal:
-                        TextureItems.Unserialize(reader);
+                        TextureItems.Deserialize(reader);
                         ParseMaskData(reader);
                         break;
                     case SpriteType.SWF:
                         {
                             if (reader.ReadInt32() != 8)
                                 reader.Warnings.Add(new GMWarning("SWF format not correct"));
-                            TextureItems.Unserialize(reader);
+                            TextureItems.Deserialize(reader);
 
                             // Parse the actual data
                             reader.Pad(4);
@@ -238,7 +238,7 @@ namespace DogScepterLib.Core.Models
             {
                 // Normal, GM:S 1.4 sprite
                 reader.Offset -= 4;
-                TextureItems.Unserialize(reader);
+                TextureItems.Deserialize(reader);
                 ParseMaskData(reader);
             }
         }
@@ -292,7 +292,7 @@ namespace DogScepterLib.Core.Models
             return $"Sprite: \"{Name.Content}\"";
         }
 
-        public class SequenceReference : GMSerializable
+        public class SequenceReference : IGMSerializable
         {
             public GMSequence Sequence;
 
@@ -302,12 +302,12 @@ namespace DogScepterLib.Core.Models
                 Sequence.Serialize(writer);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 if (reader.ReadInt32() != 1)
                     reader.Warnings.Add(new GMWarning("Unexpected version for sequence reference in sprite"));
                 Sequence = new GMSequence();
-                Sequence.Unserialize(reader);
+                Sequence.Deserialize(reader);
             }
 
             public override string ToString()
@@ -316,7 +316,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public class NineSlice : GMSerializable
+        public class NineSlice : IGMSerializable
         {
             public int Left, Top, Right, Bottom;
             public bool Enabled;
@@ -342,7 +342,7 @@ namespace DogScepterLib.Core.Models
                     writer.Write((int)TileModes[i]);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Left = reader.ReadInt32();
                 Top = reader.ReadInt32();

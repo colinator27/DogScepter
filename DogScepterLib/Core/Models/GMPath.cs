@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker path.
     /// </summary>
-    public class GMPath : GMNamedSerializable
+    public class GMPath : IGMNamedSerializable
     {
         public GMString Name { get; set; }
         public bool Smooth;
@@ -24,14 +24,14 @@ namespace DogScepterLib.Core.Models
             Points.Serialize(writer);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
             Smooth = reader.ReadWideBoolean();
             Closed = reader.ReadWideBoolean();
             Precision = reader.ReadUInt32();
             Points = new GMList<Point>();
-            Points.Unserialize(reader);
+            Points.Deserialize(reader);
         }
 
         public override string ToString()
@@ -39,7 +39,7 @@ namespace DogScepterLib.Core.Models
             return $"Path: \"{Name.Content}\"";
         }
 
-        public class Point : GMSerializable
+        public class Point : IGMSerializable
         {
             public float X;
             public float Y;
@@ -52,7 +52,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write(Speed);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 X = reader.ReadSingle();
                 Y = reader.ReadSingle();
