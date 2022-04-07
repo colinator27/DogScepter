@@ -48,8 +48,5 @@ DogScepter is a work-in-progress modding tool geared toward (but not limited to)
     - Most prominently, the reason this now exists (and also major inspiration for core code), https://github.com/krzys-h/UndertaleModTool
 
 ## Contributors
-- colinator27 (me)
-- TheEternalShine
-
 For a full list of contributors, see here:
 https://github.com/colinator27/DogScepter/graphs/contributors
