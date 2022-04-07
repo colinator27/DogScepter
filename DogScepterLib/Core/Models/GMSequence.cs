@@ -492,7 +492,7 @@ namespace DogScepterLib.Core.Models
                                 reader.Warnings.Add(new GMWarning("Expected -1 at interpolated value keyframe"));
 
                             GMAnimCurve curve = new GMAnimCurve();
-                            curve.Unserialize(reader, false);
+                            curve.Deserialize(reader, false);
                             AnimCurve = curve;
                         }
                         else

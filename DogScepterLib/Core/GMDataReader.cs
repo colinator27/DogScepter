@@ -44,7 +44,7 @@ namespace DogScepterLib.Core
             TexturesToDecompress = new List<(GMTextureData, int)>(64);
         }
 
-        public void Unserialize(bool clearData = true)
+        public void Deserialize(bool clearData = true)
         {
 #if DEBUG
             Stopwatch s = new Stopwatch();
@@ -106,7 +106,7 @@ namespace DogScepterLib.Core
         }
 
         /// <summary>
-        /// Follows the specified pointer for an object type, unserializes it and returns it
+        /// Follows the specified pointer for an object type, deserializes it and returns it
         /// </summary>
         public T ReadPointerObject<T>(int ptr) where T : IGMSerializable, new()
         {
@@ -133,7 +133,7 @@ namespace DogScepterLib.Core
         }
 
         /// <summary>
-        /// Follows the specified pointer for an object type, unserializes it and returns it.
+        /// Follows the specified pointer for an object type, deserializes it and returns it.
         /// Also has helper callbacks for list reading.
         /// </summary>
         public T ReadPointerObject<T>(int ptr, bool returnAfter = true) where T : IGMSerializable, new()
@@ -162,7 +162,7 @@ namespace DogScepterLib.Core
         }
 
         /// <summary>
-        /// Follows the specified pointer for an object type, unserializes it and returns it.
+        /// Follows the specified pointer for an object type, deserializes it and returns it.
         /// Also has helper callbacks for list reading.
         ///
         /// This version of the function should only be used when a specific pointer is used *once*, to waste less resources.
@@ -187,7 +187,7 @@ namespace DogScepterLib.Core
         }
 
         /// <summary>
-        /// Follows a pointer (in the file) for an object type, unserializes it and returns it.
+        /// Follows a pointer (in the file) for an object type, deserializes it and returns it.
         /// </summary>
         public T ReadPointerObject<T>() where T : IGMSerializable, new()
         {
@@ -195,7 +195,7 @@ namespace DogScepterLib.Core
         }
 
         /// <summary>
-        /// Follows a pointer (in the file) for an object type, unserializes it and returns it.
+        /// Follows a pointer (in the file) for an object type, deserializes it and returns it.
         /// Uses the unique variant function internally, which does not get involved with the pointer map at all.
         /// </summary>
         public T ReadPointerObjectUnique<T>() where T : IGMSerializable, new()

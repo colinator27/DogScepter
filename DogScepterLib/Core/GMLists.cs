@@ -7,11 +7,11 @@ namespace DogScepterLib.Core
 {
     // Callbacks for before/after serializing each element, for padding/etc.
     public delegate void ListSerialize(GMDataWriter writer, int index, int count);
-    public delegate void ListUnserialize(GMDataReader reader, int index, int count);
+    public delegate void ListDeserialize(GMDataReader reader, int index, int count);
 
     // Callbacks for reading/writing each element, in special scenarios
     public delegate void ListSerializeElement(GMDataWriter writer, IGMSerializable elem);
-    public delegate IGMSerializable ListUnserializeElement(GMDataReader reader, bool notLast);
+    public delegate IGMSerializable ListDeserializeElement(GMDataReader reader, bool notLast);
 
     /// <summary>
     /// Basic array-like list type in data file
@@ -50,9 +50,9 @@ namespace DogScepterLib.Core
             Serialize(writer, null, null, null);
         }
 
-        public virtual void Unserialize(GMDataReader reader, ListUnserialize before = null,
-                                                             ListUnserialize after = null,
-                                                             ListUnserializeElement elemReader = null)
+        public virtual void Deserialize(GMDataReader reader, ListDeserialize before = null,
+                                                             ListDeserialize after = null,
+                                                             ListDeserializeElement elemReader = null)
         {
             // Read the element count and begin reading elements
             int count = reader.ReadInt32();
@@ -78,7 +78,7 @@ namespace DogScepterLib.Core
 
         public virtual void Deserialize(GMDataReader reader)
         {
-            Unserialize(reader, null, null, null);
+            Deserialize(reader, null, null, null);
         }
     }
 
@@ -153,9 +153,9 @@ namespace DogScepterLib.Core
             return reader.ReadPointerObjectUnique<T>(reader.ReadInt32(), notLast);
         }
 
-        public override void Unserialize(GMDataReader reader, ListUnserialize before = null,
-                                                              ListUnserialize after = null,
-                                                              ListUnserializeElement elemReader = null)
+        public override void Deserialize(GMDataReader reader, ListDeserialize before = null,
+                                                              ListDeserialize after = null,
+                                                              ListDeserializeElement elemReader = null)
         {
             // Define a default pointer reader if none is set
             if (elemReader == null)
@@ -182,7 +182,7 @@ namespace DogScepterLib.Core
 
         public override void Deserialize(GMDataReader reader)
         {
-            Unserialize(reader, null, null, null);
+            Deserialize(reader, null, null, null);
         }
     }
 
@@ -224,9 +224,9 @@ namespace DogScepterLib.Core
             Serialize(writer, null, null, null);
         }
 
-        public override void Unserialize(GMDataReader reader, ListUnserialize before = null,
-                                                              ListUnserialize after = null,
-                                                              ListUnserializeElement elemReader = null)
+        public override void Deserialize(GMDataReader reader, ListDeserialize before = null,
+                                                              ListDeserialize after = null,
+                                                              ListDeserializeElement elemReader = null)
         {
             // Read the element count and begin reading elements
             int count = reader.ReadInt32();
@@ -252,13 +252,13 @@ namespace DogScepterLib.Core
 
         public override void Deserialize(GMDataReader reader)
         {
-            Unserialize(reader, null, null, null);
+            Deserialize(reader, null, null, null);
         }
     }
 
     /// <summary>
     /// A list of pointers to objects, forming a list, in the data file.
-    /// This variant automatically sets UsePointerMap in the base class to false. 
+    /// This variant automatically sets UsePointerMap in the base class to false.
     /// </summary>
     public class GMUniquePointerList<T> : GMPointerList<T> where T : IGMSerializable, new()
     {

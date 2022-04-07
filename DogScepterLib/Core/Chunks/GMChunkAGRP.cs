@@ -67,7 +67,7 @@ namespace DogScepterLib.Core.Chunks
                         {
                             GMDataReader groupReader = new GMDataReader(fs, fs.Name);
                             groupReader.Data.Logger = reader.Data.Logger;
-                            groupReader.Unserialize();
+                            groupReader.Deserialize();
                             AudioData[i] = groupReader.Data;
                             foreach (GMWarning w in groupReader.Warnings)
                             {

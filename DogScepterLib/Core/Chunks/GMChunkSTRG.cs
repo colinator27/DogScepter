@@ -28,7 +28,7 @@ namespace DogScepterLib.Core.Chunks
             base.Deserialize(reader);
 
             List = new GMPointerList<GMString>();
-            List.Unserialize(reader, null, null, (GMDataReader reader, bool notLast) => 
+            List.Deserialize(reader, null, null, (GMDataReader reader, bool notLast) =>
             {
                 int ptr = reader.ReadInt32();
 

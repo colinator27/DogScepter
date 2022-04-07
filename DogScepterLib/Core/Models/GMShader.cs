@@ -142,7 +142,7 @@ namespace DogScepterLib.Core.Models
             throw new NotImplementedException();
         }
 
-        public void Unserialize(GMDataReader reader, int endPos)
+        public void Deserialize(GMDataReader reader, int endPos)
         {
             Name = reader.ReadStringPointerObject();
             Type = (ShaderType)(reader.ReadUInt32() & 0x7FFFFFFF);
@@ -206,9 +206,9 @@ namespace DogScepterLib.Core.Models
             reader.Offset = ptr;
 
             if (length == -1)
-                buf.Unserialize(reader, end - ptr);
+                buf.Deserialize(reader, end - ptr);
             else
-                buf.Unserialize(reader, length);
+                buf.Deserialize(reader, length);
 
             reader.Offset = returnTo;
         }
@@ -235,7 +235,7 @@ namespace DogScepterLib.Core.Models
                 throw new NotImplementedException();
             }
 
-            public void Unserialize(GMDataReader reader, int length)
+            public void Deserialize(GMDataReader reader, int length)
             {
                 Buffer = reader.ReadBytes(length);
             }

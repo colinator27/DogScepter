@@ -50,7 +50,7 @@ namespace DogScepterLib.Core.Chunks
             for (int i = 0; i < LanguageCount; i++)
             {
                 Language l = new Language();
-                l.Unserialize(reader, EntryCount);
+                l.Deserialize(reader, EntryCount);
                 Languages.Add(l);
             }
         }
@@ -70,7 +70,7 @@ namespace DogScepterLib.Core.Chunks
                     writer.WritePointerString(s);
             }
 
-            public void Unserialize(GMDataReader reader, int entryCount)
+            public void Deserialize(GMDataReader reader, int entryCount)
             {
                 Name = reader.ReadStringPointerObject();
                 Region = reader.ReadStringPointerObject();
@@ -80,7 +80,7 @@ namespace DogScepterLib.Core.Chunks
 
             public void Deserialize(GMDataReader reader)
             {
-                Unserialize(reader, 0);
+                Deserialize(reader, 0);
             }
         }
     }

@@ -48,7 +48,7 @@ namespace DogScepterLib.Core.Models
             if (reader.VersionInfo.FormatID <= 14)
             {
                 BytecodeEntry = new Bytecode(this);
-                BytecodeEntry.Unserialize(reader, Length);
+                BytecodeEntry.Deserialize(reader, Length);
             }
             else
             {
@@ -76,7 +76,7 @@ namespace DogScepterLib.Core.Models
                     int returnTo = reader.Offset;
                     reader.Offset = absoluteBytecodeAddr;
 
-                    BytecodeEntry.Unserialize(reader, Length);
+                    BytecodeEntry.Deserialize(reader, Length);
 
                     reader.Offset = returnTo;
                 }
@@ -132,7 +132,7 @@ namespace DogScepterLib.Core.Models
                 throw new NotImplementedException();
             }
 
-            public void Unserialize(GMDataReader reader, int length)
+            public void Deserialize(GMDataReader reader, int length)
             {
                 int begin = reader.Offset;
                 int end = begin + length;
@@ -288,7 +288,7 @@ namespace DogScepterLib.Core.Models
                     Undefined,
                     UnsignedInt,
                     Int16 = 0x0f,
-                    
+
                     Unset = 0xFF
                 }
 
@@ -691,7 +691,7 @@ namespace DogScepterLib.Core.Models
                                 }
 
                                 reader.Offset += 1;
-                                
+
                                 switch (Type1)
                                 {
                                     case DataType.Double:

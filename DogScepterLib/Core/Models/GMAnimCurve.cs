@@ -35,10 +35,10 @@ namespace DogScepterLib.Core.Models
 
         public void Deserialize(GMDataReader reader)
         {
-            Unserialize(reader, true);
+            Deserialize(reader, true);
         }
 
-        public void Unserialize(GMDataReader reader, bool includeName)
+        public void Deserialize(GMDataReader reader, bool includeName)
         {
             if (includeName)
                 Name = reader.ReadStringPointerObject();
