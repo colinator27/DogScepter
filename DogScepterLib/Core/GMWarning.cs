@@ -1,5 +1,6 @@
 ﻿namespace DogScepterLib.Core;
 
+//TODO: class should get refactored in the future.
 /// <summary>
 /// Class used for warnings that happen when dealing with <see cref="GMData"/>.
 /// </summary>

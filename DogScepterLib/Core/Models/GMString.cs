@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
 {
 
     /// <summary>
-    /// An UTF-8 string, usually contained within the STRG chunk.
+    /// A UTF-8 string, usually contained within the STRG chunk.
     /// </summary>
     [DebuggerDisplay("{Content}")]
     public class GMString : IGMSerializable
