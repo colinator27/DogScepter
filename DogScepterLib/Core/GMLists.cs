@@ -14,14 +14,21 @@ namespace DogScepterLib.Core
     public delegate IGMSerializable ListDeserializeElement(GMDataReader reader, bool notLast);
 
     /// <summary>
-    /// Basic array-like list type in data file
+    /// Basic array-like list type in a GameMaker data file.
     /// </summary>
     public class GMList<T> : List<T>, IGMSerializable where T : IGMSerializable, new()
     {
+        /// <summary>
+        /// Initializes an empty <see cref="GMList{T}"/>.
+        /// </summary>
         public GMList()
         {
         }
 
+        /// <summary>
+        /// Initializes an empty <see cref="GMList{T}"/> with a specified capacity.
+        /// </summary>
+        /// <param name="capacity">How many elements this <see cref="GMList{T}"/> should be able to hold.</param>
         public GMList(int capacity) : base(capacity)
         {
         }
@@ -83,16 +90,26 @@ namespace DogScepterLib.Core
     }
 
     /// <summary>
-    /// A list of pointers to objects, forming a list, in the data file
+    /// A list of pointers to objects, forming a list, in a GameMaker data file.
     /// </summary>
     public class GMPointerList<T> : GMList<T> where T : IGMSerializable, new()
     {
+        /// <summary>
+        /// TODO
+        /// </summary>
         public bool UsePointerMap = true;
 
+        /// <summary>
+        /// Initializes an empty <see cref="GMPointerList{T}"/>.
+        /// </summary>
         public GMPointerList()
         {
         }
 
+        /// <summary>
+        /// Initializes an empty <see cref="GMPointerList{T}"/> with a specified capacity.
+        /// </summary>
+        /// <param name="capacity">How many elements this <see cref="GMPointerList{T}"/> should be able to hold.</param>
         public GMPointerList(int capacity) : base(capacity)
         {
         }
@@ -187,8 +204,8 @@ namespace DogScepterLib.Core
     }
 
     /// <summary>
-    /// A list of pointers to objects, forming a list, in the data file
-    /// The difference between the normal PointerList is that this one's objects are
+    /// A list of pointers to objects, forming a list, in a GameMaker data file. <br/>
+    /// The difference to the normal <see cref="GMPointerList{T}"/> is, that this one's objects are
     /// specifically specified to not be adjacent, therefore the offset is reset at the end
     /// to the offset after the final pointer. Also, writing does not serialize actual objects.
     /// </summary>
@@ -257,16 +274,23 @@ namespace DogScepterLib.Core
     }
 
     /// <summary>
-    /// A list of pointers to objects, forming a list, in the data file.
-    /// This variant automatically sets UsePointerMap in the base class to false.
+    /// A list of pointers to objects, forming a list, in a GameMaker data file. <br/>
+    /// This variant automatically sets <see cref="GMPointerList{T}.UsePointerMap"/> in the base class to false.
     /// </summary>
     public class GMUniquePointerList<T> : GMPointerList<T> where T : IGMSerializable, new()
     {
-        public GMUniquePointerList() : base()
+        /// <summary>
+        /// Initializes an empty <see cref="GMUniquePointerList{T}"/>.
+        /// </summary>
+        public GMUniquePointerList()
         {
             UsePointerMap = false;
         }
 
+        /// <summary>
+        /// Initializes an empty <see cref="GMUniquePointerList{T}"/> with a specified capacity.
+        /// </summary>
+        /// <param name="capacity">How many elements this <see cref="GMUniquePointerList{T}"/> should be able to hold.</param>
         public GMUniquePointerList(int capacity) : base(capacity)
         {
             UsePointerMap = false;
