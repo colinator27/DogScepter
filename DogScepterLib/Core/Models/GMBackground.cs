@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a tileset since GameMaker Studio 2, contains a background otherwise.
     /// </summary>
-    public class GMBackground : GMNamedSerializable
+    public class GMBackground : IGMNamedSerializable
     {
         public GMString Name { get; set; }
         public bool Transparent;

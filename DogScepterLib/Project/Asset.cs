@@ -111,7 +111,7 @@ namespace DogScepterLib.Project
         public string Name { get; set; }
         public T Asset { get; set; } = null;
         public int DataIndex { get; set; } = -1;
-        public GMSerializable DataAsset { get; set; } = null;
+        public IGMSerializable DataAsset { get; set; } = null;
         public CachedRefData CachedData { get; set; } = null;
 
         public AssetRef(string name)
@@ -126,7 +126,7 @@ namespace DogScepterLib.Project
             DataIndex = dataIndex;
         }
 
-        public AssetRef(string name, int dataIndex, GMSerializable dataAsset = null)
+        public AssetRef(string name, int dataIndex, IGMSerializable dataAsset = null)
         {
             Name = name;
             DataIndex = dataIndex;

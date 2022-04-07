@@ -8,7 +8,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a single code entry, which could be of an object's event, a timeline's step, a script, or a function (in 2.3)
     /// </summary>
-    public class GMCode : GMSerializable
+    public class GMCode : IGMSerializable
     {
         public GMString Name;
         public int Length;
@@ -59,7 +59,7 @@ namespace DogScepterLib.Core.Models
                 int relativeBytecodeAddr = reader.ReadInt32();
                 int absoluteBytecodeAddr = (reader.Offset - 4) + relativeBytecodeAddr;
                 bool childCandidate = false;
-                if (reader.PointerOffsets.TryGetValue(absoluteBytecodeAddr, out GMSerializable s))
+                if (reader.PointerOffsets.TryGetValue(absoluteBytecodeAddr, out IGMSerializable s))
                 {
                     if (s is Bytecode b)
                     {
@@ -99,7 +99,7 @@ namespace DogScepterLib.Core.Models
         /// <summary>
         /// A sequence of GameMaker instructions.
         /// </summary>
-        public class Bytecode : GMSerializable
+        public class Bytecode : IGMSerializable
         {
             public GMCode Parent;
             public List<Instruction> Instructions = new(64);
@@ -147,7 +147,7 @@ namespace DogScepterLib.Core.Models
             /// <summary>
             /// A single GameMaker instruction.
             /// </summary>
-            public class Instruction : GMSerializable
+            public class Instruction : IGMSerializable
             {
                 public enum VariableType : byte
                 {
@@ -161,7 +161,7 @@ namespace DogScepterLib.Core.Models
                     MultiPushPop = 0x90, // Multidimensional array, used with pushaf/popaf
                 }
 
-                public class Reference<T> : GMSerializable
+                public class Reference<T> : IGMSerializable
                 {
                     public int NextOccurrence;
                     public VariableType Type;

@@ -18,13 +18,13 @@ namespace DogScepterLib.Project.Converters
 
     public abstract class AssetConverter<T> : IConverter where T : Asset
     {
-        protected delegate CachedRefData MakeCachedData(GMNamedSerializable asset);
-        protected void EmptyRefsForNamed(IEnumerable<GMNamedSerializable> dataAssets, 
+        protected delegate CachedRefData MakeCachedData(IGMNamedSerializable asset);
+        protected void EmptyRefsForNamed(IEnumerable<IGMNamedSerializable> dataAssets, 
                                          List<AssetRef<T>> projectAssets, 
                                          MakeCachedData makeCachedData = null)
         {
             int index = 0;
-            foreach (GMNamedSerializable asset in dataAssets)
+            foreach (IGMNamedSerializable asset in dataAssets)
             {
                 projectAssets.Add(new AssetRef<T>(asset.Name?.Content ?? $"null-{index}", index++, asset)
                 {

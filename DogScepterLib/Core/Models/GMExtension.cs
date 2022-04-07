@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker extension.
     /// </summary>
-    public class GMExtension : GMSerializable
+    public class GMExtension : IGMSerializable
     {
         public GMString EmptyString;
         public GMString Name;
@@ -54,7 +54,7 @@ namespace DogScepterLib.Core.Models
             return $"Extension: \"{Name.Content}\"";
         }
 
-        public class ExtensionFile : GMSerializable
+        public class ExtensionFile : IGMSerializable
         {
             public GMString Filename;
             public GMString FinalFunction;
@@ -87,7 +87,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public class ExtensionFunction : GMSerializable
+        public class ExtensionFunction : IGMSerializable
         {
             public GMString Name;
             public int ID;

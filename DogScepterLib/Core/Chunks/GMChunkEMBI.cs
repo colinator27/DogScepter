@@ -30,7 +30,7 @@ namespace DogScepterLib.Core.Chunks
             List.Deserialize(reader);
         }
 
-        public class EmbeddedImage : GMSerializable
+        public class EmbeddedImage : IGMSerializable
         {
             public GMString Name;
             public GMTextureItem TextureItem;

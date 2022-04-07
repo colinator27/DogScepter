@@ -198,7 +198,7 @@ namespace DogScepterLib.Core.Chunks
             Constants.Deserialize(reader);
         }
 
-        public class Constant : GMSerializable
+        public class Constant : IGMSerializable
         {
             public GMString Name;
             public GMString Value;

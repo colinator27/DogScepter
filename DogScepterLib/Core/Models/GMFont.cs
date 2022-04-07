@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker font.
     /// </summary>
-    public class GMFont : GMNamedSerializable
+    public class GMFont : IGMNamedSerializable
     {
         public GMString Name { get; set; }
         public GMString DisplayName;
@@ -81,7 +81,7 @@ namespace DogScepterLib.Core.Models
         }
     }
 
-    public class GMGlyph : GMSerializable
+    public class GMGlyph : IGMSerializable
     {
         public ushort Character { get; set; }
         public ushort X { get; set; }
@@ -125,7 +125,7 @@ namespace DogScepterLib.Core.Models
         }
     }
 
-    public class GMKerning : GMSerializable
+    public class GMKerning : IGMSerializable
     {
         public short Other { get; set; }
         public short Amount { get; set; }

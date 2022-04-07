@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker sequence.
     /// </summary>
-    public class GMSequence : GMSerializable
+    public class GMSequence : IGMSerializable
     {
         public enum PlaybackTypeEnum : uint
         {
@@ -90,7 +90,7 @@ namespace DogScepterLib.Core.Models
             return (Name.Content == string.Empty) ? "Sequence" : $"Sequence: \"{Name.Content}\"";
         }
 
-        public class Keyframe<T> : GMSerializable where T : GMSerializable, new()
+        public class Keyframe<T> : IGMSerializable where T : IGMSerializable, new()
         {
             public float Key;
             public float Length;
@@ -136,7 +136,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public class BroadcastMessage : GMSerializable
+        public class BroadcastMessage : IGMSerializable
         {
             public List<GMString> List;
 
@@ -160,7 +160,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public class Track : GMSerializable
+        public class Track : IGMSerializable
         {
             [Flags]
             public enum TraitsEnum
@@ -177,7 +177,7 @@ namespace DogScepterLib.Core.Models
             public List<int> Tags;
             public List<Track> Tracks;
             public TrackKeyframes Keyframes;
-            public List<GMSerializable> OwnedResources;
+            public List<IGMSerializable> OwnedResources;
             public List<GMString> OwnedResourceTypes;
 
             public void Serialize(GMDataWriter writer)
@@ -262,7 +262,7 @@ namespace DogScepterLib.Core.Models
                     Tags.Add(reader.ReadInt32());
                 }
 
-                OwnedResources = new List<GMSerializable>();
+                OwnedResources = new List<IGMSerializable>();
                 OwnedResourceTypes = new List<GMString>();
                 for (int i = 0; i < ownedResourceCount; i++)
                 {
@@ -338,7 +338,7 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
-            public class TrackKeyframes : GMSerializable
+            public class TrackKeyframes : IGMSerializable
             {
                 public virtual void Serialize(GMDataWriter writer) {}
                 public virtual void Deserialize(GMDataReader reader) {}
@@ -346,7 +346,7 @@ namespace DogScepterLib.Core.Models
 
             public class AudioKeyframes : TrackKeyframes
             {
-                public class Data : GMSerializable
+                public class Data : IGMSerializable
                 {
                     public int ID;
                     public int Mode;
@@ -382,7 +382,7 @@ namespace DogScepterLib.Core.Models
 
             public class IDKeyframes : TrackKeyframes
             {
-                public class Data : GMSerializable
+                public class Data : IGMSerializable
                 {
                     public int ID;
 
@@ -413,7 +413,7 @@ namespace DogScepterLib.Core.Models
 
             public class ValueKeyframes : TrackKeyframes
             {
-                public class Data : GMSerializable
+                public class Data : IGMSerializable
                 {
                     public int Value;
 
@@ -460,7 +460,7 @@ namespace DogScepterLib.Core.Models
 
             public class ValueInterpolatedKeyframes : TrackKeyframes
             {
-                public class Data : GMSerializable
+                public class Data : IGMSerializable
                 {
                     public int Value;
                     public bool IsCurveEmbedded;
@@ -530,7 +530,7 @@ namespace DogScepterLib.Core.Models
 
         }
 
-        public class Moment : GMSerializable
+        public class Moment : IGMSerializable
         {
             public int InternalCount; // Should be 0 if none, 1 if there's a message?
             public GMString Event;

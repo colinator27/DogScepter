@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker timeline.
     /// </summary>
-    public class GMTimeline : GMSerializable
+    public class GMTimeline : IGMSerializable
     {
         public GMString Name;
         public List<(int, GMPointerList<GMObject.Event.Action>)> Moments;

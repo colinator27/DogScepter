@@ -9,7 +9,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains information about a GameMaker function.
     /// </summary>
-    public class GMFunctionEntry : GMSerializable
+    public class GMFunctionEntry : IGMSerializable
     {
         public GMString Name;
         public int StringIndex; // Index of the string in the STRG chunk, appears to be unused(?)

@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker shader.
     /// </summary>
-    public class GMShader : GMSerializable
+    public class GMShader : IGMSerializable
     {
         public GMString Name;
         public ShaderType Type;
@@ -221,7 +221,7 @@ namespace DogScepterLib.Core.Models
         /// <summary>
         /// Contains compiled shader data.
         /// </summary>
-        public class ShaderBuffer : GMSerializable
+        public class ShaderBuffer : IGMSerializable
         {
             public BufferRegion Buffer;
 

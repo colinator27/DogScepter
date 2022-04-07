@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains binary audio data.
     /// </summary>
-    public class GMAudio : GMSerializable
+    public class GMAudio : IGMSerializable
     {
         public BufferRegion Data;
 

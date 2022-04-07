@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker sprite.
     /// </summary>
-    public class GMSprite : GMNamedSerializable
+    public class GMSprite : IGMNamedSerializable
     {
         public GMString Name { get; set; }
         public int Width;
@@ -292,7 +292,7 @@ namespace DogScepterLib.Core.Models
             return $"Sprite: \"{Name.Content}\"";
         }
 
-        public class SequenceReference : GMSerializable
+        public class SequenceReference : IGMSerializable
         {
             public GMSequence Sequence;
 
@@ -316,7 +316,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public class NineSlice : GMSerializable
+        public class NineSlice : IGMSerializable
         {
             public int Left, Top, Right, Bottom;
             public bool Enabled;

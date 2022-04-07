@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains metadata about GameMaker texture groups.
     /// </summary>
-    public class GMTextureGroupInfo : GMSerializable
+    public class GMTextureGroupInfo : IGMSerializable
     {
         public GMString Name;
         public GMList<ResourceID> TexturePageIDs = new GMList<ResourceID>();
@@ -53,7 +53,7 @@ namespace DogScepterLib.Core.Models
             return $"Texture Group Info: \"{Name.Content}\"";
         }
 
-        public class ResourceID : GMSerializable
+        public class ResourceID : IGMSerializable
         {
             public int ID;
 

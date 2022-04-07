@@ -17,7 +17,7 @@ namespace DogScepterLib.Core
         public GMData.GMVersionInfo VersionInfo => Data.VersionInfo;
         public List<GMWarning> Warnings;
 
-        public Dictionary<int, GMSerializable> PointerOffsets;
+        public Dictionary<int, IGMSerializable> PointerOffsets;
         public Dictionary<int, GMCode.Bytecode.Instruction> Instructions;
         public List<(GMTextureData, int)> TexturesToDecompress;
 
@@ -39,7 +39,7 @@ namespace DogScepterLib.Core
             }
 
             Warnings = new List<GMWarning>();
-            PointerOffsets = new Dictionary<int, GMSerializable>(65536);
+            PointerOffsets = new Dictionary<int, IGMSerializable>(65536);
             Instructions = new Dictionary<int, GMCode.Bytecode.Instruction>(1024 * 1024);
             TexturesToDecompress = new List<(GMTextureData, int)>(64);
         }
@@ -86,11 +86,11 @@ namespace DogScepterLib.Core
         /// <summary>
         /// Returns (a possibly empty) object of the object type, at the specified pointer address
         /// </summary>
-        public T ReadPointer<T>(int ptr) where T : GMSerializable, new()
+        public T ReadPointer<T>(int ptr) where T : IGMSerializable, new()
         {
             if (ptr == 0)
                 return default;
-            if (PointerOffsets.TryGetValue(ptr, out GMSerializable s))
+            if (PointerOffsets.TryGetValue(ptr, out IGMSerializable s))
                 return (T)s;
             T res = new T();
             PointerOffsets[ptr] = res;
@@ -100,7 +100,7 @@ namespace DogScepterLib.Core
         /// <summary>
         /// Returns (a possibly empty) object of the object type, at the pointer in the file
         /// </summary>
-        public T ReadPointer<T>() where T : GMSerializable, new()
+        public T ReadPointer<T>() where T : IGMSerializable, new()
         {
             return ReadPointer<T>(ReadInt32());
         }
@@ -108,13 +108,13 @@ namespace DogScepterLib.Core
         /// <summary>
         /// Follows the specified pointer for an object type, unserializes it and returns it
         /// </summary>
-        public T ReadPointerObject<T>(int ptr) where T : GMSerializable, new()
+        public T ReadPointerObject<T>(int ptr) where T : IGMSerializable, new()
         {
             if (ptr <= 0)
                 return default;
 
             T res;
-            if (PointerOffsets.TryGetValue(ptr, out GMSerializable s))
+            if (PointerOffsets.TryGetValue(ptr, out IGMSerializable s))
                 res = (T)s;
             else
             {
@@ -136,13 +136,13 @@ namespace DogScepterLib.Core
         /// Follows the specified pointer for an object type, unserializes it and returns it.
         /// Also has helper callbacks for list reading.
         /// </summary>
-        public T ReadPointerObject<T>(int ptr, bool returnAfter = true) where T : GMSerializable, new()
+        public T ReadPointerObject<T>(int ptr, bool returnAfter = true) where T : IGMSerializable, new()
         {
             if (ptr == 0)
                 return default;
 
             T res;
-            if (PointerOffsets.TryGetValue(ptr, out GMSerializable s))
+            if (PointerOffsets.TryGetValue(ptr, out IGMSerializable s))
                 res = (T)s;
             else
             {
@@ -164,11 +164,11 @@ namespace DogScepterLib.Core
         /// <summary>
         /// Follows the specified pointer for an object type, unserializes it and returns it.
         /// Also has helper callbacks for list reading.
-        /// 
+        ///
         /// This version of the function should only be used when a specific pointer is used *once*, to waste less resources.
         /// This does not add any information or use any information from the pointer map.
         /// </summary>
-        public T ReadPointerObjectUnique<T>(int ptr, bool returnAfter = true) where T : GMSerializable, new()
+        public T ReadPointerObjectUnique<T>(int ptr, bool returnAfter = true) where T : IGMSerializable, new()
         {
             if (ptr == 0)
                 return default;
@@ -189,7 +189,7 @@ namespace DogScepterLib.Core
         /// <summary>
         /// Follows a pointer (in the file) for an object type, unserializes it and returns it.
         /// </summary>
-        public T ReadPointerObject<T>() where T : GMSerializable, new()
+        public T ReadPointerObject<T>() where T : IGMSerializable, new()
         {
             return ReadPointerObject<T>(ReadInt32());
         }
@@ -198,7 +198,7 @@ namespace DogScepterLib.Core
         /// Follows a pointer (in the file) for an object type, unserializes it and returns it.
         /// Uses the unique variant function internally, which does not get involved with the pointer map at all.
         /// </summary>
-        public T ReadPointerObjectUnique<T>() where T : GMSerializable, new()
+        public T ReadPointerObjectUnique<T>() where T : IGMSerializable, new()
         {
             return ReadPointerObjectUnique<T>(ReadInt32());
         }

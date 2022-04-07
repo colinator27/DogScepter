@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker path.
     /// </summary>
-    public class GMPath : GMNamedSerializable
+    public class GMPath : IGMNamedSerializable
     {
         public GMString Name { get; set; }
         public bool Smooth;
@@ -39,7 +39,7 @@ namespace DogScepterLib.Core.Models
             return $"Path: \"{Name.Content}\"";
         }
 
-        public class Point : GMSerializable
+        public class Point : IGMSerializable
         {
             public float X;
             public float Y;

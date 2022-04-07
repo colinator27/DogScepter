@@ -10,13 +10,13 @@ namespace DogScepterLib.Core
     public delegate void ListUnserialize(GMDataReader reader, int index, int count);
 
     // Callbacks for reading/writing each element, in special scenarios
-    public delegate void ListSerializeElement(GMDataWriter writer, GMSerializable elem);
-    public delegate GMSerializable ListUnserializeElement(GMDataReader reader, bool notLast);
+    public delegate void ListSerializeElement(GMDataWriter writer, IGMSerializable elem);
+    public delegate IGMSerializable ListUnserializeElement(GMDataReader reader, bool notLast);
 
     /// <summary>
     /// Basic array-like list type in data file
     /// </summary>
-    public class GMList<T> : List<T>, GMSerializable where T : GMSerializable, new()
+    public class GMList<T> : List<T>, IGMSerializable where T : IGMSerializable, new()
     {
         public GMList()
         {
@@ -85,7 +85,7 @@ namespace DogScepterLib.Core
     /// <summary>
     /// A list of pointers to objects, forming a list, in the data file
     /// </summary>
-    public class GMPointerList<T> : GMList<T> where T : GMSerializable, new()
+    public class GMPointerList<T> : GMList<T> where T : IGMSerializable, new()
     {
         public bool UsePointerMap = true;
 
@@ -143,12 +143,12 @@ namespace DogScepterLib.Core
             Serialize(writer, null, null, null);
         }
 
-        private static GMSerializable DoReadPointerObject(GMDataReader reader, bool notLast)
+        private static IGMSerializable DoReadPointerObject(GMDataReader reader, bool notLast)
         {
             return reader.ReadPointerObject<T>(reader.ReadInt32(), notLast);
         }
 
-        private static GMSerializable DoReadPointerObjectUnique(GMDataReader reader, bool notLast)
+        private static IGMSerializable DoReadPointerObjectUnique(GMDataReader reader, bool notLast)
         {
             return reader.ReadPointerObjectUnique<T>(reader.ReadInt32(), notLast);
         }
@@ -192,7 +192,7 @@ namespace DogScepterLib.Core
     /// specifically specified to not be adjacent, therefore the offset is reset at the end
     /// to the offset after the final pointer. Also, writing does not serialize actual objects.
     /// </summary>
-    public class GMRemotePointerList<T> : GMList<T> where T : GMSerializable, new()
+    public class GMRemotePointerList<T> : GMList<T> where T : IGMSerializable, new()
     {
 
         public void Serialize(GMDataWriter writer, ListSerialize before = null,
@@ -260,7 +260,7 @@ namespace DogScepterLib.Core
     /// A list of pointers to objects, forming a list, in the data file.
     /// This variant automatically sets UsePointerMap in the base class to false. 
     /// </summary>
-    public class GMUniquePointerList<T> : GMPointerList<T> where T : GMSerializable, new()
+    public class GMUniquePointerList<T> : GMPointerList<T> where T : IGMSerializable, new()
     {
         public GMUniquePointerList() : base()
         {

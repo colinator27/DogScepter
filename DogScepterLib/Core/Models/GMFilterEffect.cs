@@ -1,6 +1,6 @@
 ﻿namespace DogScepterLib.Core.Models
 {
-    public class GMFilterEffect : GMNamedSerializable
+    public class GMFilterEffect : IGMNamedSerializable
     {
         public GMString Name { get; set; }
         public GMString Value; // Unsure how this is determined just yet

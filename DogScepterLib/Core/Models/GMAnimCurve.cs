@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker sequence.
     /// </summary>
-    public class GMAnimCurve : GMSerializable
+    public class GMAnimCurve : IGMSerializable
     {
         public enum GraphTypeEnum
         {
@@ -53,7 +53,7 @@ namespace DogScepterLib.Core.Models
             return $"Animation Curve: \"{Name.Content}\"";
         }
 
-        public class Channel : GMSerializable
+        public class Channel : IGMSerializable
         {
             public enum FunctionTypeEnum
             {
@@ -91,7 +91,7 @@ namespace DogScepterLib.Core.Models
                 return $"Animation Curve Channel: \"{Name.Content}\"";
             }
 
-            public class Point : GMSerializable
+            public class Point : IGMSerializable
             {
                 public float X;
                 public float Value;

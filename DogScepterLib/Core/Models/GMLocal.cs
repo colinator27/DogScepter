@@ -8,7 +8,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a list of local variables, per script entry (Assigned to scripts by having the same Name property).
     /// </summary>
-    public class GMLocalsEntry : GMSerializable
+    public class GMLocalsEntry : IGMSerializable
     {
         public GMString Name;
         public List<GMLocal> Entries;
@@ -45,7 +45,7 @@ namespace DogScepterLib.Core.Models
     }
 
     [DebuggerDisplay("{Name.Content}")]
-    public class GMLocal : GMSerializable
+    public class GMLocal : IGMSerializable
     {
         public uint Index;
         public GMString Name;

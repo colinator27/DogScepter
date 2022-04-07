@@ -8,7 +8,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains information about a GameMaker variable.
     /// </summary>
-    public class GMVariable : GMSerializable
+    public class GMVariable : IGMSerializable
     {
         public GMString Name;
         public GMCode.Bytecode.Instruction.InstanceType VariableType;

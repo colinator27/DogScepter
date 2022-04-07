@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker room.
     /// </summary>
-    public class GMRoom : GMNamedSerializable
+    public class GMRoom : IGMNamedSerializable
     {
         [Flags]
         public enum RoomFlags : int
@@ -174,7 +174,7 @@ namespace DogScepterLib.Core.Models
         /// <summary>
         /// Contains information about a background in a room.
         /// </summary>
-        public class Background : GMSerializable
+        public class Background : IGMSerializable
         {
             public bool Enabled;
             public bool Foreground;
@@ -210,7 +210,7 @@ namespace DogScepterLib.Core.Models
         /// <summary>
         /// Contains information about a view in a room.
         /// </summary>
-        public class View : GMSerializable
+        public class View : IGMSerializable
         {
             public bool Enabled;
             public int ViewX, ViewY, ViewWidth, ViewHeight;
@@ -234,7 +234,7 @@ namespace DogScepterLib.Core.Models
             public void Deserialize(GMDataReader reader)
             {
                 Enabled = reader.ReadWideBoolean();
-                ViewX = reader.ReadInt32(); ViewY = reader.ReadInt32(); 
+                ViewX = reader.ReadInt32(); ViewY = reader.ReadInt32();
                 ViewWidth = reader.ReadInt32(); ViewHeight = reader.ReadInt32();
                 PortX = reader.ReadInt32(); PortY = reader.ReadInt32();
                 PortWidth = reader.ReadInt32(); PortHeight = reader.ReadInt32();
@@ -247,7 +247,7 @@ namespace DogScepterLib.Core.Models
         /// <summary>
         /// Contains information about an object in a room.
         /// </summary>
-        public class GameObject : GMSerializable
+        public class GameObject : IGMSerializable
         {
             public int X, Y;
             public int ObjectID;
@@ -304,7 +304,7 @@ namespace DogScepterLib.Core.Models
         /// <summary>
         /// Contains information about a tile in a room.
         /// </summary>
-        public class Tile : GMSerializable
+        public class Tile : IGMSerializable
         {
             public int X, Y;
             public int AssetID; // Sprite in GMS2, background before
@@ -343,7 +343,7 @@ namespace DogScepterLib.Core.Models
         /// <summary>
         /// Contains information about a layer in a room.
         /// </summary>
-        public class Layer : GMSerializable
+        public class Layer : IGMSerializable
         {
             public enum LayerKind : int
             {
@@ -464,7 +464,7 @@ namespace DogScepterLib.Core.Models
                 return Name.Content;
             }
 
-            public class LayerBackground : GMSerializable
+            public class LayerBackground : IGMSerializable
             {
                 public bool Visible;
                 public bool Foreground;
@@ -505,7 +505,7 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
-            public class LayerInstances : GMSerializable
+            public class LayerInstances : IGMSerializable
             {
                 // IDs corresponding to the IDs given in the GameObjects list in the room
                 public List<int> Instances { get; set; }
@@ -526,7 +526,7 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
-            public class LayerAssets : GMSerializable
+            public class LayerAssets : IGMSerializable
             {
                 public GMUniquePointerList<Tile> LegacyTiles;
                 public GMUniquePointerList<AssetInstance> Sprites;
@@ -581,7 +581,7 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
-            public class AssetInstance : GMSerializable
+            public class AssetInstance : IGMSerializable
             {
                 public GMString Name;
                 public int AssetID;
@@ -625,7 +625,7 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
-            public class LayerTiles : GMSerializable
+            public class LayerTiles : IGMSerializable
             {
                 public int BackgroundID;
                 public int TilesX, TilesY;
@@ -658,7 +658,7 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
-            public class LayerEffect : GMSerializable
+            public class LayerEffect : IGMSerializable
             {
                 public GMString EffectType;
                 public GMList<EffectProperty> Properties;
@@ -677,7 +677,7 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
-            public class EffectProperty : GMSerializable
+            public class EffectProperty : IGMSerializable
             {
                 public enum PropertyType
                 {

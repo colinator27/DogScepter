@@ -7,7 +7,7 @@ namespace DogScepterLib.Core.Models
     /// <summary>
     /// Contains a GameMaker object (as in the game world/room)
     /// </summary>
-    public class GMObject : GMNamedSerializable
+    public class GMObject : IGMNamedSerializable
     {
         public enum CollisionShape : int
         {
@@ -103,7 +103,7 @@ namespace DogScepterLib.Core.Models
             return $"Object: \"{Name.Content}\"";
         }
 
-        public class PhysicsVertex : GMSerializable
+        public class PhysicsVertex : IGMSerializable
         {
             public float X, Y;
 
@@ -120,7 +120,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public class Event : GMSerializable
+        public class Event : IGMSerializable
         {
             public int Subtype;
             public GMUniquePointerList<Action> Actions;
@@ -138,7 +138,7 @@ namespace DogScepterLib.Core.Models
                 Actions.Deserialize(reader);
             }
 
-            public class Action : GMSerializable
+            public class Action : IGMSerializable
             {
                 public int LibID;
                 public int ID;

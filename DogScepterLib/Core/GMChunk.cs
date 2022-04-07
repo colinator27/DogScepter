@@ -7,7 +7,7 @@ using DogScepterLib.Core.Chunks;
 
 namespace DogScepterLib.Core
 {
-    public class GMChunk : GMSerializable
+    public class GMChunk : IGMSerializable
     {
         public int Length;
         public int StartOffset;

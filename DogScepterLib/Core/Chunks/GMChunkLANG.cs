@@ -55,7 +55,7 @@ namespace DogScepterLib.Core.Chunks
             }
         }
 
-        public class Language : GMSerializable
+        public class Language : IGMSerializable
         {
             public GMString Name;
             public GMString Region;

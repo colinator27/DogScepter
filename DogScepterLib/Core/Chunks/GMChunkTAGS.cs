@@ -43,7 +43,7 @@ namespace DogScepterLib.Core.Chunks
             AssetTagsList.Deserialize(reader);
         }
 
-        public class AssetTags : GMSerializable
+        public class AssetTags : IGMSerializable
         {
             public int ID;
             public List<GMString> Tags;
