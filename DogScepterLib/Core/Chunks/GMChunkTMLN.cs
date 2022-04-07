@@ -16,12 +16,12 @@ namespace DogScepterLib.Core.Chunks
             List.Serialize(writer);
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             List = new GMUniquePointerList<GMTimeline>();
-            List.Unserialize(reader);
+            List.Deserialize(reader);
         }
     }
 }

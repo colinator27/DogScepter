@@ -143,7 +143,7 @@ namespace DogScepterLib.Core.Models
             writer.Write(TexturePageID);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             SourceX = reader.ReadUInt16();
             SourceY = reader.ReadUInt16();

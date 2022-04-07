@@ -39,14 +39,14 @@ namespace DogScepterLib.Core.Models
             Files.Serialize(writer);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             EmptyString = reader.ReadStringPointerObject();
             Name = reader.ReadStringPointerObject();
             ClassName = reader.ReadStringPointerObject();
 
             Files = new GMPointerList<ExtensionFile>();
-            Files.Unserialize(reader);
+            Files.Deserialize(reader);
         }
 
         public override string ToString()
@@ -71,14 +71,14 @@ namespace DogScepterLib.Core.Models
                 Functions.Serialize(writer);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Filename = reader.ReadStringPointerObject();
                 FinalFunction = reader.ReadStringPointerObject();
                 InitFunction = reader.ReadStringPointerObject();
                 Kind = (ExtensionKind)reader.ReadUInt32();
                 Functions = new GMPointerList<ExtensionFunction>();
-                Functions.Unserialize(reader);
+                Functions.Deserialize(reader);
             }
 
             public override string ToString()
@@ -109,7 +109,7 @@ namespace DogScepterLib.Core.Models
                     writer.Write((uint)ArgumentTypes[i]);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Name = reader.ReadStringPointerObject();
                 ID = reader.ReadInt32();

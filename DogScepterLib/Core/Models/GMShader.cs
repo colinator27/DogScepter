@@ -137,7 +137,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             throw new NotImplementedException();
         }
@@ -230,7 +230,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write(Buffer);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 throw new NotImplementedException();
             }

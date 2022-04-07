@@ -65,7 +65,7 @@ namespace DogScepterLib.Core.Models
             Events.Serialize(writer);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
             SpriteID = reader.ReadInt32();
@@ -91,11 +91,11 @@ namespace DogScepterLib.Core.Models
             for (int i = vertexCount; i > 0; i--)
             {
                 PhysicsVertex v = new PhysicsVertex();
-                v.Unserialize(reader);
+                v.Deserialize(reader);
                 PhysicsVertices.Add(v);
             }
             Events = new GMUniquePointerList<GMUniquePointerList<Event>>();
-            Events.Unserialize(reader);
+            Events.Deserialize(reader);
         }
 
         public override string ToString()
@@ -113,7 +113,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write(Y);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 X = reader.ReadSingle();
                 Y = reader.ReadSingle();
@@ -131,11 +131,11 @@ namespace DogScepterLib.Core.Models
                 Actions.Serialize(writer);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Subtype = reader.ReadInt32();
                 Actions = new GMUniquePointerList<Action>();
-                Actions.Unserialize(reader);
+                Actions.Deserialize(reader);
             }
 
             public class Action : GMSerializable
@@ -172,7 +172,7 @@ namespace DogScepterLib.Core.Models
                     writer.Write(0);
                 }
 
-                public void Unserialize(GMDataReader reader)
+                public void Deserialize(GMDataReader reader)
                 {
                     LibID = reader.ReadInt32();
                     ID = reader.ReadInt32();

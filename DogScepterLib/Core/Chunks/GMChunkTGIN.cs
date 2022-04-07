@@ -18,16 +18,16 @@ namespace DogScepterLib.Core.Chunks
             List.Serialize(writer);
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             int chunkVersion = reader.ReadInt32();
             if (chunkVersion != 1)
                 reader.Warnings.Add(new GMWarning($"TGIN version is {chunkVersion}, expected 1"));
 
             List = new GMUniquePointerList<GMTextureGroupInfo>();
-            List.Unserialize(reader);
+            List.Deserialize(reader);
         }
     }
 }

@@ -215,9 +215,9 @@ namespace DogScepterLib.Core.Chunks
             }
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             DisableDebug = reader.ReadBoolean();
             FormatID = reader.ReadByte();

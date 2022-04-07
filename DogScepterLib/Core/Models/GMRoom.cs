@@ -104,7 +104,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
             Caption = reader.ReadStringPointerObject();
@@ -163,7 +163,7 @@ namespace DogScepterLib.Core.Models
             }
             reader.Offset = gameObjectListPtr;
             GameObjects = new GMUniquePointerList<GameObject>();
-            GameObjects.Unserialize(reader);
+            GameObjects.Deserialize(reader);
         }
 
         public override string ToString()
@@ -195,7 +195,7 @@ namespace DogScepterLib.Core.Models
                 writer.WriteWideBoolean(Stretch);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Enabled = reader.ReadWideBoolean();
                 Foreground = reader.ReadWideBoolean();
@@ -231,7 +231,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write(FollowObjectID);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Enabled = reader.ReadWideBoolean();
                 ViewX = reader.ReadInt32(); ViewY = reader.ReadInt32(); 
@@ -282,7 +282,7 @@ namespace DogScepterLib.Core.Models
                     writer.Write(PreCreateCodeID);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 X = reader.ReadInt32(); Y = reader.ReadInt32();
                 ObjectID = reader.ReadInt32();
@@ -327,7 +327,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write(Color);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 X = reader.ReadInt32(); Y = reader.ReadInt32();
                 AssetID = reader.ReadInt32();
@@ -413,7 +413,7 @@ namespace DogScepterLib.Core.Models
                 }
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Name = reader.ReadStringPointerObject();
                 ID = reader.ReadInt32();
@@ -428,30 +428,30 @@ namespace DogScepterLib.Core.Models
                     EffectEnabled = reader.ReadWideBoolean();
                     EffectType = reader.ReadStringPointerObject();
                     EffectProperties = new GMList<EffectProperty>();
-                    EffectProperties.Unserialize(reader);
+                    EffectProperties.Deserialize(reader);
                 }
 
                 switch (Kind)
                 {
                     case LayerKind.Background:
                         Background = new LayerBackground();
-                        Background.Unserialize(reader);
+                        Background.Deserialize(reader);
                         break;
                     case LayerKind.Instances:
                         Instances = new LayerInstances();
-                        Instances.Unserialize(reader);
+                        Instances.Deserialize(reader);
                         break;
                     case LayerKind.Assets:
                         Assets = new LayerAssets();
-                        Assets.Unserialize(reader);
+                        Assets.Deserialize(reader);
                         break;
                     case LayerKind.Tiles:
                         Tiles = new LayerTiles();
-                        Tiles.Unserialize(reader);
+                        Tiles.Deserialize(reader);
                         break;
                     case LayerKind.Effect:
                         Effect = new LayerEffect();
-                        Effect.Unserialize(reader);
+                        Effect.Deserialize(reader);
                         break;
                     default:
                         reader.Warnings.Add(new GMWarning($"Unknown layer kind {Kind}"));
@@ -490,7 +490,7 @@ namespace DogScepterLib.Core.Models
                     writer.Write((int)AnimationSpeedType);
                 }
 
-                public void Unserialize(GMDataReader reader)
+                public void Deserialize(GMDataReader reader)
                 {
                     Visible = reader.ReadWideBoolean();
                     Foreground = reader.ReadWideBoolean();
@@ -517,7 +517,7 @@ namespace DogScepterLib.Core.Models
                         writer.Write(i);
                 }
 
-                public void Unserialize(GMDataReader reader)
+                public void Deserialize(GMDataReader reader)
                 {
                     int count = reader.ReadInt32();
                     Instances = new List<int>(count);
@@ -567,7 +567,7 @@ namespace DogScepterLib.Core.Models
                     }
                 }
 
-                public void Unserialize(GMDataReader reader)
+                public void Deserialize(GMDataReader reader)
                 {
                     LegacyTiles = reader.ReadPointerObjectUnique<GMUniquePointerList<Tile>>();
                     Sprites = reader.ReadPointerObjectUnique<GMUniquePointerList<AssetInstance>>();
@@ -606,7 +606,7 @@ namespace DogScepterLib.Core.Models
                     writer.Write(Rotation);
                 }
 
-                public void Unserialize(GMDataReader reader)
+                public void Deserialize(GMDataReader reader)
                 {
                     Name = reader.ReadStringPointerObject();
                     AssetID = reader.ReadInt32();
@@ -643,7 +643,7 @@ namespace DogScepterLib.Core.Models
                     }
                 }
 
-                public void Unserialize(GMDataReader reader)
+                public void Deserialize(GMDataReader reader)
                 {
                     BackgroundID = reader.ReadInt32();
                     TilesX = reader.ReadInt32();
@@ -669,11 +669,11 @@ namespace DogScepterLib.Core.Models
                     Properties.Serialize(writer);
                 }
 
-                public void Unserialize(GMDataReader reader)
+                public void Deserialize(GMDataReader reader)
                 {
                     EffectType = reader.ReadStringPointerObject();
                     Properties = new GMList<EffectProperty>();
-                    Properties.Unserialize(reader);
+                    Properties.Deserialize(reader);
                 }
             }
 
@@ -697,7 +697,7 @@ namespace DogScepterLib.Core.Models
                     writer.WritePointerString(Value);
                 }
 
-                public void Unserialize(GMDataReader reader)
+                public void Deserialize(GMDataReader reader)
                 {
                     Kind = (PropertyType)reader.ReadInt32();
                     Name = reader.ReadStringPointerObject();

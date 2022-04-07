@@ -21,9 +21,9 @@ namespace DogScepterLib.Core.Chunks
             List.Serialize(writer);
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
             
             // This chunk can just be empty sometimes
             if (Length == 0)
@@ -34,7 +34,7 @@ namespace DogScepterLib.Core.Chunks
                 reader.Warnings.Add(new GMWarning($"SEQN version is {chunkVersion}, expected 1"));
 
             List = new GMUniquePointerList<GMSequence>();
-            List.Unserialize(reader);
+            List.Deserialize(reader);
         }
     }
 }

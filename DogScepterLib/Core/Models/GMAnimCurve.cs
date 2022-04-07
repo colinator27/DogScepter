@@ -33,7 +33,7 @@ namespace DogScepterLib.Core.Models
             Channels.Serialize(writer);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Unserialize(reader, true);
         }
@@ -45,7 +45,7 @@ namespace DogScepterLib.Core.Models
             GraphType = (GraphTypeEnum)reader.ReadUInt32();
 
             Channels = new GMList<Channel>();
-            Channels.Unserialize(reader);
+            Channels.Deserialize(reader);
         }
 
         public override string ToString()
@@ -76,14 +76,14 @@ namespace DogScepterLib.Core.Models
                 Points.Serialize(writer);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Name = reader.ReadStringPointerObject();
                 FunctionType = (FunctionTypeEnum)reader.ReadUInt32();
                 Iterations = (ushort)reader.ReadUInt32();
 
                 Points = new GMList<Point>();
-                Points.Unserialize(reader);
+                Points.Deserialize(reader);
             }
 
             public override string ToString()
@@ -117,7 +117,7 @@ namespace DogScepterLib.Core.Models
                         writer.Write(0);
                 }
 
-                public void Unserialize(GMDataReader reader)
+                public void Deserialize(GMDataReader reader)
                 {
                     X = reader.ReadSingle();
                     Value = reader.ReadSingle();

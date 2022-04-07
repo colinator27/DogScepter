@@ -19,9 +19,9 @@ namespace DogScepterLib.Core.Chunks
             List.Serialize(writer);
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             reader.Pad(4);
 
@@ -30,7 +30,7 @@ namespace DogScepterLib.Core.Chunks
                 reader.Warnings.Add(new GMWarning($"FEDS version is {chunkVersion}, expected 1"));
 
             List = new GMUniquePointerList<GMFilterEffect>();
-            List.Unserialize(reader);
+            List.Deserialize(reader);
         }
     }
 }

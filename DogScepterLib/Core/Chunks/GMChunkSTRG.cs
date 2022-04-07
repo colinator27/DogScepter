@@ -23,9 +23,9 @@ namespace DogScepterLib.Core.Chunks
             writer.Pad(128);
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             List = new GMPointerList<GMString>();
             List.Unserialize(reader, null, null, (GMDataReader reader, bool notLast) => 

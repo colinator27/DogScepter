@@ -18,9 +18,9 @@ namespace DogScepterLib.Core.Chunks
                 writer.Write(item);
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             int count = reader.ReadInt32();
             List = new List<int>(count);

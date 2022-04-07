@@ -44,12 +44,12 @@ namespace DogScepterLib.Core.Chunks
             }
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             List = new GMUniquePointerList<GMAudioGroup>();
-            List.Unserialize(reader);
+            List.Deserialize(reader);
 
             // Now load the audio groups if possible
             string dir = reader.Data.Directory;
@@ -77,7 +77,7 @@ namespace DogScepterLib.Core.Chunks
                         }
                     }
                 }
-            }    
+            }
         }
     }
 }

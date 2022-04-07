@@ -48,7 +48,7 @@ namespace DogScepterLib.Core.Models
             Glyphs.Serialize(writer);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
             DisplayName = reader.ReadStringPointerObject();
@@ -72,7 +72,7 @@ namespace DogScepterLib.Core.Models
             if (reader.VersionInfo.IsNumberAtLeast(2022, 2))
                 Ascender = reader.ReadInt32();
             Glyphs = new GMUniquePointerList<GMGlyph>();
-            Glyphs.Unserialize(reader);
+            Glyphs.Deserialize(reader);
         }
 
         public override string ToString()
@@ -106,7 +106,7 @@ namespace DogScepterLib.Core.Models
                 Kerning[i].Serialize(writer);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Character = reader.ReadUInt16();
             X = reader.ReadUInt16();
@@ -119,7 +119,7 @@ namespace DogScepterLib.Core.Models
             for (ushort i = reader.ReadUInt16(); i > 0; i--)
             {
                 GMKerning k = new GMKerning();
-                k.Unserialize(reader);
+                k.Deserialize(reader);
                 Kerning.Add(k);
             }
         }
@@ -136,7 +136,7 @@ namespace DogScepterLib.Core.Models
             writer.Write(Amount);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Other = reader.ReadInt16();
             Amount = reader.ReadInt16();

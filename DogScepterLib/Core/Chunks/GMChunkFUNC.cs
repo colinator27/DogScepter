@@ -28,9 +28,9 @@ namespace DogScepterLib.Core.Chunks
             }
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             FunctionEntries = new GMList<GMFunctionEntry>();
             Locals = new GMList<GMLocalsEntry>();
@@ -41,14 +41,14 @@ namespace DogScepterLib.Core.Chunks
                 while (reader.Offset + 12 <= startOff + Length)
                 {
                     GMFunctionEntry entry = new GMFunctionEntry();
-                    entry.Unserialize(reader);
+                    entry.Deserialize(reader);
                     FunctionEntries.Add(entry);
                 }
             }
             else
             {
-                FunctionEntries.Unserialize(reader);
-                Locals.Unserialize(reader);
+                FunctionEntries.Deserialize(reader);
+                Locals.Deserialize(reader);
             }
         }
 

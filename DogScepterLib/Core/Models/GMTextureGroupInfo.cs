@@ -38,7 +38,7 @@ namespace DogScepterLib.Core.Models
             TilesetIDs.Serialize(writer);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
             TexturePageIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
@@ -62,7 +62,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write(ID);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 ID = reader.ReadInt32();
             }

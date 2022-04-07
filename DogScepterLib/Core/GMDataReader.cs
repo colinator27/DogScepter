@@ -55,7 +55,7 @@ namespace DogScepterLib.Core
             if (ReadChars(4) != "FORM")
                 throw new GMException("Root chunk is not \"FORM\"; invalid file.");
             Data.FORM = new GMChunkFORM();
-            Data.FORM.Unserialize(this);
+            Data.FORM.Deserialize(this);
 
             if (clearData)
             {
@@ -125,7 +125,7 @@ namespace DogScepterLib.Core
             int returnTo = Offset;
             Offset = ptr;
 
-            res.Unserialize(this);
+            res.Deserialize(this);
 
             Offset = returnTo;
 
@@ -153,7 +153,7 @@ namespace DogScepterLib.Core
             int returnTo = Offset;
             Offset = ptr;
 
-            res.Unserialize(this);
+            res.Deserialize(this);
 
             if (returnAfter)
                 Offset = returnTo;
@@ -178,7 +178,7 @@ namespace DogScepterLib.Core
             int returnTo = Offset;
             Offset = ptr;
 
-            res.Unserialize(this);
+            res.Deserialize(this);
 
             if (returnAfter)
                 Offset = returnTo;

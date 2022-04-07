@@ -40,7 +40,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
             Length = reader.ReadInt32();
@@ -127,7 +127,7 @@ namespace DogScepterLib.Core.Models
                     i.Serialize(writer);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 throw new NotImplementedException();
             }
@@ -139,7 +139,7 @@ namespace DogScepterLib.Core.Models
                 while (reader.Offset < end)
                 {
                     Instruction i = new(reader.Offset - begin);
-                    i.Unserialize(reader);
+                    i.Deserialize(reader);
                     Instructions.Add(i);
                 }
             }
@@ -183,7 +183,7 @@ namespace DogScepterLib.Core.Models
                         writer.Write((byte)Type);
                     }
 
-                    public void Unserialize(GMDataReader reader)
+                    public void Deserialize(GMDataReader reader)
                     {
                         NextOccurrence = reader.ReadInt24();
                         Type = (VariableType)reader.ReadByte();
@@ -582,7 +582,7 @@ namespace DogScepterLib.Core.Models
                     }
                 }
 
-                public void Unserialize(GMDataReader reader)
+                public void Deserialize(GMDataReader reader)
                 {
                     int start = reader.Offset;
                     reader.Instructions[start] = this;
@@ -659,7 +659,7 @@ namespace DogScepterLib.Core.Models
                                 if (Type1 != DataType.Int16) // ignore swap instructions
                                 {
                                     Variable = new Reference<GMVariable>();
-                                    Variable.Unserialize(reader);
+                                    Variable.Deserialize(reader);
                                 }
                             }
                             break;
@@ -712,7 +712,7 @@ namespace DogScepterLib.Core.Models
                                     case DataType.Variable:
                                         TypeInst = (InstanceType)val;
                                         Variable = new Reference<GMVariable>();
-                                        Variable.Unserialize(reader);
+                                        Variable.Deserialize(reader);
                                         break;
                                     case DataType.String:
                                         Value = reader.ReadInt32(); // string ID
@@ -731,7 +731,7 @@ namespace DogScepterLib.Core.Models
                                 reader.Offset += 1;
 
                                 Function = new Reference<GMFunctionEntry>();
-                                Function.Unserialize(reader);
+                                Function.Deserialize(reader);
                             }
                             break;
                         case InstructionType.Break:

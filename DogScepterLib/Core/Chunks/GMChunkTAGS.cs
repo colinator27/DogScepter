@@ -24,9 +24,9 @@ namespace DogScepterLib.Core.Chunks
             AssetTagsList.Serialize(writer);
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             reader.Pad(4);
 
@@ -40,7 +40,7 @@ namespace DogScepterLib.Core.Chunks
                 AllTags.Add(reader.ReadStringPointerObject());
 
             AssetTagsList = new GMUniquePointerList<AssetTags>();
-            AssetTagsList.Unserialize(reader);
+            AssetTagsList.Deserialize(reader);
         }
 
         public class AssetTags : GMSerializable
@@ -56,7 +56,7 @@ namespace DogScepterLib.Core.Chunks
                     writer.WritePointerString(s);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 ID = reader.ReadInt32();
                 int count = reader.ReadInt32();

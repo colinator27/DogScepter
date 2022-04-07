@@ -56,7 +56,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write((int)-1);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
 

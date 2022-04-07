@@ -17,7 +17,7 @@ namespace DogScepterLib.Core
         {
         }
 
-        public virtual void Unserialize(GMDataReader reader)
+        public virtual void Deserialize(GMDataReader reader)
         {
             // Read chunk length, measure start/end
             Length = reader.ReadInt32();
@@ -100,9 +100,9 @@ namespace DogScepterLib.Core
             writer.EndLength(beg);
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             // Gather the names and offsets of the sub-chunks
             ChunkNames = new List<string>();
@@ -139,7 +139,7 @@ namespace DogScepterLib.Core
                 if (!ChunkMap.TryGetValue(ChunkNames[i], out type))
                 {
                     // Unknown chunk name, so skip past it
-                    reader.Warnings.Add(new GMWarning($"Unknown chunk with name {ChunkNames[i]}", 
+                    reader.Warnings.Add(new GMWarning($"Unknown chunk with name {ChunkNames[i]}",
                                                         GMWarning.WarningLevel.Severe, GMWarning.WarningKind.UnknownChunk));
                     continue;
                 }
@@ -148,7 +148,7 @@ namespace DogScepterLib.Core
                 reader.Offset += 4;
                 GMChunk chunk = (GMChunk)Activator.CreateInstance(type);
                 Chunks.Add(ChunkNames[i], chunk);
-                chunk.Unserialize(reader);
+                chunk.Deserialize(reader);
             }
         }
     }

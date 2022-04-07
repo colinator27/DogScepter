@@ -22,7 +22,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write(CodeID);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
             CodeID = reader.ReadInt32();

@@ -23,7 +23,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Entries = new List<GMLocal>();
 
@@ -33,7 +33,7 @@ namespace DogScepterLib.Core.Models
             for (int i = 0; i < count; i++)
             {
                 GMLocal local = new GMLocal();
-                local.Unserialize(reader);
+                local.Deserialize(reader);
                 Entries.Add(local);
             }
         }
@@ -56,7 +56,7 @@ namespace DogScepterLib.Core.Models
             writer.WritePointerString(Name);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Index = reader.ReadUInt32();
             Name = reader.ReadStringPointerObject();

@@ -17,14 +17,14 @@ namespace DogScepterLib.Core.Chunks
             List.Serialize(writer);
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             DoFormatCheck(reader);
 
             List = new GMUniquePointerList<GMRoom>();
-            List.Unserialize(reader);
+            List.Deserialize(reader);
         }
 
         private static void DoFormatCheck(GMDataReader reader)

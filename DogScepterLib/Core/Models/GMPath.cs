@@ -24,14 +24,14 @@ namespace DogScepterLib.Core.Models
             Points.Serialize(writer);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
             Smooth = reader.ReadWideBoolean();
             Closed = reader.ReadWideBoolean();
             Precision = reader.ReadUInt32();
             Points = new GMList<Point>();
-            Points.Unserialize(reader);
+            Points.Deserialize(reader);
         }
 
         public override string ToString()
@@ -52,7 +52,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write(Speed);
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 X = reader.ReadSingle();
                 Y = reader.ReadSingle();

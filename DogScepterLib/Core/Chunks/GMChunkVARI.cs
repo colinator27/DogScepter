@@ -63,9 +63,9 @@ namespace DogScepterLib.Core.Chunks
             }
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             if (reader.VersionInfo.FormatID > 14)
             {
@@ -83,7 +83,7 @@ namespace DogScepterLib.Core.Chunks
             while (reader.Offset + varLength <= StartOffset + Length)
             {
                 GMVariable gVar = new GMVariable();
-                gVar.Unserialize(reader);
+                gVar.Deserialize(reader);
                 List.Add(gVar);
             }
         }

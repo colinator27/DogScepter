@@ -29,7 +29,7 @@ namespace DogScepterLib.Core.Models
             writer.WritePointer(TextureData);
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             Scaled = reader.ReadUInt32();
             if (reader.VersionInfo.Major >= 2) 
@@ -95,7 +95,7 @@ namespace DogScepterLib.Core.Models
             }
         }
 
-        public void Unserialize(GMDataReader reader)
+        public void Deserialize(GMDataReader reader)
         {
             int startOffset = reader.Offset;
 

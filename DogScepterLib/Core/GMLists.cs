@@ -66,7 +66,7 @@ namespace DogScepterLib.Core
                 if (elemReader == null)
                 {
                     elem = new T();
-                    elem.Unserialize(reader);
+                    elem.Deserialize(reader);
                 }
                 else
                     elem = (T)elemReader(reader, (i + 1 != count));
@@ -76,7 +76,7 @@ namespace DogScepterLib.Core
             }
         }
 
-        public virtual void Unserialize(GMDataReader reader)
+        public virtual void Deserialize(GMDataReader reader)
         {
             Unserialize(reader, null, null, null);
         }
@@ -180,7 +180,7 @@ namespace DogScepterLib.Core
             }
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
             Unserialize(reader, null, null, null);
         }
@@ -250,7 +250,7 @@ namespace DogScepterLib.Core
             }
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
             Unserialize(reader, null, null, null);
         }

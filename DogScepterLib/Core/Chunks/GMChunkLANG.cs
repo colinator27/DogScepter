@@ -34,9 +34,9 @@ namespace DogScepterLib.Core.Chunks
                 l.Serialize(writer);
         }
 
-        public override void Unserialize(GMDataReader reader)
+        public override void Deserialize(GMDataReader reader)
         {
-            base.Unserialize(reader);
+            base.Deserialize(reader);
 
             Unknown1 = reader.ReadInt32();
             LanguageCount = reader.ReadInt32();
@@ -78,7 +78,7 @@ namespace DogScepterLib.Core.Chunks
                     Entries.Add(reader.ReadStringPointerObject());
             }
 
-            public void Unserialize(GMDataReader reader)
+            public void Deserialize(GMDataReader reader)
             {
                 Unserialize(reader, 0);
             }
