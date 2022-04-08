@@ -10,8 +10,19 @@ namespace DogScepterLib.Core;
 /// </summary>
 public class GMChunk : IGMSerializable
 {
+    /// <summary>
+    /// The length of the chunk.
+    /// </summary>
     public int Length;
+
+    /// <summary>
+    /// The offset at which the chunk starts.
+    /// </summary>
     public int StartOffset;
+
+    /// <summary>
+    /// The offset at which the chunk ends.
+    /// </summary>
     public int EndOffset;
 
     /// <summary>
@@ -40,7 +51,7 @@ public class GMChunk : IGMSerializable
 /// </summary>
 public class GMChunkFORM : GMChunk
 {
-    //TODO: make this <GMChunkNames, GMChunk> (not string) in order to mitigate typos?
+    //TODO: make these <GMChunkNames, GMChunk> (not string) in order to mitigate typos?
     public List<string> ChunkNames;
     public Dictionary<string, GMChunk> Chunks;
 
@@ -90,21 +101,20 @@ public class GMChunkFORM : GMChunk
         for (int i = 0; i < ChunkNames.Count; i++)
         {
             GMChunk chunk;
-            if (Chunks.TryGetValue(ChunkNames[i], out chunk))
-            {
-                writer.Data.Logger?.Invoke($"Writing {ChunkNames[i]} at {writer.Offset:X}");
+            if (!Chunks.TryGetValue(ChunkNames[i], out chunk)) continue;
 
-                // Write chunk name, length, and content
-                writer.Write(ChunkNames[i].ToCharArray());
-                int chunkBeg = writer.BeginLength();
-                chunk.Serialize(writer);
+            writer.Data.Logger?.Invoke($"Writing {ChunkNames[i]} at {writer.Offset:X}");
 
-                // If not the last chunk, apply 16-byte padding if necessary
-                if (writer.Data.VersionInfo.AlignChunksTo16 && i != (ChunkNames.Count - 1))
-                    writer.Pad(16);
+            // Write chunk name, length, and content
+            writer.Write(ChunkNames[i].ToCharArray());
+            int chunkBeg = writer.BeginLength();
+            chunk.Serialize(writer);
 
-                writer.EndLength(chunkBeg);
-            }
+            // If not the last chunk, apply 16-byte padding if necessary
+            if (writer.Data.VersionInfo.AlignChunksTo16 && i != (ChunkNames.Count - 1))
+                writer.Pad(16);
+
+            writer.EndLength(chunkBeg);
         }
 
         writer.EndLength(beg);
