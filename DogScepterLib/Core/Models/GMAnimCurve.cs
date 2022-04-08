@@ -124,13 +124,13 @@ namespace DogScepterLib.Core.Models
 
                     if (reader.ReadUInt32() != 0) // in 2.3 a int with the value of 0 would be set here,
                     {                             // it cannot be version 2.3 if this value isn't 0
-                        reader.VersionInfo.SetNumber(2, 3, 1);
+                        reader.VersionInfo.SetVersionNumber(2, 3, 1);
                         reader.Offset -= 4;
                     }
                     else
                     {
                         if (reader.ReadUInt32() == 0)              // At all points (besides the first one)
-                            reader.VersionInfo.SetNumber(2, 3, 1); // if BezierX0 equals to 0 (the above check)
+                            reader.VersionInfo.SetVersionNumber(2, 3, 1); // if BezierX0 equals to 0 (the above check)
                         reader.Offset -= 8;                        // then BezierY0 equals to 0 as well (the current check)
                     }
 

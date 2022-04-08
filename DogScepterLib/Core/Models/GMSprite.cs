@@ -173,7 +173,7 @@ namespace DogScepterLib.Core.Models
                         GMS2_3_Sequence = reader.ReadPointerObjectUnique<SequenceReference>();
                         if (version >= 3)
                         {
-                            reader.VersionInfo.SetNumber(2, 3, 2);
+                            reader.VersionInfo.SetVersionNumber(2, 3, 2);
                             GMS2_3_2_NineSlice = reader.ReadPointerObjectUnique<NineSlice>();
                         }
                     }

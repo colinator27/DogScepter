@@ -67,21 +67,21 @@ namespace DogScepterLib.Core.Chunks
                         {
                             case Layer.LayerKind.Background:
                                 if (nextOffset - reader.Offset > 16 * 4)
-                                    reader.VersionInfo.SetNumber(2022, 1);
+                                    reader.VersionInfo.SetVersionNumber(2022, 1);
                                 finished = true;
                                 break;
                             case Layer.LayerKind.Instances:
                                 reader.Offset += 6 * 4;
                                 int instanceCount = reader.ReadInt32();
                                 if (nextOffset - reader.Offset != (instanceCount * 4))
-                                    reader.VersionInfo.SetNumber(2022, 1);
+                                    reader.VersionInfo.SetVersionNumber(2022, 1);
                                 finished = true;
                                 break;
                             case Layer.LayerKind.Assets:
                                 reader.Offset += 6 * 4;
                                 int tileOffset = reader.ReadInt32();
                                 if (tileOffset != reader.Offset + 8)
-                                    reader.VersionInfo.SetNumber(2022, 1);
+                                    reader.VersionInfo.SetVersionNumber(2022, 1);
                                 finished = true;
                                 break;
                             case Layer.LayerKind.Tiles:
@@ -89,14 +89,14 @@ namespace DogScepterLib.Core.Chunks
                                 int tileMapWidth = reader.ReadInt32();
                                 int tileMapHeight = reader.ReadInt32();
                                 if (nextOffset - reader.Offset != (tileMapWidth * tileMapHeight * 4))
-                                    reader.VersionInfo.SetNumber(2022, 1);
+                                    reader.VersionInfo.SetVersionNumber(2022, 1);
                                 finished = true;
                                 break;
                             case Layer.LayerKind.Effect:
                                 reader.Offset += 7 * 4;
                                 int propertyCount = reader.ReadInt32();
                                 if (nextOffset - reader.Offset != (propertyCount * 3 * 4))
-                                    reader.VersionInfo.SetNumber(2022, 1);
+                                    reader.VersionInfo.SetVersionNumber(2022, 1);
                                 finished = true;
                                 break;
                         }

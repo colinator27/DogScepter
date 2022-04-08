@@ -108,7 +108,7 @@ namespace DogScepterLib.Core.Chunks
                     if (invalidFormat || reader.Offset != endPtr)
                     {
                         // We didn't end up where we expected! This is most likely 2022.2+ font data
-                        reader.VersionInfo.SetNumber(2022, 2);
+                        reader.VersionInfo.SetVersionNumber(2022, 2);
                     }
                 }
 

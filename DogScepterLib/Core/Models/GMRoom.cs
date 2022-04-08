@@ -159,7 +159,7 @@ namespace DogScepterLib.Core.Models
             {
                 reader.VersionInfo.RoomObjectPreCreate = true;
                 if (eachSize == 48)
-                    reader.VersionInfo.SetNumber(2, 2, 2, 302);
+                    reader.VersionInfo.SetVersionNumber(2, 2, 2, 302);
             }
             reader.Offset = gameObjectListPtr;
             GameObjects = new GMUniquePointerList<GameObject>();

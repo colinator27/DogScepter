@@ -118,9 +118,9 @@ namespace DogScepterLib.Core
 
                 // Check if this is a GMS 2.3+ file
                 if (name == "SEQN")
-                    reader.Data.VersionInfo.SetNumber(2, 3);
+                    reader.Data.VersionInfo.SetVersionNumber(2, 3);
                 else if (name == "FEDS")
-                    reader.Data.VersionInfo.SetNumber(2, 3, 6);
+                    reader.Data.VersionInfo.SetVersionNumber(2, 3, 6);
 
                 // Update whether this version aligns chunks to 16 bytes
                 if (reader.Offset < EndOffset)

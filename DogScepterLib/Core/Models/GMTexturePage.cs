@@ -108,7 +108,7 @@ namespace DogScepterLib.Core.Models
                     // This is in QOI + BZip2 format
                     IsQoi = true;
                     IsBZip2 = true;
-                    reader.VersionInfo.SetNumber(2022, 1);
+                    reader.VersionInfo.SetVersionNumber(2022, 1);
                     reader.Offset += 4;
 
                     QoiWidth = reader.ReadInt16();
@@ -122,7 +122,7 @@ namespace DogScepterLib.Core.Models
                 {
                     // This is in QOI format
                     IsQoi = true;
-                    reader.VersionInfo.SetNumber(2022, 1);
+                    reader.VersionInfo.SetVersionNumber(2022, 1);
 
                     int dataStart = reader.Offset;
 

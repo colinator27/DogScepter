@@ -44,7 +44,7 @@ namespace DogScepterLib.Core.Chunks
                     // (the pointer was shifted back by 4 bytes, where alignment padding used to always be)
                     reader.Offset += 16;
                     if (reader.ReadInt32() != 0)
-                        reader.VersionInfo.SetNumber(2022, 3);
+                        reader.VersionInfo.SetVersionNumber(2022, 3);
                 }
                 else if (textureCount >= 2)
                 {
@@ -52,7 +52,7 @@ namespace DogScepterLib.Core.Chunks
                     int first = reader.ReadInt32();
                     int second = reader.ReadInt32();
                     if (second - first == 16)
-                        reader.VersionInfo.SetNumber(2022, 3);
+                        reader.VersionInfo.SetVersionNumber(2022, 3);
                 }
 
                 reader.Offset = returnPos;
