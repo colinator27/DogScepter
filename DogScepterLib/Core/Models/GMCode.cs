@@ -1,24 +1,60 @@
 ﻿using DogScepterLib.Core.Chunks;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace DogScepterLib.Core.Models
 {
     /// <summary>
-    /// Contains a single code entry, which could be of an object's event, a timeline's step, a script, or a function (in 2.3)
+    /// Contains a single code entry, which could be of an object's event, a timeline's step, a script, or a function (in GMS 2.3).
     /// </summary>
     public class GMCode : IGMSerializable
     {
+        /// <summary>
+        /// The name of the code entry.
+        /// </summary>
         public GMString Name;
+
+        /// <summary>
+        /// The length of the code entry in bytes.
+        /// </summary>
         public int Length;
+
+        /// <summary>
+        /// The amount of locals this code entry references.
+        /// </summary>
         public short LocalsCount;
+
+        /// <summary>
+        /// The amount of arguments this code entry expects.
+        /// </summary>
         public short ArgumentsCount;
+
+        /// <summary>
+        /// TODO: unknown flags?
+        /// </summary>
         public byte Flags;
+
+        /// <summary>
+        /// The offset at which the bytecode starts.
+        /// </summary>
         public int BytecodeOffset;
+
+        /// <summary>
+        /// The bytecode instructions of this code entry.
+        /// </summary>
         public Bytecode BytecodeEntry;
+
+        /// <summary>
+        /// The parent code entry, if it exists.
+        /// </summary>
         public GMCode ParentEntry;
-        public List<GMCode> ChildEntries = new List<GMCode>();
+
+        /// <summary>
+        /// A list of child code entries, if they exist.
+        /// </summary>
+        public readonly List<GMCode> ChildEntries = new List<GMCode>();
 
         public void Serialize(GMDataWriter writer)
         {
@@ -27,6 +63,7 @@ namespace DogScepterLib.Core.Models
                 Length = BytecodeEntry.GetLength() * 4;
             writer.Write(Length);
 
+            //TODO: double check if bytecode entry can be null here and below.
             if (writer.VersionInfo.FormatID <= 14)
             {
                 BytecodeEntry.Serialize(writer);
@@ -45,49 +82,49 @@ namespace DogScepterLib.Core.Models
             Name = reader.ReadStringPointerObject();
             Length = reader.ReadInt32();
 
+            // Early exit, if we're on <= 14
             if (reader.VersionInfo.FormatID <= 14)
             {
                 BytecodeEntry = new Bytecode(this);
                 BytecodeEntry.Deserialize(reader, Length);
+                return;
             }
-            else
+
+            LocalsCount = reader.ReadInt16();
+            int v = reader.ReadInt16();
+            ArgumentsCount = (short)(v & 0b1111111111111);
+            Flags = (byte)(v >> 13);
+            int relativeBytecodeAddr = reader.ReadInt32();
+            int absoluteBytecodeAddr = (reader.Offset - 4) + relativeBytecodeAddr;
+            bool childCandidate = false;
+            if (reader.PointerOffsets.TryGetValue(absoluteBytecodeAddr, out IGMSerializable s))
             {
-                LocalsCount = reader.ReadInt16();
-                int v = reader.ReadInt16();
-                ArgumentsCount = (short)(v & 0b1111111111111);
-                Flags = (byte)(v >> 13);
-                int relativeBytecodeAddr = reader.ReadInt32();
-                int absoluteBytecodeAddr = (reader.Offset - 4) + relativeBytecodeAddr;
-                bool childCandidate = false;
-                if (reader.PointerOffsets.TryGetValue(absoluteBytecodeAddr, out IGMSerializable s))
+                if (s is Bytecode b)
                 {
-                    if (s is Bytecode b)
-                    {
-                        BytecodeEntry = b;
-                        childCandidate = true;
-                    }
+                    BytecodeEntry = b;
+                    childCandidate = true;
                 }
-                if (BytecodeEntry == null)
-                {
-                    BytecodeEntry = new Bytecode(this);
-                    if (Length != 0) // prevent pointer overlap of entries with 0 instructions
-                        reader.PointerOffsets[absoluteBytecodeAddr] = BytecodeEntry;
+            }
+            if (BytecodeEntry == null)
+            {
+                BytecodeEntry = new Bytecode(this);
+                if (Length != 0) // prevent pointer overlap of entries with 0 instructions
+                    reader.PointerOffsets[absoluteBytecodeAddr] = BytecodeEntry;
 
-                    int returnTo = reader.Offset;
-                    reader.Offset = absoluteBytecodeAddr;
+                int returnTo = reader.Offset;
+                reader.Offset = absoluteBytecodeAddr;
 
-                    BytecodeEntry.Deserialize(reader, Length);
+                BytecodeEntry.Deserialize(reader, Length);
 
-                    reader.Offset = returnTo;
-                }
-                BytecodeOffset = reader.ReadInt32();
+                reader.Offset = returnTo;
+            }
+            BytecodeOffset = reader.ReadInt32();
 
-                if (childCandidate && Length != 0 && BytecodeOffset != 0)
-                {
-                    // Assign parents and children of this entry
-                    ParentEntry = BytecodeEntry.Parent;
-                    BytecodeEntry.Parent.ChildEntries.Add(this);
-                }
+            if (childCandidate && Length != 0 && BytecodeOffset != 0)
+            {
+                // Assign parents and children of this entry
+                ParentEntry = BytecodeEntry.Parent;
+                BytecodeEntry.Parent.ChildEntries.Add(this);
             }
         }
 
@@ -97,28 +134,36 @@ namespace DogScepterLib.Core.Models
         }
 
         /// <summary>
-        /// A sequence of GameMaker instructions.
+        /// A sequence of GameMaker bytecode instructions.
         /// </summary>
         public class Bytecode : IGMSerializable
         {
+            /// <summary>
+            /// The <see cref="GMCode"/> this bytecode belongs to.
+            /// </summary>
             public GMCode Parent;
+
+            /// <summary>
+            /// The list of GameMaker bytecode instructions.
+            /// </summary>
             public List<Instruction> Instructions = new(64);
 
+            /// <summary>
+            /// Initializes a new <see cref="Bytecode"/> class with a specified parent.
+            /// </summary>
+            /// <param name="parent">Which code entry the bytecode should belong to.</param>
             public Bytecode(GMCode parent)
             {
                 Parent = parent;
             }
 
             /// <summary>
-            /// Returns length in terms of 32-bit parts of instructions
-            /// (multiply the return value by 4 to get the number of bytes)
+            /// Returns length in terms of 32-bit parts of instructions.
+            /// Multiply the return value by 4 to get the number of bytes.
             /// </summary>
             public int GetLength()
             {
-                int len = 0;
-                foreach (Instruction i in Instructions)
-                    len += i.GetLength();
-                return len;
+                return Instructions.Sum(instruction => instruction.GetLength());
             }
 
             public void Serialize(GMDataWriter writer)
@@ -145,7 +190,7 @@ namespace DogScepterLib.Core.Models
             }
 
             /// <summary>
-            /// A single GameMaker instruction.
+            /// A single GameMaker bytecode instruction.
             /// </summary>
             public class Instruction : IGMSerializable
             {
@@ -196,8 +241,8 @@ namespace DogScepterLib.Core.Models
                 }
 
                 /// <summary>
-                /// Returns the number of 32-bit parts of the instruction
-                /// (multiply the return value by 4 to get the number of bytes)
+                /// Returns the number of 32-bit parts of the instruction.
+                /// Multiply the return value by 4 to get the number of bytes.
                 /// </summary>
                 public int GetLength()
                 {
@@ -587,10 +632,10 @@ namespace DogScepterLib.Core.Models
                     int start = reader.Offset;
                     reader.Instructions[start] = this;
 
-#if DEBUG
+                    #if DEBUG
                     if (start % 4 != 0)
                         throw new Exception("Instruction reading offset");
-#endif
+                    #endif
 
                     // Read opcode
                     reader.Offset += 3;
@@ -607,10 +652,10 @@ namespace DogScepterLib.Core.Models
                         case InstructionType.Comparison:
                             {
                                 Extra = reader.ReadByte();
-#if DEBUG
+                                #if DEBUG
                                 if (Extra != 0 && Kind != Opcode.Dup && Kind != Opcode.CallV)
                                     throw new Exception("Expected 0 byte for opcode " + Kind.ToString());
-#endif
+                                #endif
                                 ComparisonKind = (ComparisonType)reader.ReadByte();
 
                                 byte types = reader.ReadByte();

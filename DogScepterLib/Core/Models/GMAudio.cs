@@ -5,10 +5,13 @@ using System.Text;
 namespace DogScepterLib.Core.Models
 {
     /// <summary>
-    /// Contains binary audio data.
+    /// A representation of an embedded audio file used in a GameMaker data file.
     /// </summary>
     public class GMAudio : IGMSerializable
     {
+        /// <summary>
+        /// The binary audio data.
+        /// </summary>
         public BufferRegion Data;
 
         public void Serialize(GMDataWriter writer)

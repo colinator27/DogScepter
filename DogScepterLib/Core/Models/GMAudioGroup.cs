@@ -5,10 +5,13 @@ using System.Text;
 namespace DogScepterLib.Core.Models
 {
     /// <summary>
-    /// Contains name of a GameMaker audio group.
+    /// A representation of a GameMaker audio group.
     /// </summary>
     public class GMAudioGroup : IGMSerializable
     {
+        /// <summary>
+        /// The name of the audio group.
+        /// </summary>
         public GMString Name;
 
         public void Serialize(GMDataWriter writer)
