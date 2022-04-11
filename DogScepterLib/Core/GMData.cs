@@ -253,10 +253,13 @@ public class GMData
     /// </summary>
     public void BuildStringCache()
     {
-        StringCache = new Dictionary<string, int>();
         var list = ((GMChunkSTRG)Chunks["STRG"]).List;
-        for (int i = 0; i < list.Count; i++)
-            StringCache[list[i].Content] = i;
+        lock (list)
+        {
+            StringCache = new Dictionary<string, int>();
+            for (int i = 0; i < list.Count; i++)
+                StringCache[list[i].Content] = i;
+        }
     }
 
     public GMString DefineString(string content)
