@@ -30,7 +30,7 @@ namespace DogScepterLib.Core.Chunks
             List.Deserialize(reader);
 
             // Product ID information for each extension
-            if (reader.VersionInfo.IsNumberAtLeast(1, 0, 0, 9999))
+            if (reader.VersionInfo.IsVersionAtLeast(1, 0, 0, 9999))
             {
                 for (int i = 0; i < List.Count; i++)
                     List[i].ProductID = new Guid(reader.ReadBytes(16).Memory.ToArray());

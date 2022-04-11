@@ -148,7 +148,7 @@ namespace DogScepterLib.Core.Chunks
             writer.Write(Minor);
             writer.Write(Release);
             writer.Write(Build);
-            writer.VersionInfo.SetVersionNumber(Major, Minor, Release, Build);
+            writer.VersionInfo.SetVersion(Major, Minor, Release, Build);
             writer.Write(DefaultWindowWidth);
             writer.Write(DefaultWindowHeight);
             writer.Write((uint)Info);
@@ -234,7 +234,7 @@ namespace DogScepterLib.Core.Chunks
             Minor = reader.ReadInt32();
             Release = reader.ReadInt32();
             Build = reader.ReadInt32();
-            reader.VersionInfo.SetVersionNumber(Major, Minor, Release, Build);
+            reader.VersionInfo.SetVersion(Major, Minor, Release, Build);
             DefaultWindowWidth = reader.ReadInt32();
             DefaultWindowHeight = reader.ReadInt32();
             Info = (InfoFlags)reader.ReadUInt32();

@@ -53,7 +53,7 @@ namespace DogScepterLib.Project.Converters
             if (pf.DataHandle.VersionInfo.FormatID >= 17)
             {
                 projectAsset.AscenderOffset = asset.AscenderOffset;
-                if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2022, 2))
+                if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2022, 2))
                     projectAsset.Ascender = asset.Ascender;
             }
 

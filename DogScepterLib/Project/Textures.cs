@@ -572,7 +572,7 @@ namespace DogScepterLib.Project
         public void DetermineGroupBorders()
         {
             // Unknown if this check is exactly accurate
-            int extraBorder = Project.DataHandle.VersionInfo.IsNumberAtLeast(2) ? 1 : 2;
+            int extraBorder = Project.DataHandle.VersionInfo.IsVersionAtLeast(2) ? 1 : 2;
 
             foreach (Group group in TextureGroups)
             {
@@ -869,7 +869,7 @@ namespace DogScepterLib.Project
         public DSImage DrawPage(Group group, TexturePacker.Page page)
         {
             // This is pretty much a complete guess here
-            bool alwaysCropBorder = !Project.DataHandle.VersionInfo.IsNumberAtLeast(2);
+            bool alwaysCropBorder = !Project.DataHandle.VersionInfo.IsVersionAtLeast(2);
 
             DSImage res = new(page.Width, page.Height);
 

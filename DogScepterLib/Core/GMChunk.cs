@@ -51,7 +51,6 @@ public class GMChunk : IGMSerializable
 /// </summary>
 public class GMChunkFORM : GMChunk
 {
-    //TODO: make these <GMChunkNames, GMChunk> (not string) in order to mitigate typos?
     public List<string> ChunkNames;
     public Dictionary<string, GMChunk> Chunks;
 
@@ -126,12 +125,11 @@ public class GMChunkFORM : GMChunk
 
         // Gather the names and offsets of the sub-chunks
         ChunkNames = new List<string>();
-        //TODO: updated, but never used
-        List<int> ChunkOffsets = new List<int>();
+        List<int> chunkOffsets = new List<int>();
         while (reader.Offset < EndOffset)
         {
             // Read its name and skip contents
-            ChunkOffsets.Add(reader.Offset);
+            chunkOffsets.Add(reader.Offset);
             string name = reader.ReadChars(4);
             ChunkNames.Add(name);
             int length = reader.ReadInt32();
@@ -139,13 +137,37 @@ public class GMChunkFORM : GMChunk
 
             // Check if this is a GMS 2.3+ file
             if (name == "SEQN")
-                reader.Data.VersionInfo.SetVersionNumber(2, 3);
+                reader.Data.VersionInfo.SetVersion(2, 3);
             else if (name == "FEDS")
-                reader.Data.VersionInfo.SetVersionNumber(2, 3, 6);
+                reader.Data.VersionInfo.SetVersion(2, 3, 6);
 
             // Update whether this version aligns chunks to 16 bytes
             if (reader.Offset < EndOffset)
                 reader.Data.VersionInfo.AlignChunksTo16 &= (reader.Offset % 16 == 0);
+        }
+
+        // Actually read all the sub-chunks
+        Chunks = new Dictionary<string, GMChunk>();
+        reader.Offset = StartOffset;
+        for (int i = 0; i < ChunkNames.Count; i++)
+        {
+            reader.Offset = chunkOffsets[i];
+            reader.Data.Logger?.Invoke($"Reading {ChunkNames[i]} at {reader.Offset:X}");
+
+            Type type;
+            if (!ChunkMap.TryGetValue(ChunkNames[i], out type))
+            {
+                // Unknown chunk name, so skip past it
+                reader.Warnings.Add(new GMWarning($"Unknown chunk with name {ChunkNames[i]}",
+                    GMWarning.WarningLevel.Severe, GMWarning.WarningKind.UnknownChunk));
+                continue;
+            }
+
+            // Actually parse the chunk, starting at its length
+            reader.Offset += 4;
+            GMChunk chunk = (GMChunk)Activator.CreateInstance(type);
+            Chunks.Add(ChunkNames[i], chunk);
+            chunk.Deserialize(reader);
         }
     }
 }

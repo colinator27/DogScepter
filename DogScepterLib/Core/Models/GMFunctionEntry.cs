@@ -28,7 +28,7 @@ namespace DogScepterLib.Core.Models
 
             if (Occurrences > 0)
             {
-                if (writer.VersionInfo.IsNumberAtLeast(2, 3))
+                if (writer.VersionInfo.IsVersionAtLeast(2, 3))
                     writer.Write(references[0] + 4);
                 else
                     writer.Write(references[0]);
@@ -60,7 +60,7 @@ namespace DogScepterLib.Core.Models
             if (Occurrences > 0)
             {
                 int addr;
-                if (reader.VersionInfo.IsNumberAtLeast(2, 3))
+                if (reader.VersionInfo.IsVersionAtLeast(2, 3))
                     addr = reader.ReadInt32() - 4;
                 else
                     addr = reader.ReadInt32();

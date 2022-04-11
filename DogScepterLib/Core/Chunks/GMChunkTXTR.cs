@@ -33,7 +33,7 @@ namespace DogScepterLib.Core.Chunks
         private static void DoFormatCheck(GMDataReader reader)
         {
             // Perform checks to see if this is 2022.3 or higher
-            if (reader.VersionInfo.IsNumberAtLeast(2, 3) && !reader.VersionInfo.IsNumberAtLeast(2022, 3))
+            if (reader.VersionInfo.IsVersionAtLeast(2, 3) && !reader.VersionInfo.IsVersionAtLeast(2022, 3))
             {
                 int returnPos = reader.Offset;
 
@@ -44,7 +44,7 @@ namespace DogScepterLib.Core.Chunks
                     // (the pointer was shifted back by 4 bytes, where alignment padding used to always be)
                     reader.Offset += 16;
                     if (reader.ReadInt32() != 0)
-                        reader.VersionInfo.SetVersionNumber(2022, 3);
+                        reader.VersionInfo.SetVersion(2022, 3);
                 }
                 else if (textureCount >= 2)
                 {
@@ -52,7 +52,7 @@ namespace DogScepterLib.Core.Chunks
                     int first = reader.ReadInt32();
                     int second = reader.ReadInt32();
                     if (second - first == 16)
-                        reader.VersionInfo.SetVersionNumber(2022, 3);
+                        reader.VersionInfo.SetVersion(2022, 3);
                 }
 
                 reader.Offset = returnPos;

@@ -136,14 +136,14 @@ namespace DogScepterLib.Project.Converters
                     ScaleY = tile.ScaleY,
                     Color = tile.Color
                 };
-                if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
+                if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2))
                     newTile.Asset = tile.AssetID >= 0 ? pf.Sprites[tile.AssetID].Name : null;
                 else
                     newTile.Asset = tile.AssetID >= 0 ? pf.Backgrounds[tile.AssetID].Name : null;
                 projectAsset.Tiles.Add(newTile);
             }
 
-            if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
+            if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2))
             {
                 projectAsset.Layers = new List<AssetRoom.Layer>(asset.Layers.Count);
 
@@ -257,7 +257,7 @@ namespace DogScepterLib.Project.Converters
                                 });
                             }
 
-                            if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3))
+                            if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2, 3))
                             {
                                 newLayer.Assets.Sequences = new(layer.Assets.Sequences.Count);
                                 foreach (var seq in layer.Assets.Sequences)
@@ -278,7 +278,7 @@ namespace DogScepterLib.Project.Converters
                                     });
                                 }
 
-                                if (!pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3, 2))
+                                if (!pf.DataHandle.VersionInfo.IsVersionAtLeast(2, 3, 2))
                                 {
                                     newLayer.Assets.NineSlices = new();
                                     foreach (var spr in layer.Assets.NineSlices)
@@ -341,7 +341,7 @@ namespace DogScepterLib.Project.Converters
                     projectAsset.Layers.Add(newLayer);
                 }
 
-                if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3))
+                if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2, 3))
                 {
                     projectAsset.Sequences = new(asset.SequenceIDs.Count);
                     foreach (int seq in asset.SequenceIDs)
@@ -491,7 +491,7 @@ namespace DogScepterLib.Project.Converters
                         Color = tile.Color
                     };
 
-                    if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
+                    if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2))
                         newTile.AssetID = pf.Sprites.FindIndex(tile.Asset);
                     else
                         newTile.AssetID = pf.Backgrounds.FindIndex(tile.Asset);
@@ -499,7 +499,7 @@ namespace DogScepterLib.Project.Converters
                     data.Tiles.Add(newTile);
                 }
 
-                if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
+                if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2))
                 {
                     data.Layers = new(asset.Layers.Count);
                     foreach (var layer in asset.Layers)
@@ -598,7 +598,7 @@ namespace DogScepterLib.Project.Converters
                                 });
                             }
                             
-                            if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3))
+                            if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2, 3))
                             {
                                 newLayer.Assets.Sequences = new(layer.Assets.Sequences.Count);
                                 foreach (var seq in layer.Assets.Sequences)
@@ -619,7 +619,7 @@ namespace DogScepterLib.Project.Converters
                                     });
                                 }
 
-                                if (!pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3, 2))
+                                if (!pf.DataHandle.VersionInfo.IsVersionAtLeast(2, 3, 2))
                                 {
                                     newLayer.Assets.NineSlices = new(layer.Assets.NineSlices.Count);
                                     foreach (var spr in layer.Assets.NineSlices)
@@ -678,7 +678,7 @@ namespace DogScepterLib.Project.Converters
                         // maybe throw exception if nothing else matched?
                     }
 
-                    if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3))
+                    if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2, 3))
                     {
                         data.SequenceIDs = new();
                         foreach (string seq in asset.Sequences)

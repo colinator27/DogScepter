@@ -480,7 +480,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             string val = Value;
 
-            if (ctx.Data.VersionInfo.IsNumberAtLeast(2))
+            if (ctx.Data.VersionInfo.IsVersionAtLeast(2))
                 val = "\"" + val.Replace("\\", "\\\\").Replace("\r", "\\r").Replace("\n", "\\n").Replace("\"", "\\\"") + "\"";
             else
             {
@@ -1035,7 +1035,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             sb.Append(Variable.Name.Content);
 
             // Handle arrays
-            if (ctx.Data.VersionInfo.IsNumberAtLeast(2, 3))
+            if (ctx.Data.VersionInfo.IsVersionAtLeast(2, 3))
             {
                 // ... for GMS2.3
                 if (Children != null)

@@ -78,21 +78,21 @@ namespace DogScepterLib.Core.Models
             {
                 // Special/GMS2 sprite type
                 writer.Write(-1);
-                if (writer.VersionInfo.IsNumberAtLeast(2, 3, 2))
+                if (writer.VersionInfo.IsVersionAtLeast(2, 3, 2))
                     writer.Write(3);
-                else if (writer.VersionInfo.IsNumberAtLeast(2, 3))
+                else if (writer.VersionInfo.IsVersionAtLeast(2, 3))
                     writer.Write(2);
                 else
                     writer.Write(1);
                 writer.Write((int)S_SpriteType);
-                if (writer.VersionInfo.IsNumberAtLeast(2))
+                if (writer.VersionInfo.IsVersionAtLeast(2))
                 {
                     writer.Write(GMS2_PlaybackSpeed);
                     writer.Write((int)GMS2_PlaybackSpeedType);
-                    if (writer.VersionInfo.IsNumberAtLeast(2, 3))
+                    if (writer.VersionInfo.IsVersionAtLeast(2, 3))
                     {
                         writer.WritePointer(GMS2_3_Sequence);
-                        if (writer.VersionInfo.IsNumberAtLeast(2, 3, 2))
+                        if (writer.VersionInfo.IsVersionAtLeast(2, 3, 2))
                         {
                             writer.WritePointer(GMS2_3_2_NineSlice);
                         }
@@ -164,7 +164,7 @@ namespace DogScepterLib.Core.Models
 
                 int version = reader.ReadInt32();
                 S_SpriteType = (SpriteType)reader.ReadInt32();
-                if (reader.VersionInfo.IsNumberAtLeast(2))
+                if (reader.VersionInfo.IsVersionAtLeast(2))
                 {
                     GMS2_PlaybackSpeed = reader.ReadSingle();
                     GMS2_PlaybackSpeedType = (AnimSpeedType)reader.ReadInt32();
@@ -173,7 +173,7 @@ namespace DogScepterLib.Core.Models
                         GMS2_3_Sequence = reader.ReadPointerObjectUnique<SequenceReference>();
                         if (version >= 3)
                         {
-                            reader.VersionInfo.SetVersionNumber(2, 3, 2);
+                            reader.VersionInfo.SetVersion(2, 3, 2);
                             GMS2_3_2_NineSlice = reader.ReadPointerObjectUnique<NineSlice>();
                         }
                     }

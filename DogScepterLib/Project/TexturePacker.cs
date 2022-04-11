@@ -322,8 +322,8 @@ namespace DogScepterLib.Project
         {
             List<Page> result = new List<Page>();
 
-            bool pregms2_2_2 = !data.VersionInfo.IsNumberAtLeast(2, 2, 2);
-            int extraBorder = data.VersionInfo.IsNumberAtLeast(2) ? 1 : 2;
+            bool pregms2_2_2 = !data.VersionInfo.IsVersionAtLeast(2, 2, 2);
+            int extraBorder = data.VersionInfo.IsVersionAtLeast(2) ? 1 : 2;
 
             // Sort entries by area, largest to smallest
             List<GMTextureItem> entries = group.Items.OrderByDescending((entry) => entry.SourceWidth * entry.SourceHeight).ToList();

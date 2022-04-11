@@ -52,9 +52,9 @@ namespace DogScepterLib.Core.Models
             writer.WriteWideBoolean(DrawBackgroundColor);
             writer.Write(CreationCodeID);
             int flags = (int)Flags;
-            if (writer.VersionInfo.IsNumberAtLeast(2, 3))
+            if (writer.VersionInfo.IsVersionAtLeast(2, 3))
                 flags |= 0x30000;
-            else if (writer.VersionInfo.IsNumberAtLeast(2))
+            else if (writer.VersionInfo.IsVersionAtLeast(2))
                 flags |= 0x20000;
             writer.Write(flags);
             writer.WritePointer(Backgrounds);
@@ -67,10 +67,10 @@ namespace DogScepterLib.Core.Models
             writer.Write(GravityX); writer.Write(GravityY);
             writer.Write(PixelsToMeters);
             int sequencePatch = -1;
-            if (writer.VersionInfo.IsNumberAtLeast(2))
+            if (writer.VersionInfo.IsVersionAtLeast(2))
             {
                 writer.WritePointer(Layers);
-                if (writer.VersionInfo.IsNumberAtLeast(2, 3))
+                if (writer.VersionInfo.IsVersionAtLeast(2, 3))
                 {
                     sequencePatch = writer.Offset;
                     writer.Write(0);
@@ -85,11 +85,11 @@ namespace DogScepterLib.Core.Models
             GameObjects.Serialize(writer);
             writer.WriteObjectPointer(Tiles);
             Tiles.Serialize(writer);
-            if (writer.VersionInfo.IsNumberAtLeast(2))
+            if (writer.VersionInfo.IsVersionAtLeast(2))
             {
                 writer.WriteObjectPointer(Layers);
                 Layers.Serialize(writer);
-                if (writer.VersionInfo.IsNumberAtLeast(2, 3))
+                if (writer.VersionInfo.IsVersionAtLeast(2, 3))
                 {
                     // Patch and write sequence IDs
                     int returnTo = writer.Offset;
@@ -115,9 +115,9 @@ namespace DogScepterLib.Core.Models
             DrawBackgroundColor = reader.ReadWideBoolean();
             CreationCodeID = reader.ReadInt32();
             int flags = reader.ReadInt32();
-            if (reader.VersionInfo.IsNumberAtLeast(2, 3))
+            if (reader.VersionInfo.IsVersionAtLeast(2, 3))
                 flags &= ~0x30000;
-            else if (reader.VersionInfo.IsNumberAtLeast(2))
+            else if (reader.VersionInfo.IsVersionAtLeast(2))
                 flags &= ~0x20000;
             Flags = (RoomFlags)flags;
             Backgrounds = reader.ReadPointerObjectUnique<GMUniquePointerList<Background>>();
@@ -130,10 +130,10 @@ namespace DogScepterLib.Core.Models
             Right = reader.ReadInt32(); Bottom = reader.ReadInt32();
             GravityX = reader.ReadSingle(); GravityY = reader.ReadSingle();
             PixelsToMeters = reader.ReadSingle();
-            if (reader.VersionInfo.IsNumberAtLeast(2))
+            if (reader.VersionInfo.IsVersionAtLeast(2))
             {
                 Layers = reader.ReadPointerObjectUnique<GMUniquePointerList<Layer>>();
-                if (reader.VersionInfo.IsNumberAtLeast(2, 3))
+                if (reader.VersionInfo.IsVersionAtLeast(2, 3))
                 {
                     // Read sequence ID list
                     reader.Offset = reader.ReadInt32();
@@ -159,7 +159,7 @@ namespace DogScepterLib.Core.Models
             {
                 reader.VersionInfo.RoomObjectPreCreate = true;
                 if (eachSize == 48)
-                    reader.VersionInfo.SetVersionNumber(2, 2, 2, 302);
+                    reader.VersionInfo.SetVersion(2, 2, 2, 302);
             }
             reader.Offset = gameObjectListPtr;
             GameObjects = new GMUniquePointerList<GameObject>();
@@ -271,7 +271,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write(InstanceID);
                 writer.Write(CreationCodeID);
                 writer.Write(ScaleX); writer.Write(ScaleY);
-                if (writer.VersionInfo.IsNumberAtLeast(2, 2, 2, 302))
+                if (writer.VersionInfo.IsVersionAtLeast(2, 2, 2, 302))
                 {
                     writer.Write(ImageSpeed);
                     writer.Write(ImageIndex);
@@ -289,7 +289,7 @@ namespace DogScepterLib.Core.Models
                 InstanceID = reader.ReadInt32();
                 CreationCodeID = reader.ReadInt32();
                 ScaleX = reader.ReadSingle(); ScaleY = reader.ReadSingle();
-                if (reader.VersionInfo.IsNumberAtLeast(2, 2, 2, 302))
+                if (reader.VersionInfo.IsVersionAtLeast(2, 2, 2, 302))
                 {
                     ImageSpeed = reader.ReadSingle();
                     ImageIndex = reader.ReadInt32();
@@ -539,10 +539,10 @@ namespace DogScepterLib.Core.Models
                 {
                     writer.WritePointer(LegacyTiles);
                     writer.WritePointer(Sprites);
-                    if (writer.VersionInfo.IsNumberAtLeast(2, 3))
+                    if (writer.VersionInfo.IsVersionAtLeast(2, 3))
                     {
                         writer.WritePointer(Sequences);
-                        if (!writer.VersionInfo.IsNumberAtLeast(2, 3, 2))
+                        if (!writer.VersionInfo.IsVersionAtLeast(2, 3, 2))
                             writer.WritePointer(NineSlices);
                     }
 
@@ -550,11 +550,11 @@ namespace DogScepterLib.Core.Models
                     LegacyTiles.Serialize(writer);
                     writer.WriteObjectPointer(Sprites);
                     Sprites.Serialize(writer);
-                    if (writer.VersionInfo.IsNumberAtLeast(2, 3))
+                    if (writer.VersionInfo.IsVersionAtLeast(2, 3))
                     {
                         writer.WriteObjectPointer(Sequences);
                         Sequences.Serialize(writer);
-                        if (!writer.VersionInfo.IsNumberAtLeast(2, 3, 2))
+                        if (!writer.VersionInfo.IsVersionAtLeast(2, 3, 2))
                         {
                             if (NineSlices == null)
                                 writer.Write(0); // Even if it's 2.3.2 but we don't detect it, this shouldn't break format... probably
@@ -572,10 +572,10 @@ namespace DogScepterLib.Core.Models
                     LegacyTiles = reader.ReadPointerObjectUnique<GMUniquePointerList<Tile>>();
                     Sprites = reader.ReadPointerObjectUnique<GMUniquePointerList<AssetInstance>>();
 
-                    if (reader.VersionInfo.IsNumberAtLeast(2, 3))
+                    if (reader.VersionInfo.IsVersionAtLeast(2, 3))
                     {
                         Sequences = reader.ReadPointerObjectUnique<GMUniquePointerList<AssetInstance>>();
-                        if (!reader.VersionInfo.IsNumberAtLeast(2, 3, 2))
+                        if (!reader.VersionInfo.IsVersionAtLeast(2, 3, 2))
                             NineSlices = reader.ReadPointerObjectUnique<GMUniquePointerList<AssetInstance>>();
                     }
                 }
