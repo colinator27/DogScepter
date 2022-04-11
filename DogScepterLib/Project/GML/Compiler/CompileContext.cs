@@ -30,8 +30,8 @@ namespace DogScepterLib.Project.GML.Compiler
         public CompileContext(ProjectFile pf)
         {
             Project = pf;
-            IsGMS2 = pf.DataHandle.VersionInfo.IsNumberAtLeast(2);
-            IsGMS23 = pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3);
+            IsGMS2 = pf.DataHandle.VersionInfo.IsVersionAtLeast(2);
+            IsGMS23 = pf.DataHandle.VersionInfo.IsVersionAtLeast(2, 3);
             
             // Populate asset ID dictionary
             AddAssets(pf.Sounds);

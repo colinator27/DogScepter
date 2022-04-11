@@ -23,7 +23,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         {
             Types = new MacroResolverTypes(pf);
             GlobalFunctionNames = new Dictionary<GMFunctionEntry, string>();
-            if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2, 3))
+            if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2, 3))
             {
                 // Find all function names in global scripts
                 GMChunkCODE code = pf.DataHandle.GetChunk<GMChunkCODE>();
@@ -225,7 +225,7 @@ namespace DogScepterLib.Project.GML.Decompiler
             Loops.InsertNodes(this);
             ShortCircuits.InsertNodes(this);
 
-            if (Data.VersionInfo.IsNumberAtLeast(2, 3))
+            if (Data.VersionInfo.IsVersionAtLeast(2, 3))
             {
                 // Remove static jumps (not needed for decompilation)
                 BranchStatements.ProcessStatic(this);

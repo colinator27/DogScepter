@@ -21,7 +21,7 @@ namespace DogScepterLib.Core.Models
             writer.Write(Scaled);
             if (writer.VersionInfo.Major >= 2) 
                 writer.Write(GeneratedMips);
-            if (writer.VersionInfo.IsNumberAtLeast(2022, 3))
+            if (writer.VersionInfo.IsVersionAtLeast(2022, 3))
             {
                 TextureData.WriteLengthOffset = writer.Offset;
                 writer.Write(0);
@@ -34,7 +34,7 @@ namespace DogScepterLib.Core.Models
             Scaled = reader.ReadUInt32();
             if (reader.VersionInfo.Major >= 2) 
                 GeneratedMips = reader.ReadUInt32();
-            if (reader.VersionInfo.IsNumberAtLeast(2022, 3))
+            if (reader.VersionInfo.IsVersionAtLeast(2022, 3))
                 reader.ReadInt32(); // Ignore the data length (for now, at least)
             TextureData = reader.ReadPointerObjectUnique<GMTextureData>();
         }
@@ -60,7 +60,7 @@ namespace DogScepterLib.Core.Models
 
         private void WriteLength(GMDataWriter writer, int length)
         {
-            if (writer.VersionInfo.IsNumberAtLeast(2022, 3))
+            if (writer.VersionInfo.IsVersionAtLeast(2022, 3))
             {
                 int returnTo = writer.Offset;
 
@@ -108,7 +108,7 @@ namespace DogScepterLib.Core.Models
                     // This is in QOI + BZip2 format
                     IsQoi = true;
                     IsBZip2 = true;
-                    reader.VersionInfo.SetNumber(2022, 1);
+                    reader.VersionInfo.SetVersion(2022, 1);
                     reader.Offset += 4;
 
                     QoiWidth = reader.ReadInt16();
@@ -122,7 +122,7 @@ namespace DogScepterLib.Core.Models
                 {
                     // This is in QOI format
                     IsQoi = true;
-                    reader.VersionInfo.SetNumber(2022, 1);
+                    reader.VersionInfo.SetVersion(2022, 1);
 
                     int dataStart = reader.Offset;
 

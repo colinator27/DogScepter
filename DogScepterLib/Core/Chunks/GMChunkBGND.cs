@@ -26,7 +26,7 @@ namespace DogScepterLib.Core.Chunks
             base.Deserialize(reader);
 
             List = new GMUniquePointerList<GMBackground>();
-            reader.VersionInfo.AlignBackgroundsTo8 = reader.VersionInfo.IsNumberAtLeast(2, 3); // only occurs on newer 2.3.1 versions
+            reader.VersionInfo.AlignBackgroundsTo8 = reader.VersionInfo.IsVersionAtLeast(2, 3); // only occurs on newer 2.3.1 versions
             List.Deserialize(reader, null, null, (GMDataReader reader, bool notLast) =>
             {
                 int ptr = reader.ReadInt32();

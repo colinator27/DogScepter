@@ -32,7 +32,7 @@ namespace DogScepterLib.Project.Converters
             info["LastObjectID"] = generalInfo.LastObjectID;
             info["LastTileID"] = generalInfo.LastTileID;
             info["GameID"] = generalInfo.GameID;
-            if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
+            if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2))
             {
                 info["FPS"] = generalInfo.GMS2_FPS;
                 info["AllowStatistics"] = generalInfo.GMS2_AllowStatistics;
@@ -73,7 +73,7 @@ namespace DogScepterLib.Project.Converters
             info.LastObjectID = pf.Info.GetInt("LastObjectID");
             info.LastTileID = pf.Info.GetInt("LastTileID");
             info.GameID = pf.Info.GetInt("GameID");
-            if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
+            if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2))
             {
                 if (pf.Info.ContainsKey("FPS"))
                 {

@@ -168,7 +168,7 @@ namespace DogScepterLib.Project.Converters
                     projectAsset.SpecialInfo.InternalBuffer = asset.S_Buffer;
                 }
 
-                if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
+                if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2))
                 {
                     projectAsset.SpecialInfo.GMS2PlaybackSpeed = asset.GMS2_PlaybackSpeed;
                     projectAsset.SpecialInfo.GMS2PlaybackSpeedType = asset.GMS2_PlaybackSpeedType;

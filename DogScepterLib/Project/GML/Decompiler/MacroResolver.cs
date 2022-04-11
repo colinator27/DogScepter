@@ -149,7 +149,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                     {
                         if (ctx.Cache.Types.ColorMacros.TryGetValue(value, out string color))
                             return new ASTAsset(color);
-                        return new ASTAsset((ctx.Data.VersionInfo.IsNumberAtLeast(2) ? "0x" : "$") + value.ToString("X6", CultureInfo.InvariantCulture));
+                        return new ASTAsset((ctx.Data.VersionInfo.IsVersionAtLeast(2) ? "0x" : "$") + value.ToString("X6", CultureInfo.InvariantCulture));
                     }
                     break;
                 case MacroType.Keyboard:

@@ -135,7 +135,7 @@ namespace DogScepterLib.Project.Converters
             var agrp = pf.DataHandle.GetChunk<GMChunkAGRP>();
             var groups = agrp?.List;
 
-            bool updatedVersion = pf.DataHandle.VersionInfo.IsNumberAtLeast(1, 0, 0, 9999);
+            bool updatedVersion = pf.DataHandle.VersionInfo.IsVersionAtLeast(1, 0, 0, 9999);
 
             // First, sort sounds alphabetically
             List<AssetRef<AssetSound>> sortedSounds = updatedVersion ? pf.Sounds.OrderBy(x => x.Name).ToList() : pf.Sounds;

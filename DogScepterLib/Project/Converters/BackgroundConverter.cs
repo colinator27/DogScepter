@@ -40,7 +40,7 @@ namespace DogScepterLib.Project.Converters
                     pf.Textures.TextureGroups[pf.Textures.PageToGroup[asset.TextureItem.TexturePageID]].Name
             };
 
-            if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
+            if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2))
             {
                 projectAsset.GMS2Tiles = new AssetBackground.TileInfo()
                 {
@@ -111,7 +111,7 @@ namespace DogScepterLib.Project.Converters
                     TextureItem = projectAsset.TextureItem
                 };
 
-                if (pf.DataHandle.VersionInfo.IsNumberAtLeast(2))
+                if (pf.DataHandle.VersionInfo.IsVersionAtLeast(2))
                 {
                     dataAsset.TileWidth = projectAsset.GMS2Tiles.Width;
                     dataAsset.TileHeight = projectAsset.GMS2Tiles.Height;

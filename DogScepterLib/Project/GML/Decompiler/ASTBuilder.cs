@@ -199,7 +199,7 @@ namespace DogScepterLib.Project.GML.Decompiler
                                     astStatement = new ASTRepeatLoop(stack.Pop());
                                     break;
                                 case Loop.LoopType.With:
-                                    if (dctx.Data.VersionInfo.IsNumberAtLeast(2, 3))
+                                    if (dctx.Data.VersionInfo.IsVersionAtLeast(2, 3))
                                     {
                                         ASTNode n = stack.Pop();
 
@@ -339,7 +339,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                                     // 2.3 stacktop instance
                                     if (variable.Left.Kind == ASTNode.StatementKind.Int16 &&
-                                        ctx.Data.VersionInfo.IsNumberAtLeast(2, 3) &&
+                                        ctx.Data.VersionInfo.IsVersionAtLeast(2, 3) &&
                                         (variable.Left as ASTInt16).Value == -9)
                                     {
                                         variable.Left = stack.Pop();
@@ -488,7 +488,7 @@ namespace DogScepterLib.Project.GML.Decompiler
 
                             // 2.3 stacktop instance
                             if (variable.Left.Kind == ASTNode.StatementKind.Int16 &&
-                                ctx.Data.VersionInfo.IsNumberAtLeast(2, 3) &&
+                                ctx.Data.VersionInfo.IsVersionAtLeast(2, 3) &&
                                 (variable.Left as ASTInt16).Value == -9)
                             {
                                 variable.Left = stack.Pop();
@@ -787,7 +787,7 @@ namespace DogScepterLib.Project.GML.Decompiler
         public static List<ASTNode> ProcessArrayIndex(DecompileContext ctx, ASTNode index)
         {
             // All array indices are normal in 2.3
-            if (ctx.Data.VersionInfo.IsNumberAtLeast(2, 3))
+            if (ctx.Data.VersionInfo.IsVersionAtLeast(2, 3))
                 return new() { index };
             
             // Check for 2D array indices

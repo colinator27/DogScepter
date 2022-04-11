@@ -43,7 +43,7 @@ namespace DogScepterLib.Core.Chunks
         private void DoFormatCheck(GMDataReader reader)
         {
             // Check for new "Ascender" field introduced in 2022.2, by attempting to parse old font data format
-            if (reader.VersionInfo.IsNumberAtLeast(2, 3) && !reader.VersionInfo.IsNumberAtLeast(2022, 2))
+            if (reader.VersionInfo.IsVersionAtLeast(2, 3) && !reader.VersionInfo.IsVersionAtLeast(2022, 2))
             {
                 int returnTo = reader.Offset;
 
@@ -108,7 +108,7 @@ namespace DogScepterLib.Core.Chunks
                     if (invalidFormat || reader.Offset != endPtr)
                     {
                         // We didn't end up where we expected! This is most likely 2022.2+ font data
-                        reader.VersionInfo.SetNumber(2022, 2);
+                        reader.VersionInfo.SetVersion(2022, 2);
                     }
                 }
 
