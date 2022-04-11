@@ -231,7 +231,8 @@ public class GMData
     /// </summary>
     public byte[] Hash;
 
-    //Only assigned, not used?
+    //TODO: Only assigned, not seemingly not used. The array is referenced by `BufferRegions` in various places
+    // to reduce memory copies/usage, double check if this is still needed.
     public byte[] WorkingBuffer;
 
     /// <summary>
