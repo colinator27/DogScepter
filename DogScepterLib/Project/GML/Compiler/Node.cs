@@ -15,6 +15,7 @@ namespace DogScepterLib.Project.GML.Compiler
 
         FunctionCall, // Represents a place where a function is called (but can also be a variable name)
         FunctionCallChain, // Appears in cases like a.b() and a()(). First child is a ChainReference or another FunctionCallChain
+        FunctionCallExpr, // Appears specifically in cases like a()(), representing the second call in this case
         Variable, // Represents a single variable name (and nothing else)
         ChainReference, // Appears in cases like a.b.c and a.b[0].c (and so on). 
         Prefix, // Appears in cases like ++a, ++a.b.c, ++a.b[0] (and so on)

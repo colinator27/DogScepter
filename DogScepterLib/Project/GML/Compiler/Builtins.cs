@@ -69,6 +69,7 @@ namespace DogScepterLib.Project.GML.Compiler
 
             FunctionDefine("show_message", 1);
             FunctionDefine("show_debug_message", 1);
+            FunctionDefine("room_goto", 1);
 
             FunctionDefine("ord", 1);
             FunctionDefine("chr", 1);

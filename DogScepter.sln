@@ -1,20 +1,22 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30717.126
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DogScepterLib", "DogScepterLib\DogScepterLib.csproj", "{96413ABC-3EDA-4D63-87C4-8C4D7981D4D2}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DogScepterTest", "DogScepterTest\DogScepterTest.csproj", "{03327F28-4BA1-4636-BDAF-22FC01707D07}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DogScepter", "DogScepter\DogScepter.csproj", "{F1CF0EB5-88ED-4EB0-BFAB-4BDF1EFDBF02}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DogScepter", "DogScepter\DogScepter.csproj", "{F1CF0EB5-88ED-4EB0-BFAB-4BDF1EFDBF02}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{DD0D8377-A002-4266-8891-ECF034F492F9}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DogScepterCLI", "DogScepterCLI\DogScepterCLI.csproj", "{B4CFDAE2-F720-4CD3-A1D9-44E30A79CEA3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DogScepterCLI", "DogScepterCLI\DogScepterCLI.csproj", "{B4CFDAE2-F720-4CD3-A1D9-44E30A79CEA3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DogScepterSandbox", "DogScepterSandbox\DogScepterSandbox.csproj", "{A57C48F1-B620-4B05-8FE5-97AFD88057F5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -38,6 +40,10 @@ Global
 		{B4CFDAE2-F720-4CD3-A1D9-44E30A79CEA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B4CFDAE2-F720-4CD3-A1D9-44E30A79CEA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B4CFDAE2-F720-4CD3-A1D9-44E30A79CEA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A57C48F1-B620-4B05-8FE5-97AFD88057F5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A57C48F1-B620-4B05-8FE5-97AFD88057F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A57C48F1-B620-4B05-8FE5-97AFD88057F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A57C48F1-B620-4B05-8FE5-97AFD88057F5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

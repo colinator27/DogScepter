@@ -77,9 +77,13 @@ namespace DogScepterLib.Project.GML.Decompiler
                     case Instruction.InstructionType.SingleType:
                         sb.Append($".{DataTypeToChar[i.Type1]}");
 
-                        if (i.Kind == Instruction.Opcode.Dup || i.Kind == Instruction.Opcode.CallV)
+                        if (i.Kind == Instruction.Opcode.CallV)
+                            sb.Append($" {i.Extra}");
+                        else if (i.Kind == Instruction.Opcode.Dup)
                         {
                             sb.Append($" {i.Extra}");
+                            if ((byte)i.ComparisonKind != 0)
+                                sb.Append($" {(byte)i.ComparisonKind & 0x7F}");
                         }
                         break;
 

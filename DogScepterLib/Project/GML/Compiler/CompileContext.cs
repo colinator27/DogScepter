@@ -25,6 +25,7 @@ namespace DogScepterLib.Project.GML.Compiler
         public Dictionary<string, int> AssetIds = new();
         public Dictionary<string, int> VariableIds = new();
         public Dictionary<string, FunctionReference> Functions = new();
+        public List<FunctionReference> FunctionsToResolveLater { get; set; } = new();
         public List<string> Scripts = new();
 
         public CompileContext(ProjectFile pf)
@@ -52,11 +53,18 @@ namespace DogScepterLib.Project.GML.Compiler
                 AssetIds[asset.Name] = asset.DataIndex;
         }
 
-        public void AddCode(string name, string code, bool isScript = false)
+        /// <summary>
+        /// Adds a new code entry to this compilation context.
+        /// </summary>
+        public void AddCode(string name, string code, CodeContext.CodeMode mode = CodeContext.CodeMode.Replace, bool isScript = false)
         {
-            Code.Add(new CodeContext(this, name, code, isScript));
+            Code.Add(new CodeContext(this, name, code, mode, isScript));
         }
 
+        /// <summary>
+        /// Compiles all of the code entries associated with this context, linking them with the project's data handle.
+        /// </summary>
+        /// <returns>True if successful, false otherwise</returns>
         public bool Compile()
         {
             BuildFunctionInformation();
@@ -144,7 +152,26 @@ namespace DogScepterLib.Project.GML.Compiler
             if (Errors.Count != 0)
                 return false;
 
-            return true;
+            // Produce VM bytecode from the processed parse tree
+            foreach (var code in Code)
+                Bytecode.CompileStatement(code, code.RootNode);
+
+            if (Errors.Count != 0)
+                return false;
+
+            // Process references
+            foreach (var func in FunctionsToResolveLater)
+                func.Resolve(this);
+            foreach (var code in Code)
+                Bytecode.ProcessReferences(code);
+
+            if (Errors.Count != 0)
+                return false;
+
+            // Finally add code to data file
+            LinkToData();
+
+            return Errors.Count == 0;
         }
 
         private void BuildFunctionInformation()
@@ -216,6 +243,55 @@ namespace DogScepterLib.Project.GML.Compiler
                 }
             }
         }
+
+        private void LinkToData()
+        {
+            // Make a map of code entry names to their references, to speed up further operations
+            Dictionary<string, GMCode> nameToCode = new();
+            GMChunkCODE codeChunk = Project.DataHandle.GetChunk<GMChunkCODE>();
+            foreach (var code in codeChunk.List)
+                nameToCode[code.Name.Content] = code;
+
+            GMChunkGLOB glob = Project.DataHandle.GetChunk<GMChunkGLOB>();
+
+            // TODO - in general, need to populate locals
+
+            // Link all of our code contexts
+            foreach (var code in Code)
+            {
+                if (nameToCode.TryGetValue(code.Name, out GMCode existing))
+                {
+                    // This is an existing code entry
+                    switch (code.Mode)
+                    {
+                        case CodeContext.CodeMode.Replace:
+                            existing.BytecodeEntry.Instructions = code.Instructions;
+                            break;
+                        case CodeContext.CodeMode.InsertBegin:
+                            existing.BytecodeEntry.Instructions.InsertRange(0, code.Instructions);
+                            break;
+                        case CodeContext.CodeMode.InsertEnd:
+                            existing.BytecodeEntry.Instructions.AddRange(code.Instructions);
+                            break;
+                    }
+                }
+                else
+                {
+                    // This is a new code entry - create it
+                    GMCode newEntry = new() { Name = Project.DataHandle.DefineString(code.Name) };
+                    newEntry.BytecodeEntry = new(newEntry) { Instructions = code.Instructions };
+                    codeChunk.List.Add(newEntry);
+
+                    if (Project.DataHandle.VersionInfo.IsVersionAtLeast(2, 3))
+                    {
+                        // Add to global init scripts
+                        glob.List.Add(codeChunk.List.Count - 1);
+
+                        // TODO handle sub-functions
+                    }
+                }
+            }
+        }
     }
 
     public class CodeContext
@@ -226,8 +302,16 @@ namespace DogScepterLib.Project.GML.Compiler
             Macro
         }
 
+        public enum CodeMode
+        {
+            Replace,
+            InsertBegin,
+            InsertEnd,
+        }
+
         public CompileContext BaseContext { get; set; }
         public CodeKind Kind { get; set; } = CodeKind.Script;
+        public CodeMode Mode { get; set; } = CodeMode.Replace;
         public string Name { get; init; }
         public string Code { get; init; }
         public bool IsScript { get; init; }
@@ -247,13 +331,17 @@ namespace DogScepterLib.Project.GML.Compiler
         public List<Instruction> Instructions { get; set; } = new(64);
         public int BytecodeLength { get; set; } = 0;
         public Stack<DataType> TypeStack { get; set; } = new();
+        public List<FunctionPatch> FunctionPatches { get; set; } = new();
+        public List<VariablePatch> VariablePatches { get; set; } = new();
+        public List<StringPatch> StringPatches { get; set; } = new();
 
-        public CodeContext(CompileContext baseContext, string name, string code, bool isScript)
+        public CodeContext(CompileContext baseContext, string name, string code, CodeMode mode, bool isScript)
         {
             BaseContext = baseContext;
             Name = name;
             CurrentName = name;
             Code = code;
+            Mode = mode;
             IsScript = isScript;
         }
 
@@ -392,7 +480,7 @@ namespace DogScepterLib.Project.GML.Compiler
 
             // All function declarations are referenced (by at least their own declaration),
             // so we should resolve them.
-            Resolve(ctx); 
+            ctx.FunctionsToResolveLater.Add(this);
         }
 
         // Called when a function is referenced (i.e. should be added to function list)
@@ -406,4 +494,9 @@ namespace DogScepterLib.Project.GML.Compiler
             Resolved = true;
         }
     }
+
+    // Basic patch structures
+    public record FunctionPatch(Instruction Target, TokenFunction Token, FunctionReference Reference);
+    public record VariablePatch(Instruction Target, TokenVariable Token);
+    public record StringPatch(Instruction Target, string Content);
 }

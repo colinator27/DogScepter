@@ -214,6 +214,17 @@ public class GMCode : IGMSerializable
                 {
                 }
 
+                public Reference(T target)
+                {
+                    Target = target;
+                }
+
+                public Reference(T target, VariableType type)
+                {
+                    Target = target;
+                    Type = type;
+                }
+
                 public Reference(int int32Value)
                 {
                     NextOccurrence = int32Value & 0x00FFFFFF;

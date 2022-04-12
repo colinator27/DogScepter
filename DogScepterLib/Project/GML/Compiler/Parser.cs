@@ -268,6 +268,10 @@ namespace DogScepterLib.Project.GML.Compiler
                 {
                     case TokenKind.Dot:
                         {
+                            ctx.Position++;
+                            Node next = ParseBase(ctx);
+                            if (next == null)
+                                return null;
                             if (left.Kind != NodeKind.ChainReference)
                             {
                                 // Convert left side to a chain reference
@@ -275,17 +279,15 @@ namespace DogScepterLib.Project.GML.Compiler
                                 chain.Children.Add(left);
                                 left = chain;
                             }
-
-                            ctx.Position++;
-                            Node next = ParseBase(ctx);
-                            if (next == null)
-                                return null;
                             if (left.Children[^1].Kind == NodeKind.Constant)
                             {
                                 // The left side should be an instance type
                                 // This current node should be a variable. Need to propagate the instance type to it
                                 if (next.Kind != NodeKind.Variable)
-                                    ctx.Error("Expected variable after instance type", left.Children[^1].Token);
+                                {
+                                    if (next.Kind != NodeKind.FunctionCall) // Exception for cases like obj_example.func()
+                                        ctx.Error("Expected variable after instance type", left.Children[^1].Token);
+                                }
                                 else
                                 {
                                     TokenConstant constant = left.Children[^1].Token.Value as TokenConstant;
@@ -325,7 +327,9 @@ namespace DogScepterLib.Project.GML.Compiler
                             // Handle chain function calls, like a()()
                             Node call = new(NodeKind.FunctionCallChain);
                             call.Children.Add(left);
-                            ParseCallArguments(ctx, call);
+                            Node nextCall = new(NodeKind.FunctionCallExpr);
+                            call.Children.Add(nextCall);
+                            ParseCallArguments(ctx, nextCall);
                             left = call;
                         }
                         break;
@@ -496,11 +500,15 @@ namespace DogScepterLib.Project.GML.Compiler
 
         private static void ParseCallArguments(CodeContext ctx, Node parent)
         {
-            ExpectToken(ctx, TokenKind.Open, "'('");
+            Token open = ExpectToken(ctx, TokenKind.Open, "'('");
+
+            int argCount = 0;
 
             Token curr = ctx.Tokens[ctx.Position];
             while (curr.Kind != TokenKind.EOF && curr.Kind != TokenKind.Close)
             {
+                argCount++;
+
                 if (curr.Kind == TokenKind.Comma)
                 {
                     // Automatically supply undefined as an argument
@@ -518,6 +526,9 @@ namespace DogScepterLib.Project.GML.Compiler
                     break;
                 }
             }
+
+            if (argCount >= 128)
+                ctx.Error("Too many arguments to function call", open?.Index ?? -1);
 
             ExpectToken(ctx, TokenKind.Close, "')'");
         }

@@ -18,7 +18,6 @@ namespace DogScepterLib.Core.Models
         public void Serialize(GMDataWriter writer)
         {
             writer.WritePointerString(Name);
-            writer.Write(Occurrences);
 
             List<int> references;
             if (writer.FunctionReferences.TryGetValue(this, out references))
@@ -26,6 +25,7 @@ namespace DogScepterLib.Core.Models
             else
                 Occurrences = 0;
 
+            writer.Write(Occurrences);
             if (Occurrences > 0)
             {
                 if (writer.VersionInfo.IsVersionAtLeast(2, 3))
