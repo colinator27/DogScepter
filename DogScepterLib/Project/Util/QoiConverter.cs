@@ -33,7 +33,7 @@ namespace DogScepterLib.Project.Util
         {
             byte[] header = new byte[12];
             s.Read(header, 0, 12);
-            if (header[0] != 102 /* f */ || header[1] != 105 /* o */ || header[2] != 111 /* i */ || header[3] != 113 /* q */)
+            if (header[0] != (byte)'f' || header[1] != (byte)'i' || header[2] != (byte)'o' || header[3] != (byte)'q')
                 throw new Exception("Invalid little-endian QOIF image magic");
 
             int width = header[4] + (header[5] << 8);
@@ -132,10 +132,10 @@ namespace DogScepterLib.Project.Util
         public unsafe static byte[] GetArrayFromImage(DSImage img)
         {
             byte[] res = new byte[(img.Width * img.Height * 4) + 12 + 4 + 128]; // default capacity (extra 128 bytes to be safe)
-            res[0] = 102; // f
-            res[1] = 105; // o
-            res[2] = 111; // i
-            res[3] = 113; // q
+            res[0] = (byte)'f';
+            res[1] = (byte)'i';
+            res[2] = (byte)'o';
+            res[3] = (byte)'q';
             res[4] = (byte)(img.Width & 0xff);
             res[5] = (byte)((img.Width >> 8) & 0xff);
             res[6] = (byte)(img.Height & 0xff);
