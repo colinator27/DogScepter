@@ -37,7 +37,7 @@ public class GMBackground : IGMNamedSerializable
     // GMS2 tiles
 
     /// <summary>
-    /// A currently unknown tile value. Seems to always be 2.
+    /// TODO: A currently unknown tile value. Seems to always be 2.
     /// </summary>
     public uint TileUnknown1 = 2;
 
@@ -68,7 +68,7 @@ public class GMBackground : IGMNamedSerializable
     public uint TileColumns;
 
     /// <summary>
-    /// A currently unknown tile value. Seems to always be 0.
+    /// TODO: A currently unknown tile value. Seems to always be 0.
     /// </summary>
     public uint TileUnknown2 = 0;
 

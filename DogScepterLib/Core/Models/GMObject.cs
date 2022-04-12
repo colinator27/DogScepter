@@ -272,13 +272,13 @@ public class GMObject : IGMNamedSerializable
         /// </summary>
         /// <remarks>GameMaker suffixes <see cref="GMCode"/>.<see cref="GMCode.Name"/>, which
         /// <see cref="Action"/>.<see cref="Action.CodeID"/> references, with this ID.</remarks>
-        //TODO: UMT has this as an UINT, while this here is an INT. Who's correct?
         public int Subtype;
 
         /// <summary>
         /// A list of <see cref="Action"/>s this event executes.
         /// </summary>
-        /// <remarks>TODO: Seems to always have 1 entry, maybe the games using drag-and-drop code are different. Research if that's really the case.</remarks>
+        /// <remarks>Possible to have more than one entry on <i>very</i> old GameMaker versions, due to Drag-and-Drop which didn't
+        /// convert it directly to GML when compiling. Should usually only ever have one entry.</remarks>
         public GMUniquePointerList<Action> Actions;
 
         public void Serialize(GMDataWriter writer)
@@ -299,9 +299,8 @@ public class GMObject : IGMNamedSerializable
         /// </summary>
         public class Action : IGMSerializable
         {
-            //TODO: a lot of unknown hardcoded values, from pre studio DnD era. Nowadays, DnD blocks are compiled to bytecode.
-            // Some of the attribute names may also be wrong, most of them have been taken from here:
-            // https://github.com/WarlockD/GMdsam/blob/26aefe3e90a7a7a1891cb83f468079546f32b4b7/GMdsam/GameMaker/ChunkTypes.cs#L466
+            //TODO: a lot of unknown values, from pre studio DnD era. Nowadays, DnD blocks are compiled to bytecode.
+            // The attribute names have been taken from the 1.X project files.
             public int LibID;
             public int ID;
             public int Kind;

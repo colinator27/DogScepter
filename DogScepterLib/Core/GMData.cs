@@ -78,7 +78,7 @@ public class GMData
         public bool RoomObjectPreCreate = false;
 
         /// <summary>
-        /// Whether the GameMaker data file contains various variable counts whose purpose is currently unknown.
+        /// Whether some unknown variables in the GameMaker data file have different values.
         /// </summary>
         public bool DifferentVarCounts = false;
 
