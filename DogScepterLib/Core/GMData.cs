@@ -78,8 +78,11 @@ public class GMData
         public bool RoomObjectPreCreate = false;
 
         /// <summary>
-        /// Whether the GameMaker data file contains various variable counts whose purpose is currently unknown.
+        /// Whether some unknown variables in <see cref="GMChunkVARI"/> file have different values. Only used if
+        /// <see cref="FormatID"/> is equal or higher than <c>14</c>.
         /// </summary>
+        /// <remarks><see cref="GMChunkVARI.VarCount1"/> and <see cref="GMChunkVARI.VarCount2"/> seem to be separate
+        /// fields for instance and global variables which when this is <see langword="false"/> end up being the same.</remarks>
         public bool DifferentVarCounts = false;
 
         /// <summary>

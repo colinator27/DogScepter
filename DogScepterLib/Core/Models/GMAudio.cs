@@ -1,26 +1,24 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace DogScepterLib.Core.Models;
 
-namespace DogScepterLib.Core.Models
+/// <summary>
+/// A representation of an embedded audio file used in a GameMaker data file.
+/// </summary>
+public class GMAudio : IGMSerializable
 {
     /// <summary>
-    /// Contains binary audio data.
+    /// The binary audio data.
     /// </summary>
-    public class GMAudio : IGMSerializable
+    public BufferRegion Data;
+
+    public void Serialize(GMDataWriter writer)
     {
-        public BufferRegion Data;
+        writer.Write(Data.Length);
+        writer.Write(Data);
+    }
 
-        public void Serialize(GMDataWriter writer)
-        {
-            writer.Write(Data.Length);
-            writer.Write(Data);
-        }
-
-        public void Deserialize(GMDataReader reader)
-        {
-            int length = reader.ReadInt32();
-            Data = reader.ReadBytes(length);
-        }
+    public void Deserialize(GMDataReader reader)
+    {
+        int length = reader.ReadInt32();
+        Data = reader.ReadBytes(length);
     }
 }
