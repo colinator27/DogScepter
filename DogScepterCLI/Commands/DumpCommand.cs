@@ -93,6 +93,7 @@ public class DumpCommand : ICommand
 
         string dir = OutputDirectory ?? Environment.CurrentDirectory;
 
+        // If directory does not exist, ask if it should be created.
         if (!Directory.Exists(dir))
         {
             if (console.PromptYesNo($"Directory \"{dir}\" does not exist. Create it?"))
@@ -104,7 +105,8 @@ public class DumpCommand : ICommand
             }
         }
 
-        if (Util.IsDirectoryEmpty(dir))
+        // If the directory is not empty, ask if one wants to overwrite content.
+        if (!Util.IsDirectoryEmpty(dir))
         {
             if (!console.PromptYesNo($"Directory \"{dir}\" contains existing contents. Are you sure you want to potentially overwrite it?"))
             {
@@ -122,7 +124,7 @@ public class DumpCommand : ICommand
             return default;
         projectFile.HackyComparisonMode = ComparisonMode;
 
-        // If any dump options were specified, overwrite to true, otherwise false.
+        // If any dump options were specified, overwrite to true in respective methods, otherwise stays false.
         bool didAnything = false;
 
         if (DumpTextures)
