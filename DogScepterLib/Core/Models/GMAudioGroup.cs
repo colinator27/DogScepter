@@ -1,32 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace DogScepterLib.Core.Models;
 
-namespace DogScepterLib.Core.Models
+/// <summary>
+/// A representation of a GameMaker audio group.
+/// </summary>
+public class GMAudioGroup : IGMSerializable
 {
     /// <summary>
-    /// A representation of a GameMaker audio group.
+    /// The name of the audio group.
     /// </summary>
-    public class GMAudioGroup : IGMSerializable
+    public GMString Name;
+
+    public void Serialize(GMDataWriter writer)
     {
-        /// <summary>
-        /// The name of the audio group.
-        /// </summary>
-        public GMString Name;
+        writer.WritePointerString(Name);
+    }
 
-        public void Serialize(GMDataWriter writer)
-        {
-            writer.WritePointerString(Name);
-        }
+    public void Deserialize(GMDataReader reader)
+    {
+        Name = reader.ReadStringPointerObject();
+    }
 
-        public void Deserialize(GMDataReader reader)
-        {
-            Name = reader.ReadStringPointerObject();
-        }
-
-        public override string ToString()
-        {
-            return $"Audio Group: \"{Name.Content}\"";
-        }
+    public override string ToString()
+    {
+        return $"Audio Group: \"{Name.Content}\"";
     }
 }
