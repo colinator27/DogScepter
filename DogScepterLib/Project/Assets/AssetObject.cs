@@ -11,7 +11,6 @@ namespace DogScepterLib.Project.Assets
 {
     public class AssetObject : Asset
     {
-
         /// <summary>
         /// Contains asset object physics properties. All properties will only be used if <see cref="Physics"/> is enabled.
         /// </summary>
