@@ -11,6 +11,120 @@ namespace DogScepterLib.Project.Assets
 {
     public class AssetObject : Asset
     {
+        /// <summary>
+        /// Contains asset object physics properties. All properties will only be used if <see cref="Physics"/> is enabled.
+        /// </summary>
+        public record struct PhysicsProperties
+        {
+            /// <summary>
+            /// Whether the asset object uses GameMaker's builtin physics engine.
+            /// </summary>
+            /// <remarks>The default value in GameMaker for this is <see langword="false"/>.</remarks>
+            public bool IsEnabled;
+
+            /// <summary>
+            /// Whether this asset object should act as a sensor fixture, which will cause the game
+            /// to ignore all other physical properties of this object, and only react to collision events.
+            /// </summary>
+            /// <remarks>The default value in GameMaker for this is <see langword="false"/>.</remarks>
+            public bool Sensor;
+
+            /// <summary>
+            /// The collision shape the asset object uses.
+            /// </summary>
+            /// <remarks>The default value in GameMaker Studio 1 for this is
+            /// <see cref="Core.Models.GMObject.PhysicsProperties.CollisionShape.Circle"/> while in Studio 2 it is
+            /// <see cref="Core.Models.GMObject.PhysicsProperties.CollisionShape.Box"/>.</remarks>
+            public Core.Models.GMObject.PhysicsProperties.CollisionShape Shape;
+
+            /// <summary>
+            /// The physics density of the asset object.
+            /// </summary>
+            /// <remarks>Density is defined as mass per unit volume, with mass being automatically calculated by
+            /// this density value and the unit volume being taken from the surface area of the shape. <br/>
+            /// The default value in Gamemaker for this is <c>0.5</c>.</remarks>
+            public float Density;
+
+            /// <summary>
+            /// Determines how "bouncy" a asset object is and is co-dependant on other attributes like <c>Gravity</c> or
+            /// <see cref="Friction"/>.
+            /// </summary>
+            /// <remarks>The default value for this in GameMaker is <c>0.1</c>.</remarks>
+            public float Restitution;
+
+            /// <summary>
+            /// The collision group this asset object belongs to.
+            /// </summary>
+            /// <remarks>The default value for this in GameMaker is <c>0</c>.</remarks>
+            public int Group;
+
+            /// <summary>
+            /// The amount of linear damping this asset object has, which will gradually slow down moving objects.
+            /// </summary>
+            /// <remarks>The default value for this in GameMaker is <c>0.1</c></remarks>
+            public float LinearDamping;
+
+            /// <summary>
+            /// The amount of angular damping this asset object has, which will slow down rotating objects.
+            /// </summary>
+            /// <remarks>The default value for this in GameMaker is <c>0.1</c>.</remarks>
+            public float AngularDamping;
+
+            /// <summary>
+            /// The list of vertices used for
+            /// <see cref="Core.Models.GMObject.PhysicsProperties.CollisionShape"/>.<see cref="Core.Models.GMObject.PhysicsProperties.CollisionShape.Custom"/>.
+            /// </summary>
+            public List<PhysicsVertex> Vertices;
+
+            /// <summary>
+            /// The amount of friction this asset object has, which will cause a loss of momentum during collisions.
+            /// </summary>
+            /// <remarks>The default value for this in GameMaker is <c>0.2</c>.</remarks>
+            public float Friction;
+
+            /// <summary>
+            /// Whether the asset object should use physics simulation on object creation.
+            /// </summary>
+            /// <remarks>The default value for this in GameMaker is <see langword="true"/>.</remarks>
+            public bool IsAwake;
+
+            /// <summary>
+            /// Whether the asset object should be kinematic, which makes it unaffected by collisions and other physics properties
+            /// Will only be used if <see cref="Density"/> is set to <c>0</c>.
+            /// </summary>
+            /// <remarks>The default value for this in GameMaker is <see langword="false"/>.</remarks>
+            public bool IsKinematic;
+
+            /// <summary>
+            /// An explicit cast from a <see cref="Core.Models.GMObject"/>.<see cref="Core.Models.GMObject.PhysicsProperties"/>
+            /// struct to a <see cref="PhysicsProperties"/>.
+            /// </summary>
+            /// <param name="physicsProperties">The physics properties as
+            /// <see cref="Core.Models.GMObject"/>.<see cref="Core.Models.GMObject.PhysicsProperties"/>.</param>
+            /// <returns>Physics properties as <see cref="PhysicsProperties"/>.</returns>
+            public static explicit operator PhysicsProperties(Core.Models.GMObject.PhysicsProperties physicsProperties)
+            {
+                PhysicsProperties newPhysics = new PhysicsProperties
+                {
+                    IsEnabled = physicsProperties.IsEnabled,
+                    Sensor = physicsProperties.Sensor,
+                    Shape = physicsProperties.Shape,
+                    Density = physicsProperties.Density,
+                    Restitution = physicsProperties.Restitution,
+                    Group = physicsProperties.Group,
+                    LinearDamping = physicsProperties.LinearDamping,
+                    AngularDamping = physicsProperties.AngularDamping,
+                    Friction = physicsProperties.Friction,
+                    IsAwake = physicsProperties.IsAwake,
+                    IsKinematic = physicsProperties.IsKinematic,
+                };
+                foreach (Core.Models.GMObject.PhysicsVertex v in physicsProperties.Vertices)
+                    newPhysics.Vertices.Add(new PhysicsVertex { X = v.X, Y = v.Y });
+
+                return newPhysics;
+            }
+        }
+
         public string Sprite { get; set; }
         public bool Visible { get; set; }
         public bool Solid { get; set; }
@@ -18,18 +132,7 @@ namespace DogScepterLib.Project.Assets
         public bool Persistent { get; set; }
         public string ParentObject { get; set; }
         public string MaskSprite { get; set; }
-        public bool Physics { get; set; }
-        public bool PhysicsSensor { get; set; }
-        public Core.Models.GMObject.CollisionShape PhysicsShape { get; set; }
-        public float PhysicsDensity { get; set; }
-        public float PhysicsRestitution { get; set; }
-        public int PhysicsGroup { get; set; }
-        public float PhysicsLinearDamping { get; set; }
-        public float PhysicsAngularDamping { get; set; }
-        public List<PhysicsVertex> PhysicsVertices { get; set; }
-        public float PhysicsFriction { get; set; }
-        public bool PhysicsAwake { get; set; }
-        public bool PhysicsKinematic { get; set; }
+        public PhysicsProperties Physics { get; set; }
         public SortedDictionary<EventType, List<Event>> Events { get; set; }
 
         public enum EventType : uint
@@ -43,8 +146,8 @@ namespace DogScepterLib.Project.Assets
             Mouse = 6,
             Other = 7,
             Draw = 8,
-            KeyPress = 9, 
-            KeyRelease = 10, 
+            KeyPress = 9,
+            KeyRelease = 10,
             Trigger = 11,
             CleanUp = 12,
             Gesture = 13,

@@ -30,25 +30,13 @@ namespace DogScepterLib.Project.Converters
                 ParentObject = asset.ParentObjectID >= 0 ? pf.Objects[asset.ParentObjectID].Name
                                     : (asset.ParentObjectID == -100 ? "<undefined>" : null),
                 MaskSprite = asset.MaskSpriteID >= 0 ? pf.Sprites[asset.MaskSpriteID].Name : null,
-                Physics = asset.Physics,
-                PhysicsSensor = asset.PhysicsSensor,
-                PhysicsShape = asset.PhysicsShape,
-                PhysicsDensity = asset.PhysicsDensity,
-                PhysicsRestitution = asset.PhysicsRestitution,
-                PhysicsGroup = asset.PhysicsGroup,
-                PhysicsLinearDamping = asset.PhysicsLinearDamping,
-                PhysicsAngularDamping = asset.PhysicsAngularDamping,
-                PhysicsVertices = new List<AssetObject.PhysicsVertex>(),
-                PhysicsFriction = asset.PhysicsFriction,
-                PhysicsAwake = asset.PhysicsAwake,
-                PhysicsKinematic = asset.PhysicsKinematic,
+                Physics = (AssetObject.PhysicsProperties)asset.Physics,
                 Events = new SortedDictionary<AssetObject.EventType, List<AssetObject.Event>>()
             };
 
             pf.Objects[index].Asset = projectAsset;
 
-            foreach (GMObject.PhysicsVertex v in asset.PhysicsVertices)
-                projectAsset.PhysicsVertices.Add(new AssetObject.PhysicsVertex() { X = v.X, Y = v.Y });
+
             for (int j = 0; j < asset.Events.Count; j++)
             {
                 List<AssetObject.Event> projectEvents = new List<AssetObject.Event>();
@@ -239,23 +227,9 @@ namespace DogScepterLib.Project.Converters
                     Persistent = projectAsset.Persistent,
                     ParentObjectID = getObject(projectAsset.ParentObject),
                     MaskSpriteID = pf.Sprites.FindIndex(projectAsset.MaskSprite),
-                    Physics = projectAsset.Physics,
-                    PhysicsSensor = projectAsset.PhysicsSensor,
-                    PhysicsShape = projectAsset.PhysicsShape,
-                    PhysicsDensity = projectAsset.PhysicsDensity,
-                    PhysicsRestitution = projectAsset.PhysicsRestitution,
-                    PhysicsGroup = projectAsset.PhysicsGroup,
-                    PhysicsLinearDamping = projectAsset.PhysicsLinearDamping,
-                    PhysicsAngularDamping = projectAsset.PhysicsAngularDamping,
-                    PhysicsVertices = new List<GMObject.PhysicsVertex>(),
-                    PhysicsFriction = projectAsset.PhysicsFriction,
-                    PhysicsAwake = projectAsset.PhysicsAwake,
-                    PhysicsKinematic = projectAsset.PhysicsKinematic,
+                    Physics = (GMObject.PhysicsProperties)projectAsset.Physics,
                     Events = new GMUniquePointerList<GMUniquePointerList<GMObject.Event>>()
                 };
-
-                foreach (AssetObject.PhysicsVertex v in projectAsset.PhysicsVertices)
-                    dataAsset.PhysicsVertices.Add(new GMObject.PhysicsVertex() { X = v.X, Y = v.Y });
 
                 foreach (var events in projectAsset.Events.Values)
                 {
