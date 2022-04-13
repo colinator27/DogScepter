@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using DogScepterLib.Project.Assets;
 
 namespace DogScepterLib.Core.Models;
 
@@ -8,22 +9,134 @@ namespace DogScepterLib.Core.Models;
 public class GMObject : IGMNamedSerializable
 {
     /// <summary>
-    /// Possible collision shapes a game object can have. Only used if <see cref="GMObject.Physics"/> is enabled.
+    /// Contains GameMaker object physics properties. All properties will only be used if <see cref="Physics"/> is enabled.
     /// </summary>
-    public enum CollisionShape
+    public record struct PhysicsProperties
     {
         /// <summary>
-        /// A circular collision shape.
+        /// Possible collision shapes a game object can have.
         /// </summary>
-        Circle = 0,
+        public enum CollisionShape
+        {
+            /// <summary>
+            /// A circular collision shape.
+            /// </summary>
+            Circle = 0,
+            /// <summary>
+            /// A rectangular collision shape.
+            /// </summary>
+            Box = 1,
+            /// <summary>
+            /// A custom polygonal collision shape.
+            /// </summary>
+            Custom = 2
+        }
+
         /// <summary>
-        /// A rectangular collision shape.
+        /// Whether the game object uses GameMaker's builtin physics engine.
         /// </summary>
-        Box = 1,
+        /// <remarks>The default value in GameMaker for this is <see langword="false"/>.</remarks>
+        public bool IsEnabled;
+
         /// <summary>
-        /// A custom polygonal collision shape.
+        /// Whether this game object should act as a sensor fixture, which will cause the game
+        /// to ignore all other physical properties of this object, and only react to collision events.
         /// </summary>
-        Custom = 2
+        /// <remarks>The default value in GameMaker for this is <see langword="false"/>.</remarks>
+        public bool Sensor;
+
+        /// <summary>
+        /// The collision shape the game object uses.
+        /// </summary>
+        /// <remarks>The default value in GameMaker Studio 1 for this is <see cref="CollisionShape.Circle"/> while
+        /// in Studio 2 it is <see cref="CollisionShape.Box"/>.</remarks>
+        public CollisionShape Shape;
+
+        /// <summary>
+        /// The physics density of the game object.
+        /// </summary>
+        /// <remarks>Density is defined as mass per unit volume, with mass being automatically calculated by
+        /// this density value and the unit volume being taken from the surface area of the shape. <br/>
+        /// The default value in Gamemaker for this is <c>0.5</c>.</remarks>
+        public float Density;
+
+        /// <summary>
+        /// Determines how "bouncy" a game object is and is co-dependant on other attributes like <c>Gravity</c> or
+        /// <see cref="Friction"/>.
+        /// </summary>
+        /// <remarks>The default value for this in GameMaker is <c>0.1</c>.</remarks>
+        public float Restitution;
+
+        /// <summary>
+        /// The collision group this game object belongs to.
+        /// </summary>
+        /// <remarks>The default value for this in GameMaker is <c>0</c>.</remarks>
+        public int Group;
+
+        /// <summary>
+        /// The amount of linear damping this game object has, which will gradually slow down moving objects.
+        /// </summary>
+        /// <remarks>The default value for this in GameMaker is <c>0.1</c></remarks>
+        public float LinearDamping;
+
+        /// <summary>
+        /// The amount of angular damping this game object has, which will slow down rotating objects.
+        /// </summary>
+        /// <remarks>The default value for this in GameMaker is <c>0.1</c>.</remarks>
+        public float AngularDamping;
+
+        /// <summary>
+        /// The list of vertices used for <see cref="CollisionShape"/>.<see cref="CollisionShape.Custom"/>.
+        /// </summary>
+        public List<PhysicsVertex> Vertices;
+
+        /// <summary>
+        /// The amount of friction this game object has, which will cause a loss of momentum during collisions.
+        /// </summary>
+        /// <remarks>The default value for this in GameMaker is <c>0.2</c>.</remarks>
+        public float Friction;
+
+        /// <summary>
+        /// Whether the game object should use physics simulation on object creation.
+        /// </summary>
+        /// <remarks>The default value for this in GameMaker is <see langword="true"/>.</remarks>
+        public bool IsAwake;
+
+        /// <summary>
+        /// Whether the game object should be kinematic, which makes it unaffected by collisions and other physics properties
+        /// Will only be used if <see cref="Density"/> is set to <c>0</c>.
+        /// </summary>
+        /// <remarks>The default value for this in GameMaker is <see langword="false"/>.</remarks>
+        public bool IsKinematic;
+
+        /// <summary>
+        /// An explicit cast from a <see cref="AssetObject"/>.<see cref="AssetObject.PhysicsProperties"/>
+        /// struct to a <see cref="PhysicsProperties"/>.
+        /// </summary>
+        /// <param name="physicsProperties">The physics properties as
+        /// <see cref="AssetObject"/>.<see cref="AssetObject.PhysicsProperties"/>.</param>
+        /// <returns>Physics properties as <see cref="PhysicsProperties"/>.</returns>
+        public static explicit operator PhysicsProperties(AssetObject.PhysicsProperties physicsProperties)
+        {
+            PhysicsProperties newPhysics = new PhysicsProperties
+            {
+                IsEnabled = physicsProperties.IsEnabled,
+                Sensor = physicsProperties.Sensor,
+                Shape = physicsProperties.Shape,
+                Density = physicsProperties.Density,
+                Restitution = physicsProperties.Restitution,
+                Group = physicsProperties.Group,
+                LinearDamping = physicsProperties.LinearDamping,
+                AngularDamping = physicsProperties.AngularDamping,
+                Friction = physicsProperties.Friction,
+                IsAwake = physicsProperties.IsAwake,
+                IsKinematic = physicsProperties.IsKinematic,
+            };
+            foreach (AssetObject.PhysicsVertex v in physicsProperties.Vertices)
+                newPhysics.Vertices.Add(new PhysicsVertex { X = v.X, Y = v.Y });
+
+            return newPhysics;
+        }
     }
 
     /// <summary>
@@ -79,90 +192,10 @@ public class GMObject : IGMNamedSerializable
     /// </summary>
     public int MaskSpriteID;
 
-    #region Physics properties
-
     /// <summary>
-    /// Whether the game object uses GameMaker's builtin physics engine.
+    /// The physics properties of this <see cref="GMObject"/>.
     /// </summary>
-    /// <remarks>The default value in GameMaker for this is <see langword="false"/>.</remarks>
-    public bool Physics;
-
-    /// <summary>
-    /// Whether this game object should act as a sensor fixture, which will cause the game
-    /// to ignore all other physical properties of this object, and only react to collision events.
-    /// Only used if <see cref="Physics"/> is enabled.
-    /// </summary>
-    /// <remarks>The default value in GameMaker for this is <see langword="false"/>.</remarks>
-    public bool PhysicsSensor;
-
-    /// <summary>
-    /// The collision shape the game object uses. Only used if <see cref="Physics"/> is enabled.
-    /// </summary>
-    /// <remarks>The default value in GameMaker Studio 1 for this is <see cref="CollisionShape.Circle"/> while
-    /// in Studio 2 it is <see cref="CollisionShape.Box"/>.</remarks>
-    public CollisionShape PhysicsShape;
-
-    /// <summary>
-    /// The physics density of the game object. Only used if <see cref="Physics"/> is enabled.
-    /// </summary>
-    /// <remarks>Density is defined as mass per unit volume, with mass being automatically calculated by
-    /// this density value and the unit volume being taken from the surface area of the shape. <br/>
-    /// The default value in Gamemaker for this is <c>0.5</c>.</remarks>
-    public float PhysicsDensity;
-
-    /// <summary>
-    /// Determines how "bouncy" a game object is and is co-dependant on other attributes like <c>Gravity</c> or
-    /// <see cref="PhysicsFriction"/>. Only used if <see cref="Physics"/> is enabled.
-    /// </summary>
-    /// <remarks>The default value for this in GameMaker is <c>0.1</c>.</remarks>
-    public float PhysicsRestitution;
-
-    /// <summary>
-    /// The collision group this game object belongs to. Only used if <see cref="Physics"/> is enabled.
-    /// </summary>
-    /// <remarks>The default value for this in GameMaker is <c>0</c>.</remarks>
-    public int PhysicsGroup;
-
-    /// <summary>
-    /// The amount of linear damping this game object has, which will gradually slow down moving objects.
-    /// Only used if <see cref="Physics"/> is enabled.
-    /// </summary>
-    /// <remarks>The default value for this in GameMaker is <c>0.1</c></remarks>
-    public float PhysicsLinearDamping;
-
-    /// <summary>
-    /// The amount of angular damping this game object has, which will slow down rotating objects.
-    /// Only used if <see cref="Physics"/> is enabled.
-    /// </summary>
-    /// <remarks>The default value for this in GameMaker is <c>0.1</c>.</remarks>
-    public float PhysicsAngularDamping;
-
-    /// <summary>
-    /// The list of vertices used for <see cref="CollisionShape.Custom"/>. Only used if <see cref="Physics"/> is enabled.
-    /// </summary>
-    public List<PhysicsVertex> PhysicsVertices;
-
-    /// <summary>
-    /// The amount of friction this game object has, which will cause a loss of momentum during collisions.
-    /// Only used if <see cref="Physics"/> is enabled.
-    /// </summary>
-    /// <remarks>The default value for this in GameMaker is <c>0.2</c>.</remarks>
-    public float PhysicsFriction;
-
-    /// <summary>
-    /// Whether the game object should use physics simulation on object creation.
-    /// </summary>
-    /// <remarks>The default value for this in GameMaker is <see langword="true"/>.</remarks>
-    public bool PhysicsAwake;
-
-    /// <summary>
-    /// Whether the game object should be kinematic, which makes it unaffected by collisions and other physics properties
-    /// Will only be used if <see cref="Physics"/> is enabled and <see cref="PhysicsDensity"/> is set to <c>0</c>.
-    /// </summary>
-    /// <remarks>The default value for this in GameMaker is <see langword="false"/>.</remarks>
-    public bool PhysicsKinematic;
-
-    #endregion
+    public PhysicsProperties Physics;
 
     /// <summary>
     /// The events that the game object has.
@@ -179,19 +212,19 @@ public class GMObject : IGMNamedSerializable
         writer.WriteWideBoolean(Persistent);
         writer.Write(ParentObjectID);
         writer.Write(MaskSpriteID);
-        writer.WriteWideBoolean(Physics);
-        writer.WriteWideBoolean(PhysicsSensor);
-        writer.Write((int)PhysicsShape);
-        writer.Write(PhysicsDensity);
-        writer.Write(PhysicsRestitution);
-        writer.Write(PhysicsGroup);
-        writer.Write(PhysicsLinearDamping);
-        writer.Write(PhysicsAngularDamping);
-        writer.Write(PhysicsVertices.Count);
-        writer.Write(PhysicsFriction);
-        writer.WriteWideBoolean(PhysicsAwake);
-        writer.WriteWideBoolean(PhysicsKinematic);
-        foreach (PhysicsVertex v in PhysicsVertices)
+        writer.WriteWideBoolean(Physics.IsEnabled);
+        writer.WriteWideBoolean(Physics.Sensor);
+        writer.Write((int)Physics.Shape);
+        writer.Write(Physics.Density);
+        writer.Write(Physics.Restitution);
+        writer.Write(Physics.Group);
+        writer.Write(Physics.LinearDamping);
+        writer.Write(Physics.AngularDamping);
+        writer.Write(Physics.Vertices.Count);
+        writer.Write(Physics.Friction);
+        writer.WriteWideBoolean(Physics.IsAwake);
+        writer.WriteWideBoolean(Physics.IsKinematic);
+        foreach (PhysicsVertex v in Physics.Vertices)
             v.Serialize(writer);
         Events.Serialize(writer);
     }
@@ -206,24 +239,24 @@ public class GMObject : IGMNamedSerializable
         Persistent = reader.ReadWideBoolean();
         ParentObjectID = reader.ReadInt32();
         MaskSpriteID = reader.ReadInt32();
-        Physics = reader.ReadWideBoolean();
-        PhysicsSensor = reader.ReadWideBoolean();
-        PhysicsShape = (CollisionShape)reader.ReadInt32();
-        PhysicsDensity = reader.ReadSingle();
-        PhysicsRestitution = reader.ReadSingle();
-        PhysicsGroup = reader.ReadInt32();
-        PhysicsLinearDamping = reader.ReadSingle();
-        PhysicsAngularDamping = reader.ReadSingle();
+        Physics.IsEnabled = reader.ReadWideBoolean();
+        Physics.Sensor = reader.ReadWideBoolean();
+        Physics.Shape = (PhysicsProperties.CollisionShape)reader.ReadInt32();
+        Physics.Density = reader.ReadSingle();
+        Physics.Restitution = reader.ReadSingle();
+        Physics.Group = reader.ReadInt32();
+        Physics.LinearDamping = reader.ReadSingle();
+        Physics.AngularDamping = reader.ReadSingle();
         int vertexCount = reader.ReadInt32();
-        PhysicsFriction = reader.ReadSingle();
-        PhysicsAwake = reader.ReadWideBoolean();
-        PhysicsKinematic = reader.ReadWideBoolean();
-        PhysicsVertices = new List<PhysicsVertex>(vertexCount);
+        Physics.Friction = reader.ReadSingle();
+        Physics.IsAwake = reader.ReadWideBoolean();
+        Physics.IsKinematic = reader.ReadWideBoolean();
+        Physics.Vertices = new List<PhysicsVertex>(vertexCount);
         for (int i = vertexCount; i > 0; i--)
         {
             PhysicsVertex v = new PhysicsVertex();
             v.Deserialize(reader);
-            PhysicsVertices.Add(v);
+            Physics.Vertices.Add(v);
         }
         Events = new GMUniquePointerList<GMUniquePointerList<Event>>();
         Events.Deserialize(reader);
@@ -235,7 +268,7 @@ public class GMObject : IGMNamedSerializable
     }
 
     /// <summary>
-    /// Contains a physics vertex which is used for <see cref="CollisionShape"/>.<see cref="CollisionShape.Custom"/>.
+    /// Contains a physics vertex which is used for <see cref="PhysicsProperties.CollisionShape"/>.<see cref="PhysicsProperties.CollisionShape.Custom"/>.
     /// </summary>
     public class PhysicsVertex : IGMSerializable
     {
