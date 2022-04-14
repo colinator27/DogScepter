@@ -3,10 +3,8 @@ using Microsoft.Toolkit.HighPerformance;
 using PropertyChanged;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace DogScepterLib.Project
 {
