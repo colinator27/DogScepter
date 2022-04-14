@@ -96,6 +96,11 @@ public class GMData
         public bool RunFromIDE = false;
 
         /// <summary>
+        /// Whether the VM bytecode short-circuits logical and/or operations.
+        /// </summary>
+        public bool ShortCircuit = true;
+
+        /// <summary>
         /// The ID of the main data file's audio group.
         /// </summary>
         public int BuiltinAudioGroupID => (Major >= 2 || (Major == 1 && (Build >= 1354 || (Build >= 161 && Build < 1000)))) ? 0 : 1;

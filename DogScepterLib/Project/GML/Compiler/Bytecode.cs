@@ -1,112 +1,11 @@
-﻿using System.Collections.Generic;
-using DogScepterLib.Core.Chunks;
+﻿using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
-using static DogScepterLib.Core.Models.GMCode.Bytecode;
 using static DogScepterLib.Core.Models.GMCode.Bytecode.Instruction;
 
 namespace DogScepterLib.Project.GML.Compiler;
 
-public static class Bytecode
+public static partial class Bytecode
 {
-    // Basic patch structures
-    public record FunctionPatch(Instruction Target, TokenFunction Token, FunctionReference Reference);
-    public record VariablePatch(Instruction Target, TokenVariable Token);
-    public record StringPatch(Instruction Target, string Content);
-
-    // Bytecode patch structures
-    public interface IJumpPatch
-    {
-        public void Add(Instruction instr);
-        public void Finish(CodeContext ctx);
-    }
-    public class JumpForwardPatch : IJumpPatch
-    {
-        private readonly List<Instruction> _patches;
-
-        public JumpForwardPatch(Instruction firstToPatch)
-        {
-            _patches = new() { firstToPatch };
-        }
-
-        public void Add(Instruction instr)
-        {
-            _patches.Add(instr);
-        }
-
-        public void Finish(CodeContext ctx)
-        {
-            foreach (var instr in _patches)
-                instr.JumpOffset = (ctx.BytecodeLength - instr.Address) / 4;
-        }
-    }
-    public class JumpBackwardPatch : IJumpPatch
-    {
-        private readonly List<Instruction> _patches;
-        private readonly int _startAddress;
-
-        public JumpBackwardPatch(CodeContext ctx)
-        {
-            _startAddress = ctx.BytecodeLength;
-            _patches = new();
-        }
-
-        public void Add(Instruction instr)
-        {
-            _patches.Add(instr);
-        }
-
-        public void Finish(CodeContext ctx)
-        {
-            foreach (var instr in _patches)
-                instr.JumpOffset = (_startAddress - instr.Address) / 4;
-        }
-    }
-    public class Context
-    {
-        public enum ContextKind
-        {
-            BasicLoop,
-            With,
-            Switch
-            // todo: try/catch/finally?
-        }
-
-        public ContextKind Kind { get; init; }
-        public bool BreakUsed { get; private set; }
-        public bool ContinueUsed { get; private set; }
-        public DataType DuplicatedType { get; init; }
-
-        private readonly IJumpPatch _breakJump;
-        private readonly IJumpPatch _continueJump;
-
-        public Context(ContextKind kind, IJumpPatch breakJump, IJumpPatch continueJump)
-        {
-            Kind = kind;
-            _breakJump = breakJump;
-            _continueJump = continueJump;
-        }
-
-        public Context(IJumpPatch breakJump, IJumpPatch continueJump, DataType duplicatedType)
-        {
-            Kind = ContextKind.Switch;
-            _breakJump = breakJump;
-            _continueJump = continueJump;
-            DuplicatedType = duplicatedType;
-        }
-
-        public IJumpPatch UseBreakJump()
-        {
-            BreakUsed = true;
-            return _breakJump;
-        }
-
-        public IJumpPatch UseContinueJump()
-        {
-            ContinueUsed = true;
-            return _continueJump;
-        }
-    }
-
     public static void ProcessReferences(CodeContext ctx)
     {
         // Resolve string references
@@ -143,145 +42,6 @@ public static class Bytecode
     }
 
     /// <summary>
-    /// Emits a basic instruction with no properties.
-    /// </summary>
-    private static Instruction Emit(CodeContext ctx, Opcode opcode)
-    {
-        Instruction res = new(ctx.BytecodeLength)
-        {
-            Kind = opcode
-        };
-        ctx.Instructions.Add(res);
-        ctx.BytecodeLength += 4;
-        return res;
-    }
-
-    /// <summary>
-    /// Emits a basic single-type instruction.
-    /// </summary>
-    private static Instruction Emit(CodeContext ctx, Opcode opcode, DataType type)
-    {
-        Instruction res = new(ctx.BytecodeLength)
-        {
-            Kind = opcode,
-            Type1 = type
-        };
-        ctx.Instructions.Add(res);
-        ctx.BytecodeLength += res.GetLength() * 4;
-        return res;
-    }
-
-    /// <summary>
-    /// Emits a basic double-type instruction.
-    /// </summary>
-    private static Instruction Emit(CodeContext ctx, Opcode opcode, DataType type, DataType type2)
-    {
-        Instruction res = new(ctx.BytecodeLength)
-        {
-            Kind = opcode,
-            Type1 = type,
-            Type2 = type2
-        };
-        ctx.Instructions.Add(res);
-        ctx.BytecodeLength += res.GetLength() * 4;
-        return res;
-    }
-
-    /// <summary>
-    /// Emits a special "dup swap" instruction, with its parameters and type.
-    /// </summary>
-    private static Instruction EmitDupSwap(CodeContext ctx, DataType type, byte param1, byte param2)
-    {
-        Instruction res = new(ctx.BytecodeLength)
-        {
-            Kind = Opcode.Dup,
-            Type1 = type,
-            Extra = param1,
-            ComparisonKind = (ComparisonType)(param2 | 0x80)
-        };
-        ctx.Instructions.Add(res);
-        ctx.BytecodeLength += 4;
-        return res;
-    }
-
-    /// <summary>
-    /// Emits an instruction that references a variable, with data type.
-    /// </summary>
-    private static Instruction EmitVariable(CodeContext ctx, Opcode opcode, DataType type, TokenVariable variable)
-    {
-        Instruction res = new(ctx.BytecodeLength)
-        {
-            Kind = opcode,
-            Type1 = type
-        };
-
-        ctx.VariablePatches.Add(new(res, variable));
-
-        ctx.Instructions.Add(res);
-        ctx.BytecodeLength += 8;
-        return res;
-    }
-
-    /// <summary>
-    /// Emits an instruction that references a function, with data type, argument count, and optional reference.
-    /// </summary>
-    private static Instruction EmitCall(CodeContext ctx, Opcode opcode, DataType type, TokenFunction function, int argCount, Token token = null, FunctionReference reference = null)
-    {
-        Instruction res = new(ctx.BytecodeLength)
-        {
-            Kind = opcode,
-            Type1 = type,
-            Value = (short)argCount
-        };
-
-        if (function.Builtin != null)
-        {
-            if (function.Builtin.ArgumentCount != -1 && argCount != function.Builtin.ArgumentCount)
-                ctx.Error($"Built-in function \"{function.Builtin.Name}\" expects {function.Builtin.ArgumentCount} arguments; {argCount} supplied.", token?.Index ?? -1);
-        }
-
-        ctx.FunctionPatches.Add(new(res, function, reference));
-
-        ctx.Instructions.Add(res);
-        ctx.BytecodeLength += 8;
-        return res;
-    }
-
-    /// <summary>
-    /// Emits an instruction that references a string, with data type.
-    /// </summary>
-    private static Instruction EmitString(CodeContext ctx, Opcode opcode, DataType type, string str)
-    {
-        Instruction res = new(ctx.BytecodeLength)
-        {
-            Kind = opcode,
-            Type1 = type
-        };
-
-        ctx.StringPatches.Add(new(res, str));
-
-        ctx.Instructions.Add(res);
-        ctx.BytecodeLength += 8;
-        return res;
-    }
-
-    /// <summary>
-    /// If the top of the type stack isn't the supplied type, emits an instruction to convert to that type.
-    /// This removes the type from the top of the type stack in the process.
-    /// </summary>
-    /// <returns>True if a conversion instruction was emitted, false otherwise</returns>
-    private static bool ConvertTo(CodeContext ctx, DataType to)
-    {
-        DataType from = ctx.TypeStack.Pop();
-        if (from != to)
-        {
-            Emit(ctx, Opcode.Conv, from, to);
-            return true;
-        }
-        return false;
-    }
-
-    /// <summary>
     /// Emits the necessary bytecode for a statement and its sub-nodes.
     /// </summary>
     public static void CompileStatement(CodeContext ctx, Node stmt)
@@ -297,10 +57,41 @@ public static class Bytecode
                 Emit(ctx, Opcode.Popz, DataType.Variable);
                 break;
             case NodeKind.Assign:
-                // TODO
+                switch (stmt.Token.Kind)
+                {
+                    case TokenKind.Assign:
+                        CompileExpression(ctx, stmt.Children[1]);
+                        CompileAssign(ctx, stmt.Children[0]);
+                        break;
+                    case TokenKind.AssignPlus:
+                        CompileCompoundAssign(ctx, stmt, Opcode.Add);
+                        break;
+                    case TokenKind.AssignMinus:
+                        CompileCompoundAssign(ctx, stmt, Opcode.Sub);
+                        break;
+                    case TokenKind.AssignTimes:
+                        CompileCompoundAssign(ctx, stmt, Opcode.Mul);
+                        break;
+                    case TokenKind.AssignDivide:
+                        CompileCompoundAssign(ctx, stmt, Opcode.Div);
+                        break;
+                    case TokenKind.AssignAnd:
+                        CompileCompoundAssign(ctx, stmt, Opcode.And, true);
+                        break;
+                    case TokenKind.AssignOr:
+                        CompileCompoundAssign(ctx, stmt, Opcode.Or, true);
+                        break;
+                    case TokenKind.AssignXor:
+                        CompileCompoundAssign(ctx, stmt, Opcode.Xor, true);
+                        break;
+                    case TokenKind.AssignMod:
+                        CompileCompoundAssign(ctx, stmt, Opcode.Mod);
+                        break;
+                }
                 break;
             case NodeKind.Exit:
-                CompileExit(ctx);
+                ExitCleanup(ctx);
+                Emit(ctx, Opcode.Exit, DataType.Int32);
                 break;
             case NodeKind.Break:
                 if (ctx.BytecodeContexts.Count == 0)
@@ -353,7 +144,53 @@ public static class Bytecode
                 // TODO
                 break;
             case NodeKind.With:
-                // TODO
+                {
+                    // Instance
+                    CompileExpression(ctx, stmt.Children[0]);
+                    DataType type = ctx.TypeStack.Pop();
+                    if (type != DataType.Int32)
+                    {
+                        if (type == DataType.Variable && ctx.BaseContext.IsGMS23)
+                        {
+                            // Use magic -9 to reference stacktop instance
+                            Emit(ctx, Opcode.PushI, DataType.Int16).Value = (short)-9;
+                        }
+                        else
+                            Emit(ctx, Opcode.Conv, type, DataType.Int32);
+                    }
+
+                    // Body
+                    var popEnvJump = new JumpForwardPatch(Emit(ctx, Opcode.PushEnv));
+                    var startJump = new JumpBackwardPatch(ctx);
+                    var endJump = new JumpForwardPatch();
+                    ctx.BytecodeContexts.Push(new Context(Context.ContextKind.With, endJump, popEnvJump));
+                    CompileStatement(ctx, stmt.Children[1]);
+
+                    popEnvJump.Finish(ctx);
+                    startJump.Add(Emit(ctx, Opcode.PopEnv));
+                    startJump.Finish(ctx);
+
+                    if (ctx.BytecodeContexts.Pop().BreakUsed)
+                    {
+                        // Need to generate custom "magic" popenv block
+                        var endOfCleanupJump = new JumpForwardPatch(Emit(ctx, Opcode.B));
+
+                        endJump.Finish(ctx);
+
+                        // Special magic that doesn't continue the loop
+                        var instr = Emit(ctx, Opcode.PopEnv);
+                        instr.PopenvExitMagic = true;
+                        if (ctx.BaseContext.Project.DataHandle.VersionInfo.FormatID <= 14)
+                        {
+                            // Older versions use a different magic value
+                            instr.JumpOffset = -1048576;
+                        }
+
+                        endOfCleanupJump.Finish(ctx);
+                    }
+                    else
+                        endJump.Finish(ctx);
+                }
                 break;
             case NodeKind.While:
                 {
@@ -374,13 +211,84 @@ public static class Bytecode
                 }
                 break;
             case NodeKind.For:
-                // TODO
+                {
+                    // Initial statement
+                    CompileStatement(ctx, stmt.Children[0]);
+
+                    // Condition
+                    var repeatJump = new JumpBackwardPatch(ctx);
+                    CompileExpression(ctx, stmt.Children[1]);
+                    ConvertTo(ctx, DataType.Boolean);
+                    var endLoopJump = new JumpForwardPatch(Emit(ctx, Opcode.Bf));
+
+                    // Body
+                    var continuePatch = new JumpForwardPatch();
+                    ctx.BytecodeContexts.Push(new Context(Context.ContextKind.BasicLoop, endLoopJump, continuePatch));
+                    CompileStatement(ctx, stmt.Children[3]);
+                    ctx.BytecodeContexts.Pop();
+
+                    // Iteration statement
+                    continuePatch.Finish(ctx);
+                    CompileStatement(ctx, stmt.Children[2]);
+                    repeatJump.Add(Emit(ctx, Opcode.B));
+                    repeatJump.Finish(ctx);
+
+                    endLoopJump.Finish(ctx);
+                }
                 break;
             case NodeKind.Repeat:
-                // TODO
+                {
+                    // Repeat counter
+                    CompileExpression(ctx, stmt.Children[0]);
+                    ConvertTo(ctx, DataType.Int32);
+
+                    // This loop type keeps its counter on the stack, starting here
+                    Emit(ctx, Opcode.Dup, DataType.Int32);
+                    Emit(ctx, Opcode.Push, DataType.Int32).Value = 0; // special instruction
+                    EmitCompare(ctx, ComparisonType.LTE, DataType.Int32, DataType.Int32);
+                    var endJump = new JumpForwardPatch(Emit(ctx, Opcode.Bt));
+                    var continueJump = new JumpForwardPatch();
+
+                    // Body
+                    var startJump = new JumpBackwardPatch(ctx);
+                    ctx.BytecodeContexts.Push(new Context(Context.ContextKind.Repeat, endJump, continueJump));
+                    CompileStatement(ctx, stmt.Children[1]);
+                    ctx.BytecodeContexts.Pop();
+
+                    // Decrement counter
+                    continueJump.Finish(ctx);
+                    Emit(ctx, Opcode.Push, DataType.Int32).Value = 1; // special instruction
+                    Emit(ctx, Opcode.Sub, DataType.Int32, DataType.Int32);
+                    Emit(ctx, Opcode.Dup, DataType.Int32);
+                    Emit(ctx, Opcode.Conv, DataType.Int32, DataType.Boolean);
+                    startJump.Add(Emit(ctx, Opcode.Bt));
+                    startJump.Finish(ctx);
+
+                    // Cleanup
+                    endJump.Finish(ctx);
+                    Emit(ctx, Opcode.Popz, DataType.Int32);
+                }
                 break;
             case NodeKind.DoUntil:
-                // TODO
+                {
+                    var endJump = new JumpForwardPatch();
+                    var continueJump = new JumpForwardPatch();
+
+                    // Body
+                    var startJump = new JumpBackwardPatch(ctx);
+                    ctx.BytecodeContexts.Push(new Context(Context.ContextKind.BasicLoop, endJump, continueJump));
+                    CompileStatement(ctx, stmt.Children[0]);
+                    ctx.BytecodeContexts.Pop();
+
+                    // Condition
+                    continueJump.Finish(ctx);
+                    CompileExpression(ctx, stmt.Children[1]);
+                    ConvertTo(ctx, DataType.Boolean);
+                    startJump.Add(Emit(ctx, Opcode.Bf));
+                    startJump.Finish(ctx);
+
+                    endJump.Finish(ctx);
+                }
                 break;
             case NodeKind.FunctionDecl:
                 // TODO
@@ -398,102 +306,6 @@ public static class Bytecode
     {
         foreach (Node n in block.Children)
             CompileStatement(ctx, n);
-    }
-
-    private static void CompileExpression(CodeContext ctx, Node expr)
-    {
-        switch (expr.Kind)
-        {
-            case NodeKind.Constant:
-                CompileConstant(ctx, expr.Token.Value as TokenConstant);
-                break;
-            case NodeKind.FunctionCall:
-            case NodeKind.FunctionCallChain:
-                CompileFunctionCall(ctx, expr);
-                break;
-            case NodeKind.Variable:
-                EmitVariable(ctx, Opcode.Push, DataType.Variable, expr.Token.Value as TokenVariable);
-                break;
-            case NodeKind.Accessor:
-                // TODO
-                break;
-            case NodeKind.ChainReference:
-                // TODO
-                break;
-            case NodeKind.Prefix:
-                // TODO
-                break;
-            case NodeKind.Postfix:
-                // TODO
-                break;
-            case NodeKind.Conditional:
-                // TODO
-                break;
-            case NodeKind.NullCoalesce:
-                // TODO
-                break;
-            case NodeKind.Binary:
-                // TODO
-                break;
-            case NodeKind.Unary:
-                // TODO
-                break;
-        }
-    }
-
-    private static void CompileConstant(CodeContext ctx, TokenConstant constant)
-    {
-        switch (constant.Kind)
-        {
-            case ConstantKind.Number:
-                if (constant.IsBool && 0 <= constant.ValueNumber && constant.ValueNumber <= 1)
-                {
-                    // This is a proper boolean type
-                    Emit(ctx, Opcode.Push).Value = (short)constant.ValueNumber;
-                    ctx.TypeStack.Push(DataType.Boolean);
-                }
-                else if ((long)constant.ValueNumber == constant.ValueNumber)
-                {
-                    // This is an integer type
-                    long number = (long)constant.ValueNumber;
-                    if (number <= int.MaxValue && number >= int.MinValue)
-                    {
-                        if (number <= short.MaxValue && number >= short.MinValue)
-                        {
-                            // 16-bit int
-                            Emit(ctx, Opcode.PushI, DataType.Int16).Value = (short)number;
-                            ctx.TypeStack.Push(DataType.Int32);
-                        }
-                        else
-                        {
-                            // 32-bit int
-                            Emit(ctx, Opcode.Push, DataType.Int32).Value = (int)number;
-                            ctx.TypeStack.Push(DataType.Int32);
-                        }
-                    }
-                    else
-                    {
-                        // 64-bit int
-                        Emit(ctx, Opcode.Push, DataType.Int64).Value = number;
-                        ctx.TypeStack.Push(DataType.Int64);
-                    }
-                }
-                else
-                {
-                    // Floating point (64-bit)
-                    Emit(ctx, Opcode.Push, DataType.Double).Value = constant.ValueNumber;
-                    ctx.TypeStack.Push(DataType.Double);
-                }
-                break;
-            case ConstantKind.Int64:
-                Emit(ctx, Opcode.Push, DataType.Int64).Value = constant.ValueInt64;
-                ctx.TypeStack.Push(DataType.Int64);
-                break;
-            case ConstantKind.String:
-                EmitString(ctx, Opcode.Push, DataType.String, constant.ValueString);
-                ctx.TypeStack.Push(DataType.String);
-                break;
-        }
     }
 
     private static void CompileFunctionCall(CodeContext ctx, Node func)
@@ -739,32 +551,51 @@ public static class Bytecode
         }
     }
 
-    private static void CompileExit(CodeContext ctx)
+    private static void ExitCleanup(CodeContext ctx)
     {
-        // First, clean up duplicated values left on the stack by switch statements
+        // Perform cleanup for contexts
         foreach (var context in ctx.BytecodeContexts)
         {
-            if (context.Kind == Context.ContextKind.Switch)
-                Emit(ctx, Opcode.Popz, context.DuplicatedType);
-        }
-
-        // Second, clear the stack for every instance used in with loops
-        foreach (var context in ctx.BytecodeContexts)
-        {
-            if (context.Kind == Context.ContextKind.With)
+            switch (context.Kind)
             {
-                // This is a special instruction that signals to not continue the with loop
-                var instr = Emit(ctx, Opcode.PopEnv);
-                instr.PopenvExitMagic = true;
-                if (ctx.BaseContext.Project.DataHandle.VersionInfo.FormatID <= 14)
-                {
-                    // Older versions use a different magic value
-                    instr.JumpOffset = -1048576;
-                }
+                case Context.ContextKind.Switch:
+                    // Clean up duplicated values left on the stack by switch statements
+                    Emit(ctx, Opcode.Popz, context.DuplicatedType);
+                    break;
+                case Context.ContextKind.With:
+                    {
+                        // This is a special instruction that signals to not continue the with loop
+                        var instr = Emit(ctx, Opcode.PopEnv);
+                        instr.PopenvExitMagic = true;
+                        if (ctx.BaseContext.Project.DataHandle.VersionInfo.FormatID <= 14)
+                        {
+                            // Older versions use a different magic value
+                            instr.JumpOffset = -1048576;
+                        }
+                    }
+                    break;
+                case Context.ContextKind.Repeat:
+                    // Clean up repeat counters on stack
+                    Emit(ctx, Opcode.Popz, DataType.Int32);
+                    break;
             }
         }
+    }
 
-        // Finally, emit the actual instruction to end the code
-        Emit(ctx, Opcode.Exit, DataType.Int32);
+    private static void CompileAssign(CodeContext ctx, Node lhs)
+    {
+        DataType type = ctx.TypeStack.Pop();
+
+        if (lhs.Kind == NodeKind.Variable)
+        {
+            EmitVariable(ctx, Opcode.Pop, DataType.Variable, lhs.Token.Value as TokenVariable, type);
+        }
+
+        // TODO
+    }
+
+    private static void CompileCompoundAssign(CodeContext ctx, Node assign, Opcode opcode, bool bitwise = false)
+    {
+        // TODO
     }
 }

@@ -35,7 +35,7 @@ public static class TokenProcessor
                     // Check assets
                     if (ctx.BaseContext.AssetIds.TryGetValue(name, out int assetId))
                     {
-                        ctx.Tokens[i] = new Token(ctx, new TokenConstant((double)assetId), ctx.Tokens[i].Index);
+                        ctx.Tokens[i] = new Token(ctx, new TokenConstant((double)assetId), ctx.Tokens[i].Index, name);
                         continue;
                     }
 
@@ -45,7 +45,7 @@ public static class TokenProcessor
                         var constantToken = new TokenConstant(constant);
                         if (ctx.BaseContext.IsGMS23)
                             constantToken.IsBool = (name == "true" || name == "false");
-                        ctx.Tokens[i] = new Token(ctx, constantToken, ctx.Tokens[i].Index);
+                        ctx.Tokens[i] = new Token(ctx, constantToken, ctx.Tokens[i].Index, name);
                         continue;
                     }
 

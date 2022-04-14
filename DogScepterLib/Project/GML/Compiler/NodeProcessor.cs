@@ -31,6 +31,37 @@ public static class NodeProcessor
             case NodeKind.FunctionCall:
                 n = OptimizeIntrinsicCall(ctx, n);
                 break;
+            case NodeKind.Constant:
+                {
+                    // Rewrite self/other/global in 2.3+
+                    if (!ctx.IsGMS23)
+                        break;
+
+                    Token t = n.Token;
+                    if (t == null)
+                        break;
+
+                    TokenConstant c = (t.Value as TokenConstant);
+                    if (c.Kind != ConstantKind.Number)
+                        break;
+
+                    if (c.ValueNumber == -1 && t.Text == "self")
+                    {
+                        n = new Node(NodeKind.FunctionCall, new Token(null, TokenKind.FunctionCall, -1) { Value = new TokenFunction("@@This@@", null) });
+                        break;
+                    }
+                    if (c.ValueNumber == -2 && t.Text == "other")
+                    {
+                        n = new Node(NodeKind.FunctionCall, new Token(null, TokenKind.FunctionCall, -1) { Value = new TokenFunction("@@Other@@", null) });
+                        break;
+                    }
+                    if (c.ValueNumber == -5 && t.Text == "global")
+                    {
+                        n = new Node(NodeKind.FunctionCall, new Token(null, TokenKind.FunctionCall, -1) { Value = new TokenFunction("@@Global@@", null) });
+                        break;
+                    }
+                }
+                break;
         }
 
         return n;

@@ -511,125 +511,125 @@ public class GMCode : IGMSerializable
                     case InstructionType.SingleType:
                     case InstructionType.DoubleType:
                     case InstructionType.Comparison:
-                    {
-                        writer.Write(Extra);
-                        if (writer.VersionInfo.FormatID <= 14 && Kind == Opcode.Cmp)
-                            writer.Write((byte)0);
-                        else
-                            writer.Write((byte)ComparisonKind);
-                        writer.Write((byte)((byte)Type2 << 4 | (byte)Type1));
-                        if (writer.VersionInfo.FormatID <= 14)
-                            writer.Write(NewOpcodeToOld((byte)Kind, (byte)ComparisonKind));
-                        else
-                            writer.Write((byte)Kind);
-                    }
+                        {
+                            writer.Write(Extra);
+                            if (writer.VersionInfo.FormatID <= 14 && Kind == Opcode.Cmp)
+                                writer.Write((byte)0);
+                            else
+                                writer.Write((byte)ComparisonKind);
+                            writer.Write((byte)((byte)Type2 << 4 | (byte)Type1));
+                            if (writer.VersionInfo.FormatID <= 14)
+                                writer.Write(NewOpcodeToOld((byte)Kind, (byte)ComparisonKind));
+                            else
+                                writer.Write((byte)Kind);
+                        }
                         break;
                     case InstructionType.Branch:
-                    {
-                        if (writer.VersionInfo.FormatID <= 14)
-                            writer.WriteInt24(JumpOffset);
-                        else if (PopenvExitMagic)
-                            writer.WriteInt24(0xF00000);
-                        else
-                            writer.WriteInt24((int)((uint)JumpOffset & ~0xFF800000));
+                        {
+                            if (writer.VersionInfo.FormatID <= 14)
+                                writer.WriteInt24(JumpOffset);
+                            else if (PopenvExitMagic)
+                                writer.WriteInt24(0xF00000);
+                            else
+                                writer.WriteInt24((int)((uint)JumpOffset & ~0xFF800000));
 
-                        if (writer.VersionInfo.FormatID <= 14)
-                            writer.Write(NewOpcodeToOld((byte)Kind, 0));
-                        else
-                            writer.Write((byte)Kind);
-                    }
+                            if (writer.VersionInfo.FormatID <= 14)
+                                writer.Write(NewOpcodeToOld((byte)Kind, 0));
+                            else
+                                writer.Write((byte)Kind);
+                        }
                         break;
                     case InstructionType.Pop:
-                    {
-                        if (Type1 == DataType.Int16)
                         {
-                            writer.Write((short)TypeInst);
-                            writer.Write((byte)((byte)Type2 << 4 | (byte)Type1));
-                            if (writer.VersionInfo.FormatID <= 14)
-                                writer.Write(NewOpcodeToOld((byte)Kind, 0));
+                            if (Type1 == DataType.Int16)
+                            {
+                                writer.Write((short)TypeInst);
+                                writer.Write((byte)((byte)Type2 << 4 | (byte)Type1));
+                                if (writer.VersionInfo.FormatID <= 14)
+                                    writer.Write(NewOpcodeToOld((byte)Kind, 0));
+                                else
+                                    writer.Write((byte)Kind);
+                            }
                             else
-                                writer.Write((byte)Kind);
+                            {
+                                writer.Write((short)TypeInst);
+                                writer.Write((byte)((byte)Type2 << 4 | (byte)Type1));
+                                if (writer.VersionInfo.FormatID <= 14)
+                                    writer.Write(NewOpcodeToOld((byte)Kind, 0));
+                                else
+                                    writer.Write((byte)Kind);
+                                Variable.Serialize(writer);
+                            }
                         }
-                        else
-                        {
-                            writer.Write((short)TypeInst);
-                            writer.Write((byte)((byte)Type2 << 4 | (byte)Type1));
-                            if (writer.VersionInfo.FormatID <= 14)
-                                writer.Write(NewOpcodeToOld((byte)Kind, 0));
-                            else
-                                writer.Write((byte)Kind);
-                            Variable.Serialize(writer);
-                        }
-                    }
                         break;
                     case InstructionType.Push:
-                    {
-                        if (Type1 == DataType.Int16)
-                            writer.Write((short)Value);
-                        else if (Type1 == DataType.Variable)
-                            writer.Write((short)TypeInst);
-                        else
-                            writer.Write((short)0);
-                        writer.Write((byte)Type1);
-
-                        if (writer.VersionInfo.FormatID <= 14)
-                            writer.Write(NewOpcodeToOld((byte)Kind, 0));
-                        else
-                            writer.Write((byte)Kind);
-
-                        switch (Type1)
                         {
-                            case DataType.Double:
-                                writer.Write((double)Value);
-                                break;
-                            case DataType.Float:
-                                writer.Write((float)Value);
-                                break;
-                            case DataType.Int32:
-                                if (Function != null)
-                                {
-                                    Function.Serialize(writer);
+                            if (Type1 == DataType.Int16)
+                                writer.Write((short)Value);
+                            else if (Type1 == DataType.Variable)
+                                writer.Write((short)TypeInst);
+                            else
+                                writer.Write((short)0);
+                            writer.Write((byte)Type1);
+
+                            if (writer.VersionInfo.FormatID <= 14)
+                                writer.Write(NewOpcodeToOld((byte)Kind, 0));
+                            else
+                                writer.Write((byte)Kind);
+
+                            switch (Type1)
+                            {
+                                case DataType.Double:
+                                    writer.Write((double)Value);
                                     break;
-                                }
-                                writer.Write((int)Value);
-                                break;
-                            case DataType.Int64:
-                                writer.Write((long)Value);
-                                break;
-                            case DataType.Boolean:
-                                writer.WriteWideBoolean((bool)Value);
-                                break;
-                            case DataType.Variable:
-                                Variable.Serialize(writer);
-                                break;
-                            case DataType.String:
-                                writer.Write((int)Value); // string ID
-                                break;
-                            //case DataType.Int16:
-                            //    break;
+                                case DataType.Float:
+                                    writer.Write((float)Value);
+                                    break;
+                                case DataType.Int32:
+                                    if (Function != null)
+                                    {
+                                        Function.Serialize(writer);
+                                        break;
+                                    }
+                                    writer.Write((int)Value);
+                                    break;
+                                case DataType.Int64:
+                                    writer.Write((long)Value);
+                                    break;
+                                case DataType.Boolean:
+                                    writer.WriteWideBoolean((bool)Value);
+                                    break;
+                                case DataType.Variable:
+                                    Variable.Serialize(writer);
+                                    break;
+                                case DataType.String:
+                                    writer.Write((int)Value); // string ID
+                                    break;
+                                //case DataType.Int16:
+                                //    break;
+                            }
                         }
-                    }
                         break;
                     case InstructionType.Call:
-                    {
-                        writer.Write((short)Value);
-                        writer.Write((byte)Type1);
-                        if (writer.VersionInfo.FormatID <= 14)
-                            writer.Write(NewOpcodeToOld((byte)Kind, 0));
-                        else
-                            writer.Write((byte)Kind);
-                        Function.Serialize(writer);
-                    }
+                        {
+                            writer.Write((short)Value);
+                            writer.Write((byte)Type1);
+                            if (writer.VersionInfo.FormatID <= 14)
+                                writer.Write(NewOpcodeToOld((byte)Kind, 0));
+                            else
+                                writer.Write((byte)Kind);
+                            Function.Serialize(writer);
+                        }
                         break;
                     case InstructionType.Break:
-                    {
-                        writer.Write((ushort)Value);
-                        writer.Write((byte)Type1);
-                        if (writer.VersionInfo.FormatID <= 14)
-                            writer.Write(NewOpcodeToOld((byte)Kind, 0));
-                        else
-                            writer.Write((byte)Kind);
-                    }
+                        {
+                            writer.Write((ushort)Value);
+                            writer.Write((byte)Type1);
+                            if (writer.VersionInfo.FormatID <= 14)
+                                writer.Write(NewOpcodeToOld((byte)Kind, 0));
+                            else
+                                writer.Write((byte)Kind);
+                        }
                         break;
                     default:
                         throw new Exception("Unknown opcode " + Kind.ToString());
@@ -659,142 +659,148 @@ public class GMCode : IGMSerializable
                     case InstructionType.SingleType:
                     case InstructionType.DoubleType:
                     case InstructionType.Comparison:
-                    {
-                        Extra = reader.ReadByte();
-#if DEBUG
-                        if (Extra != 0 && Kind != Opcode.Dup && Kind != Opcode.CallV)
-                            throw new Exception("Expected 0 byte for opcode " + Kind.ToString());
-#endif
-                        ComparisonKind = (ComparisonType)reader.ReadByte();
+                        {
+                            Extra = reader.ReadByte();
+    #if DEBUG
+                            if (Extra != 0 && Kind != Opcode.Dup && Kind != Opcode.CallV)
+                                throw new Exception("Expected 0 byte for opcode " + Kind.ToString());
+    #endif
+                            ComparisonKind = (ComparisonType)reader.ReadByte();
 
-                        byte types = reader.ReadByte();
-                        Type1 = (DataType)(types & 0xf);
-                        Type2 = (DataType)(types >> 4);
-                        if (Kind == Opcode.Cmp && reader.VersionInfo.FormatID <= 14)
-                            ComparisonKind = (ComparisonType)(reader.ReadByte() - 0x10);
-                        else
-                            reader.Offset += 1;
-                    }
+                            byte types = reader.ReadByte();
+                            Type1 = (DataType)(types & 0xf);
+                            Type2 = (DataType)(types >> 4);
+                            if (Kind == Opcode.Cmp && reader.VersionInfo.FormatID <= 14)
+                                ComparisonKind = (ComparisonType)(reader.ReadByte() - 0x10);
+                            else
+                                reader.Offset += 1;
+
+                            if (Kind == Opcode.And || Kind == Opcode.Or)
+                            {
+                                if (Type1 == DataType.Boolean && Type2 == DataType.Boolean)
+                                    reader.VersionInfo.ShortCircuit = false;
+                            }
+                        }
                         break;
                     case InstructionType.Branch:
-                    {
-                        if (reader.VersionInfo.FormatID <= 14)
                         {
-                            JumpOffset = reader.ReadInt24();
-                            if (JumpOffset == -1048576)
-                                PopenvExitMagic = true;
+                            if (reader.VersionInfo.FormatID <= 14)
+                            {
+                                JumpOffset = reader.ReadInt24();
+                                if (JumpOffset == -1048576)
+                                    PopenvExitMagic = true;
+                            }
+                            else
+                            {
+                                uint v = reader.ReadUInt24();
+
+                                PopenvExitMagic = (v & 0x800000) != 0;
+
+                                // The rest is int23 signed value, so make sure
+                                uint r = v & 0x003FFFFF;
+                                if ((v & 0x00C00000) != 0)
+                                    r |= 0xFFC00000;
+                                JumpOffset = (int)r;
+                            }
+
+                            reader.Offset += 1;
                         }
-                        else
-                        {
-                            uint v = reader.ReadUInt24();
-
-                            PopenvExitMagic = (v & 0x800000) != 0;
-
-                            // The rest is int23 signed value, so make sure
-                            uint r = v & 0x003FFFFF;
-                            if ((v & 0x00C00000) != 0)
-                                r |= 0xFFC00000;
-                            JumpOffset = (int)r;
-                        }
-
-                        reader.Offset += 1;
-                    }
                         break;
                     case InstructionType.Pop:
-                    {
-                        TypeInst = (InstanceType)reader.ReadInt16();
-
-                        byte types = reader.ReadByte();
-                        Type1 = (DataType)(types & 0xf);
-                        Type2 = (DataType)(types >> 4);
-
-                        reader.Offset += 1;
-
-                        if (Type1 != DataType.Int16) // ignore swap instructions
                         {
-                            Variable = new Reference<GMVariable>();
-                            Variable.Deserialize(reader);
-                        }
-                    }
-                        break;
-                    case InstructionType.Push:
-                    {
-                        short val = reader.ReadInt16();
+                            TypeInst = (InstanceType)reader.ReadInt16();
 
-                        Type1 = (DataType)reader.ReadByte();
-                        if (reader.VersionInfo.FormatID <= 14)
-                        {
-                            // Convert to new opcodes
-                            if (Type1 == DataType.Variable)
+                            byte types = reader.ReadByte();
+                            Type1 = (DataType)(types & 0xf);
+                            Type2 = (DataType)(types >> 4);
+
+                            reader.Offset += 1;
+
+                            if (Type1 != DataType.Int16) // ignore swap instructions
                             {
-                                switch (val)
-                                {
-                                    case -5:
-                                        Kind = Opcode.PushGlb;
-                                        break;
-                                    case -6:
-                                        Kind = Opcode.PushBltn;
-                                        break;
-                                    case -7:
-                                        Kind = Opcode.PushLoc;
-                                        break;
-                                }
-                            }
-                            else if (Type1 == DataType.Int16)
-                                Kind = Opcode.PushI;
-                        }
-
-                        reader.Offset += 1;
-
-                        switch (Type1)
-                        {
-                            case DataType.Double:
-                                Value = reader.ReadDouble();
-                                break;
-                            case DataType.Float:
-                                Value = reader.ReadSingle();
-                                break;
-                            case DataType.Int32:
-                                Value = reader.ReadInt32();
-                                break;
-                            case DataType.Int64:
-                                Value = reader.ReadInt64();
-                                break;
-                            case DataType.Boolean:
-                                Value = reader.ReadWideBoolean();
-                                break;
-                            case DataType.Variable:
-                                TypeInst = (InstanceType)val;
                                 Variable = new Reference<GMVariable>();
                                 Variable.Deserialize(reader);
-                                break;
-                            case DataType.String:
-                                Value = reader.ReadInt32(); // string ID
-                                break;
-                            case DataType.Int16:
-                                Value = val;
-                                break;
+                            }
                         }
-                    }
+                        break;
+                    case InstructionType.Push:
+                        {
+                            short val = reader.ReadInt16();
+
+                            Type1 = (DataType)reader.ReadByte();
+                            if (reader.VersionInfo.FormatID <= 14)
+                            {
+                                // Convert to new opcodes
+                                if (Type1 == DataType.Variable)
+                                {
+                                    switch (val)
+                                    {
+                                        case -5:
+                                            Kind = Opcode.PushGlb;
+                                            break;
+                                        case -6:
+                                            Kind = Opcode.PushBltn;
+                                            break;
+                                        case -7:
+                                            Kind = Opcode.PushLoc;
+                                            break;
+                                    }
+                                }
+                                else if (Type1 == DataType.Int16)
+                                    Kind = Opcode.PushI;
+                            }
+
+                            reader.Offset += 1;
+
+                            switch (Type1)
+                            {
+                                case DataType.Double:
+                                    Value = reader.ReadDouble();
+                                    break;
+                                case DataType.Float:
+                                    Value = reader.ReadSingle();
+                                    break;
+                                case DataType.Int32:
+                                    Value = reader.ReadInt32();
+                                    break;
+                                case DataType.Int64:
+                                    Value = reader.ReadInt64();
+                                    break;
+                                case DataType.Boolean:
+                                    Value = reader.ReadWideBoolean();
+                                    break;
+                                case DataType.Variable:
+                                    TypeInst = (InstanceType)val;
+                                    Variable = new Reference<GMVariable>();
+                                    Variable.Deserialize(reader);
+                                    break;
+                                case DataType.String:
+                                    Value = reader.ReadInt32(); // string ID
+                                    break;
+                                case DataType.Int16:
+                                    Value = val;
+                                    break;
+                            }
+                        }
                         break;
                     case InstructionType.Call:
-                    {
-                        Value = reader.ReadInt16();
-                        Type1 = (DataType)reader.ReadByte();
+                        {
+                            Value = reader.ReadInt16();
+                            Type1 = (DataType)reader.ReadByte();
 
-                        reader.Offset += 1;
+                            reader.Offset += 1;
 
-                        Function = new Reference<GMFunctionEntry>();
-                        Function.Deserialize(reader);
-                    }
+                            Function = new Reference<GMFunctionEntry>();
+                            Function.Deserialize(reader);
+                        }
                         break;
                     case InstructionType.Break:
-                    {
-                        Value = reader.ReadUInt16();
-                        Type1 = (DataType)reader.ReadByte();
+                        {
+                            Value = reader.ReadUInt16();
+                            Type1 = (DataType)reader.ReadByte();
 
-                        reader.Offset += 1;
-                    }
+                            reader.Offset += 1;
+                        }
                         break;
                     default:
                         throw new Exception("Unknown opcode " + Kind.ToString());

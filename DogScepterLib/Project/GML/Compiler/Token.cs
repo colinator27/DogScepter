@@ -140,6 +140,15 @@ public class Token
         Index = index;
     }
 
+    public Token(CodeContext context, TokenConstant value, int index, string text)
+    {
+        Context = context;
+        Kind = TokenKind.Constant;
+        Value = value;
+        Index = index;
+        Text = text;
+    }
+
     public Token(CodeContext context, TokenVariable value, int index)
     {
         Context = context;

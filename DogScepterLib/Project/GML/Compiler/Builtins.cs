@@ -71,6 +71,10 @@ public class Builtins
         FunctionDefine("show_debug_message", 1);
         FunctionDefine("room_goto", 1);
 
+        FunctionDefine("@@This@@", 0);
+        FunctionDefine("@@Other@@", 0);
+        FunctionDefine("@@Global@@", 0);
+
         FunctionDefine("variable_global_set", 2);
         FunctionDefine("get_integer", 2);
 

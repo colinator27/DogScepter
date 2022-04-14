@@ -8,9 +8,15 @@ ProjectFile pf = DogScepterTest.Util.BasicLoadProject("data.win", null, Console.
 var ctx = new CompileContext(pf);
 ctx.AddCode("Custom_Script",
 @"
-while (get_integer(""This will loop until you input a falsey value"", 1))
+b = self
+with (other)
+    b = 123
+a = 1
+for (i = 0; i < 10; i = i + 1)
 {
+    a = a + i
 }
+show_message(string(i));
 
 if (get_integer(""Enter a truthy or falsey integer"", 1))
     show_message(""Truthy value was entered"");
