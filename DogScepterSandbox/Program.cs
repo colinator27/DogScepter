@@ -6,9 +6,14 @@ using DogScepterLib.Project.GML.Compiler;
 ProjectFile pf = DogScepterTest.Util.BasicLoadProject("data.win", null, Console.WriteLine);
 
 var ctx = new CompileContext(pf);
-ctx.AddCode("gml_GlobalScript_Custom_Script",
+ctx.AddCode("Custom_Script",
 @"
-show_message(""Test message!"");
+if (get_integer(""Enter a truthy or falsey integer"", 1))
+    show_message(""Truthy value was entered"");
+else
+    show_message(""Falsey value was entered"");
+variable_global_set(""__TEST_GLOBAL__"", ""Test global value"")
+show_message(global.__TEST_GLOBAL__);
 
 //obj_fader.func(""Test string"");
 //obj_fader.abc.func(""Test"");

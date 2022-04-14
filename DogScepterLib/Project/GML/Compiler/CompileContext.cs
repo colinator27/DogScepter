@@ -253,6 +253,8 @@ namespace DogScepterLib.Project.GML.Compiler
                 nameToCode[code.Name.Content] = code;
 
             GMChunkGLOB glob = Project.DataHandle.GetChunk<GMChunkGLOB>();
+            GMChunkSCPT scpt = Project.DataHandle.GetChunk<GMChunkSCPT>();
+            GMChunkFUNC func = Project.DataHandle.GetChunk<GMChunkFUNC>();
 
             // TODO - in general, need to populate locals
 
@@ -274,20 +276,75 @@ namespace DogScepterLib.Project.GML.Compiler
                             existing.BytecodeEntry.Instructions.AddRange(code.Instructions);
                             break;
                     }
+
+                    // TODO: clear and redo locals entry
+
+                    // TODO: handle 2.3+ sub-functions
                 }
                 else
                 {
                     // This is a new code entry - create it
-                    GMCode newEntry = new() { Name = Project.DataHandle.DefineString(code.Name) };
+                    GMCode newEntry = new() { Name = Project.DataHandle.DefineString(code.Name), LocalsCount = 1 };
                     newEntry.BytecodeEntry = new(newEntry) { Instructions = code.Instructions };
                     codeChunk.List.Add(newEntry);
 
                     if (Project.DataHandle.VersionInfo.IsVersionAtLeast(2, 3))
                     {
-                        // Add to global init scripts
-                        glob.List.Add(codeChunk.List.Count - 1);
+                        // Add locals entry
+                        func.Locals.Add(new GMLocalsEntry()
+                        {
+                            Name = newEntry.Name,
+                            Entries = new() 
+                            { 
+                                new GMLocal() 
+                                { 
+                                    Name = Project.DataHandle.DefineString("arguments"),
+                                    Index = 2
+                                } 
+                            }
+                        });
+                        // TODO: finish adding locals
 
-                        // TODO handle sub-functions
+                        if (code.IsScript)
+                        {
+                            // Add to global init scripts
+                            glob.List.Add(codeChunk.List.Count - 1);
+
+                            // Add to actual scripts
+                            scpt.List.Add(new()
+                            {
+                                Name = Project.DataHandle.DefineString(code.ScriptName),
+                                CodeID = codeChunk.List.Count - 1,
+                                Constructor = false
+                            });
+                        }
+                        
+                        // TODO: handle sub-functions
+                    }
+                    else if (code.IsScript)
+                    {
+                        // Add locals entry
+                        func.Locals.Add(new GMLocalsEntry()
+                        {
+                            Name = newEntry.Name,
+                            Entries = new()
+                            {
+                                new GMLocal()
+                                {
+                                    Name = Project.DataHandle.DefineString("arguments"),
+                                    Index = 0
+                                }
+                            }
+                        });
+                        // TODO: finish adding locals
+
+                        // Add script entry
+                        scpt.List.Add(new()
+                        {
+                            Name = Project.DataHandle.DefineString(code.Name),
+                            CodeID = codeChunk.List.Count - 1,
+                            Constructor = false
+                        });
                     }
                 }
             }
@@ -313,6 +370,7 @@ namespace DogScepterLib.Project.GML.Compiler
         public CodeKind Kind { get; set; } = CodeKind.Script;
         public CodeMode Mode { get; set; } = CodeMode.Replace;
         public string Name { get; init; }
+        public string ScriptName { get; init; }
         public string Code { get; init; }
         public bool IsScript { get; init; }
 
@@ -331,13 +389,18 @@ namespace DogScepterLib.Project.GML.Compiler
         public List<Instruction> Instructions { get; set; } = new(64);
         public int BytecodeLength { get; set; } = 0;
         public Stack<DataType> TypeStack { get; set; } = new();
-        public List<FunctionPatch> FunctionPatches { get; set; } = new();
-        public List<VariablePatch> VariablePatches { get; set; } = new();
-        public List<StringPatch> StringPatches { get; set; } = new();
+        public List<Bytecode.FunctionPatch> FunctionPatches { get; set; } = new();
+        public List<Bytecode.VariablePatch> VariablePatches { get; set; } = new();
+        public List<Bytecode.StringPatch> StringPatches { get; set; } = new();
 
         public CodeContext(CompileContext baseContext, string name, string code, CodeMode mode, bool isScript)
         {
             BaseContext = baseContext;
+            if (isScript && BaseContext.IsGMS23)
+            {
+                ScriptName = name;
+                name = "gml_GlobalScript_" + name;
+            }
             Name = name;
             CurrentName = name;
             Code = code;
@@ -494,9 +557,4 @@ namespace DogScepterLib.Project.GML.Compiler
             Resolved = true;
         }
     }
-
-    // Basic patch structures
-    public record FunctionPatch(Instruction Target, TokenFunction Token, FunctionReference Reference);
-    public record VariablePatch(Instruction Target, TokenVariable Token);
-    public record StringPatch(Instruction Target, string Content);
 }

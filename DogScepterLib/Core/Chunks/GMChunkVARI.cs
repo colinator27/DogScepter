@@ -87,5 +87,55 @@ namespace DogScepterLib.Core.Chunks
                 List.Add(gVar);
             }
         }
+
+        public GMVariable FindOrDefine(string name, GMCode.Bytecode.Instruction.InstanceType type, bool builtin, GMData data)
+        {
+            // Search for an existing variable entry
+            foreach (var variable in List)
+            {
+                if (variable.VariableType == type &&
+                    variable.Name.Content == name)
+                    return variable;
+            }
+
+            // No entry was found, so generate a new entry.
+            // Starting with its ID:
+            int id = 0;
+            if (data.VersionInfo.FormatID > 14)
+            {
+                if (builtin)
+                {
+                    // All builtin variables have ID -6
+                    id = (int)GMCode.Bytecode.Instruction.InstanceType.Builtin;
+                }
+                else
+                {
+                    if (data.VersionInfo.DifferentVarCounts)
+                    {
+                        // Variable counts are different depending on instance/global
+                        if (type == GMCode.Bytecode.Instruction.InstanceType.Self)
+                            id = VarCount2++;
+                        else if (type == GMCode.Bytecode.Instruction.InstanceType.Global)
+                            id = VarCount1++;
+                    }
+                    else
+                    {
+                        // Variable counts are the same
+                        VarCount1++;
+                        VarCount2 = VarCount1;
+                    }
+                }
+            }
+
+            // Create the new variable, add to list, and return it
+            GMVariable res = new()
+            {
+                Name = data.DefineString(name),
+                VariableType = type,
+                VariableID = id
+            };
+            List.Add(res);
+            return res;
+        }
     }
 }

@@ -54,17 +54,17 @@ namespace DogScepterLib.Core.Chunks
 
         public GMFunctionEntry FindOrDefine(string name, GMData data)
         {
+            // Search for an existing function entry
             foreach (var func in FunctionEntries)
             {
                 if (func.Name.Content == name)
                     return func;
             }
 
-            var str = data.DefineString(name, out int id);
+            // Create a new function, add to list, and return it
             GMFunctionEntry res = new()
             {
-                Name = str,
-                StringIndex = id
+                Name = data.DefineString(name)
             };
             FunctionEntries.Add(res);
             return res;

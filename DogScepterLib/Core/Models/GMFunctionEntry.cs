@@ -12,7 +12,6 @@ namespace DogScepterLib.Core.Models
     public class GMFunctionEntry : IGMSerializable
     {
         public GMString Name;
-        public int StringIndex; // Index of the string in the STRG chunk, appears to be unused(?)
         public int Occurrences;
 
         public void Serialize(GMDataWriter writer)

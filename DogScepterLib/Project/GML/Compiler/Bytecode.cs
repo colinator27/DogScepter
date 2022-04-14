@@ -1,4 +1,5 @@
-﻿using DogScepterLib.Core.Chunks;
+﻿using System.Collections.Generic;
+using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
 using static DogScepterLib.Core.Models.GMCode.Bytecode;
 using static DogScepterLib.Core.Models.GMCode.Bytecode.Instruction;
@@ -7,6 +8,60 @@ namespace DogScepterLib.Project.GML.Compiler
 {
     public static class Bytecode
     {
+        // Basic patch structures
+        public record FunctionPatch(Instruction Target, TokenFunction Token, FunctionReference Reference);
+        public record VariablePatch(Instruction Target, TokenVariable Token);
+        public record StringPatch(Instruction Target, string Content);
+
+        // Bytecode patch structures
+        private interface IJumpPatch
+        {
+            public void Add(Instruction instr);
+            public void Finish(CodeContext ctx);
+        }
+        private class JumpForwardPatch : IJumpPatch
+        {
+            private readonly List<Instruction> _patches;
+
+            public JumpForwardPatch(Instruction firstToPatch)
+            {
+                _patches = new() { firstToPatch };
+            }
+
+            public void Add(Instruction instr)
+            {
+                _patches.Add(instr);
+            }
+
+            public void Finish(CodeContext ctx)
+            {
+                foreach (var instr in _patches)
+                    instr.JumpOffset = (ctx.BytecodeLength - instr.Address) / 4;
+            }
+        }
+        private class JumpBackwardPatch : IJumpPatch
+        {
+            private readonly List<Instruction> _patches;
+            private readonly int _startAddress;
+
+            public JumpBackwardPatch(CodeContext ctx)
+            {
+                _startAddress = ctx.BytecodeLength;
+                _patches = new();
+            }
+
+            public void Add(Instruction instr)
+            {
+                _patches.Add(instr);
+            }
+
+            public void Finish(CodeContext ctx)
+            {
+                foreach (var instr in _patches)
+                    instr.JumpOffset = (_startAddress - instr.Address) / 4;
+            }
+        }
+
         public static void ProcessReferences(CodeContext ctx)
         {
             // Resolve string references
@@ -28,7 +83,18 @@ namespace DogScepterLib.Project.GML.Compiler
             }
 
             // Resolve variable references
-            // TODO
+            var vari = ctx.BaseContext.Project.DataHandle.GetChunk<GMChunkVARI>();
+            // TODO: Handle local variables properly
+            foreach (var p in ctx.VariablePatches)
+            {
+                GMVariable variable = vari.FindOrDefine(p.Token.Name,
+                                                        (InstanceType)p.Token.InstanceType,
+                                                        p.Token.Builtin != null,
+                                                        ctx.BaseContext.Project.DataHandle);
+                p.Target.Variable = new Reference<GMVariable>(variable, p.Token.VariableType);
+                if (p.Token.VariableType == VariableType.Normal)
+                    p.Target.TypeInst = (InstanceType)p.Token.InstanceType;
+            }
         }
 
         /// <summary>
@@ -45,6 +111,76 @@ namespace DogScepterLib.Project.GML.Compiler
                 case NodeKind.FunctionCallChain:
                     CompileFunctionCall(ctx, stmt);
                     Emit(ctx, Opcode.Popz, DataType.Variable);
+                    break;
+                case NodeKind.Assign:
+                    // TODO
+                    break;
+                case NodeKind.Exit:
+                    // TODO
+                    break;
+                case NodeKind.Break:
+                    // TODO
+                    break;
+                case NodeKind.Continue:
+                    // TODO
+                    break;
+                case NodeKind.Return:
+                    // TODO
+                    break;
+                case NodeKind.If:
+                    {
+                        // Condition
+                        CompileExpression(ctx, stmt.Children[0]);
+                        ConvertTo(ctx, DataType.Boolean);
+                        var conditionJump = new JumpForwardPatch(Emit(ctx, Opcode.Bf));
+
+                        // Body
+                        CompileStatement(ctx, stmt.Children[1]);
+
+                        if (stmt.Children.Count == 3)
+                        {
+                            // Else branch
+                            var elseJump = new JumpForwardPatch(Emit(ctx, Opcode.B));
+                            conditionJump.Finish(ctx);
+                            CompileStatement(ctx, stmt.Children[2]);
+                            elseJump.Finish(ctx);
+                        }
+                        else
+                        {
+                            // Normal ending
+                            conditionJump.Finish(ctx);
+                        }
+                    }
+                    break;
+                case NodeKind.Switch:
+                    // TODO
+                    break;
+                case NodeKind.LocalVarDecl:
+                    // TODO
+                    break;
+                case NodeKind.With:
+                    // TODO
+                    break;
+                case NodeKind.While:
+                    // TODO
+                    break;
+                case NodeKind.For:
+                    // TODO
+                    break;
+                case NodeKind.Repeat:
+                    // TODO
+                    break;
+                case NodeKind.DoUntil:
+                    // TODO
+                    break;
+                case NodeKind.FunctionDecl:
+                    // TODO
+                    break;
+                case NodeKind.Static:
+                    // TODO
+                    break;
+                case NodeKind.New:
+                    // TODO
                     break;
             }
         }
@@ -200,24 +336,31 @@ namespace DogScepterLib.Project.GML.Compiler
                     CompileFunctionCall(ctx, expr);
                     break;
                 case NodeKind.Variable:
-                    // todo: support more than basic variables
                     EmitVariable(ctx, Opcode.Push, DataType.Variable, expr.Token.Value as TokenVariable);
                     break;
                 case NodeKind.Accessor:
+                    // TODO
                     break;
                 case NodeKind.ChainReference:
+                    // TODO
                     break;
                 case NodeKind.Prefix:
+                    // TODO
                     break;
                 case NodeKind.Postfix:
+                    // TODO
                     break;
                 case NodeKind.Conditional:
+                    // TODO
                     break;
                 case NodeKind.NullCoalesce:
+                    // TODO
                     break;
                 case NodeKind.Binary:
+                    // TODO
                     break;
                 case NodeKind.Unary:
+                    // TODO
                     break;
             }
         }
