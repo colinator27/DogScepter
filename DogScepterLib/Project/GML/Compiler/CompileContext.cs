@@ -1,10 +1,7 @@
 ﻿using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static DogScepterLib.Core.Models.GMCode.Bytecode;
 using static DogScepterLib.Core.Models.GMCode.Bytecode.Instruction;
 
@@ -392,6 +389,7 @@ public class CodeContext
     public List<Bytecode.FunctionPatch> FunctionPatches { get; set; } = new();
     public List<Bytecode.VariablePatch> VariablePatches { get; set; } = new();
     public List<Bytecode.StringPatch> StringPatches { get; set; } = new();
+    public Stack<Bytecode.Context> BytecodeContexts { get; set; } = new();
 
     public CodeContext(CompileContext baseContext, string name, string code, CodeMode mode, bool isScript)
     {

@@ -8,11 +8,15 @@ ProjectFile pf = DogScepterTest.Util.BasicLoadProject("data.win", null, Console.
 var ctx = new CompileContext(pf);
 ctx.AddCode("Custom_Script",
 @"
+while (get_integer(""This will loop until you input a falsey value"", 1))
+{
+}
+
 if (get_integer(""Enter a truthy or falsey integer"", 1))
     show_message(""Truthy value was entered"");
 else
     show_message(""Falsey value was entered"");
-variable_global_set(""__TEST_GLOBAL__"", ""Test global value"")
+variable_global_set(""__TEST_GLOBAL__"", ""Test global value"");
 show_message(global.__TEST_GLOBAL__);
 
 //obj_fader.func(""Test string"");
