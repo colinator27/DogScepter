@@ -8,15 +8,22 @@ ProjectFile pf = DogScepterTest.Util.BasicLoadProject("data.win", null, Console.
 var ctx = new CompileContext(pf);
 ctx.AddCode("Custom_Script",
 @"
+enum TEST
+{
+    A = 123,
+    B
+}
+
 b = self
 with (other)
-    b = 123
+    self.b = 123 + TEST.B
 a = 1
-for (i = 0; i < 10; i = i + 1)
+for (var i = 0; i < 10; i = i + 1)
 {
     a = a + i
 }
 show_message(string(i));
+var b;
 
 if (get_integer(""Enter a truthy or falsey integer"", 1))
     show_message(""Truthy value was entered"");

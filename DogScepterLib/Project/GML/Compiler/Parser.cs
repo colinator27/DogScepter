@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using static DogScepterLib.Core.Models.GMCode.Bytecode.Instruction;
 
 namespace DogScepterLib.Project.GML.Compiler;
 
@@ -206,7 +207,9 @@ public class Parser
             case TokenKind.AssignNullCoalesce:
                 Node varNode;
                 if (left.Kind == NodeKind.Variable)
+                {
                     varNode = left;
+                }
                 else if (left.Kind == NodeKind.ChainReference)
                 {
                     // Find last variable reference in the chain
@@ -260,7 +263,6 @@ public class Parser
             return null;
 
         bool finishedChain = false;
-
         while (!finishedChain)
         {
             Token curr = ctx.Tokens[ctx.Position];
@@ -295,7 +297,9 @@ public class Parser
                                     ctx.Error("Invalid instance type", left.Children[^1].Token);
                                 else
                                 {
-                                    (next.Token.Value as TokenVariable).InstanceType = (int)constant.ValueNumber;
+                                    TokenVariable tokenVar = (next.Token.Value as TokenVariable);
+                                    tokenVar.InstanceType = (int)constant.ValueNumber;
+                                    tokenVar.ExplicitInstType = true;
                                     left.Children[^1] = next;
 
                                     // Undo chain reference if only one
@@ -1091,6 +1095,7 @@ public class Parser
         while (curr.Kind == TokenKind.Variable)
         {
             TokenVariable tokenVar = (curr.Value as TokenVariable);
+            tokenVar.InstanceType = (int)InstanceType.Local;
             if (tokenVar.Builtin != null)
                 ctx.Error($"Local variable declared over builtin variable '{tokenVar.Name}'", curr);
             Node variable = new(NodeKind.Variable, curr);
@@ -1325,7 +1330,7 @@ public class Parser
             if (curr.Kind == TokenKind.Assign)
             {
                 ctx.Position++;
-                val = new EnumValue(entryName, NodeProcessor.ProcessNode(ctx.BaseContext, ParseExpression(ctx)));
+                val = new EnumValue(entryName, NodeProcessor.ProcessNode(ctx, ParseExpression(ctx)));
             }
             else
                 val = new EnumValue(entryName, null);

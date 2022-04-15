@@ -55,6 +55,7 @@ namespace DogScepterLib.Core.Chunks
         public GMFunctionEntry FindOrDefine(string name, GMData data)
         {
             // Search for an existing function entry
+            // todo? might want to cache this with a map?
             foreach (var func in FunctionEntries)
             {
                 if (func.Name.Content == name)
@@ -68,6 +69,17 @@ namespace DogScepterLib.Core.Chunks
             };
             FunctionEntries.Add(res);
             return res;
+        }
+
+        public GMLocalsEntry FindLocalsEntry(string name)
+        {
+            // todo? might want to cache this with a map?
+            foreach (var entry in Locals)
+            {
+                if (entry.Name.Content == name)
+                    return entry;
+            }
+            return null;
         }
     }
 }

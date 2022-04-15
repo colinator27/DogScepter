@@ -1,13 +1,47 @@
 ﻿using System;
 using System.Globalization;
 using System.Text;
+using static DogScepterLib.Core.Models.GMCode.Bytecode.Instruction;
 
 namespace DogScepterLib.Project.GML.Compiler;
 
 public static class NodeProcessor
 {
-    public static Node ProcessNode(CompileContext ctx, Node n)
+    public static Node ProcessNode(CodeContext ctx, Node n)
     {
+        var previousLocals = ctx.LocalVars;
+        switch (n.Kind)
+        {
+            case NodeKind.FunctionDecl:
+                // Enter into the local context of this function declaration
+                ctx.LocalVars = (n.Info as NodeFunctionInfo).LocalVars;
+                break;
+            case NodeKind.ChainReference:
+                // Check for local variables
+                if (ctx.LocalVars == null)
+                    break;
+                if (n.Children[0].Kind == NodeKind.Variable)
+                {
+                    TokenVariable tokenVar = n.Children[0].Token.Value as TokenVariable;
+                    if (ctx.LocalVars.Contains(tokenVar.Name))
+                        tokenVar.InstanceType = (int)InstanceType.Local;
+                }
+
+                // Don't check for locals inside of this node
+                ctx.LocalVars = null;
+                break;
+            case NodeKind.Variable:
+                {
+                    // Check for local variables
+                    if (ctx.LocalVars == null)
+                        break;
+                    TokenVariable tokenVar = n.Token.Value as TokenVariable;
+                    if (!tokenVar.ExplicitInstType && ctx.LocalVars.Contains(tokenVar.Name))
+                        tokenVar.InstanceType = (int)InstanceType.Local;
+                }
+                break;
+        }
+
         for (int i = 0; i < n.Children.Count; i++)
         {
             n.Children[i] = ProcessNode(ctx, n.Children[i]);
@@ -16,7 +50,10 @@ public static class NodeProcessor
         switch (n.Kind)
         {
             case NodeKind.ChainReference:
-                if (ctx.ResolveEnums)
+                // Restore previous locals
+                ctx.LocalVars = previousLocals;
+
+                if (ctx.BaseContext.ResolveEnums)
                     n = ResolveEnum(ctx, n);
                 break;
             case NodeKind.Unary:
@@ -34,7 +71,7 @@ public static class NodeProcessor
             case NodeKind.Constant:
                 {
                     // Rewrite self/other/global in 2.3+
-                    if (!ctx.IsGMS23)
+                    if (!ctx.BaseContext.IsGMS23)
                         break;
 
                     Token t = n.Token;
@@ -62,27 +99,31 @@ public static class NodeProcessor
                     }
                 }
                 break;
+            case NodeKind.FunctionDecl:
+                // Restore previous locals
+                ctx.LocalVars = previousLocals;
+                break;
         }
 
         return n;
     }
 
-    private static Node ResolveEnum(CompileContext ctx, Node n)
+    private static Node ResolveEnum(CodeContext ctx, Node n)
     {
         if (n.Children.Count != 2 || n.Children[0].Kind != NodeKind.Variable || n.Children[1].Kind != NodeKind.Variable)
             return n;
 
         // Try to find enum value (and replace with its number)
         string enumName = (n.Children[0].Token.Value as TokenVariable).Name;
-        if (ctx.Enums.TryGetValue(enumName, out Enum baseEnum))
+        if (ctx.BaseContext.Enums.TryGetValue(enumName, out Enum baseEnum))
         {
             string valName = (n.Children[1].Token.Value as TokenVariable).Name;
             if (baseEnum.TryGetValue(valName, out EnumValue enumVal))
             {
-                if (ctx.ReferencedEnums.Count != 0)
+                if (ctx.BaseContext.ReferencedEnums.Count != 0)
                 {
                     // Currently resolving interdependent enums
-                    if (ctx.ReferencedEnums.Add(enumName))
+                    if (ctx.BaseContext.ReferencedEnums.Add(enumName))
                     {
                         if (enumVal.HasValue)
                         {
@@ -110,7 +151,7 @@ public static class NodeProcessor
         return n;
     }
 
-    private static Node OptimizeUnary(CompileContext ctx, Node n)
+    private static Node OptimizeUnary(CodeContext ctx, Node n)
     {
         if (n.Children[0].Kind != NodeKind.Constant)
             return n;
@@ -160,7 +201,7 @@ public static class NodeProcessor
         return n;
     }
 
-    private static Node OptimizeIf(CompileContext ctx, Node n)
+    private static Node OptimizeIf(CodeContext ctx, Node n)
     {
         if (n.Children[0].Kind != NodeKind.Constant)
             return n;
@@ -188,7 +229,7 @@ public static class NodeProcessor
         }
     }
 
-    private static Node OptimizeIntrinsicCall(CompileContext ctx, Node n)
+    private static Node OptimizeIntrinsicCall(CodeContext ctx, Node n)
     {
         if (n.Children.Count != 1 || n.Children[0].Kind != NodeKind.Constant)
             return n;
@@ -308,7 +349,7 @@ public static class NodeProcessor
         return n;
     }
 
-    private static Node OptimizeBinary(CompileContext ctx, Node n)
+    private static Node OptimizeBinary(CodeContext ctx, Node n)
     {
         if (n.Children[0].Kind != NodeKind.Constant || n.Children[1].Kind != NodeKind.Constant)
             return n;

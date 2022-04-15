@@ -28,7 +28,6 @@ public static partial class Bytecode
 
         // Resolve variable references
         var vari = ctx.BaseContext.Project.DataHandle.GetChunk<GMChunkVARI>();
-        // TODO: Handle local variables properly
         foreach (var p in ctx.VariablePatches)
         {
             GMVariable variable = vari.FindOrDefine(p.Token.Name,
@@ -38,6 +37,11 @@ public static partial class Bytecode
             p.Target.Variable = new Reference<GMVariable>(variable, p.Token.VariableType);
             if (p.Token.VariableType == VariableType.Normal)
                 p.Target.TypeInst = (InstanceType)p.Token.InstanceType;
+            if (p.Token.InstanceType == (int)InstanceType.Local)
+            {
+                if (!ctx.ReferencedLocalVars.Contains(p.Token.Name))
+                    ctx.ReferencedLocalVars.Add(p.Token.Name);
+            }
         }
     }
 
@@ -141,7 +145,17 @@ public static partial class Bytecode
                 // TODO
                 break;
             case NodeKind.LocalVarDecl:
-                // TODO
+                {
+                    for (int i = 0; i < stmt.Children.Count; i++)
+                    {
+                        if (stmt.Children[i].Children.Count == 0)
+                            continue;
+
+                        // Compile initial assignment
+                        CompileExpression(ctx, stmt.Children[i].Children[0]);
+                        CompileAssign(ctx, stmt.Children[i]);
+                    }
+                }
                 break;
             case NodeKind.With:
                 {

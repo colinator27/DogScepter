@@ -108,6 +108,7 @@ public class CompileContext
 
         // Expand interdependent enums
         ResolveEnums = true;
+        CodeContext tempCtx = new(this, "@@temp@@", "", CodeContext.CodeMode.Replace, false);
         foreach (var _enum in Enums.Values)
         {
             foreach (var val in _enum.Values)
@@ -116,7 +117,7 @@ public class CompileContext
                 ReferencedEnums.Add(_enum.Name);
 
                 if (!val.HasValue && val.Node != null)
-                    val.Node = NodeProcessor.ProcessNode(this, val.Node);
+                    val.Node = NodeProcessor.ProcessNode(tempCtx, val.Node);
             }
         }
         ReferencedEnums.Clear();
@@ -144,7 +145,7 @@ public class CompileContext
 
         // Perform optimizations and basic processing on the parse tree
         foreach (var code in Code)
-            code.RootNode = NodeProcessor.ProcessNode(this, code.RootNode);
+            code.RootNode = NodeProcessor.ProcessNode(code, code.RootNode);
 
         if (Errors.Count != 0)
             return false;
@@ -253,8 +254,6 @@ public class CompileContext
         GMChunkSCPT scpt = Project.DataHandle.GetChunk<GMChunkSCPT>();
         GMChunkFUNC func = Project.DataHandle.GetChunk<GMChunkFUNC>();
 
-        // TODO - in general, need to populate locals
-
         // Link all of our code contexts
         foreach (var code in Code)
         {
@@ -274,7 +273,12 @@ public class CompileContext
                         break;
                 }
 
-                // TODO: clear and redo locals entry
+                // Clear and re-populate locals entry
+                GMLocalsEntry localsEntry = func.FindLocalsEntry(code.Name);
+                localsEntry.ClearLocals(existing);
+                localsEntry.AddLocal(Project.DataHandle, "arguments", existing);
+                foreach (string local in code.ReferencedLocalVars)
+                    localsEntry.AddLocal(Project.DataHandle, local, existing);
 
                 // TODO: handle 2.3+ sub-functions
             }
@@ -285,23 +289,15 @@ public class CompileContext
                 newEntry.BytecodeEntry = new(newEntry) { Instructions = code.Instructions };
                 codeChunk.List.Add(newEntry);
 
+                // Add locals entry
+                GMLocalsEntry localsEntry = new(newEntry.Name);
+                func.Locals.Add(localsEntry);
+                localsEntry.AddLocal(Project.DataHandle, "arguments", newEntry);
+                foreach (string local in code.ReferencedLocalVars)
+                    localsEntry.AddLocal(Project.DataHandle, local, newEntry);
+
                 if (Project.DataHandle.VersionInfo.IsVersionAtLeast(2, 3))
                 {
-                    // Add locals entry
-                    func.Locals.Add(new GMLocalsEntry()
-                    {
-                        Name = newEntry.Name,
-                        Entries = new() 
-                        { 
-                            new GMLocal() 
-                            { 
-                                Name = Project.DataHandle.DefineString("arguments"),
-                                Index = 2
-                            } 
-                        }
-                    });
-                    // TODO: finish adding locals
-
                     if (code.IsScript)
                     {
                         // Add to global init scripts
@@ -320,21 +316,6 @@ public class CompileContext
                 }
                 else if (code.IsScript)
                 {
-                    // Add locals entry
-                    func.Locals.Add(new GMLocalsEntry()
-                    {
-                        Name = newEntry.Name,
-                        Entries = new()
-                        {
-                            new GMLocal()
-                            {
-                                Name = Project.DataHandle.DefineString("arguments"),
-                                Index = 0
-                            }
-                        }
-                    });
-                    // TODO: finish adding locals
-
                     // Add script entry
                     scpt.List.Add(new()
                     {
@@ -375,6 +356,7 @@ public class CodeContext
     public List<Token> Tokens { get; set; } = null;
     public Node RootNode { get; set; } = null;
     public bool Errored { get; set; } = false;
+    public List<string> ReferencedLocalVars { get; set; } = new();
     public List<string> LocalVars { get; set; } = new();
     public List<string> StaticVars { get; set; } = new();
     public List<string> ArgumentVars { get; set; } = new();
