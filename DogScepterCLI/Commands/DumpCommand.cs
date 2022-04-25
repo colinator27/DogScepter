@@ -75,7 +75,7 @@ public class DumpCommand : ICommand
     /// <summary>
     /// Whether to enable features more useful for comparing versions of a game
     /// </summary>
-    [CommandOption("hackycompare", 'h', Description = "Enables hacky comparison mode.")]
+    [CommandOption("hackycompare", Description = "Enables hacky comparison mode.")]
     // ReSharper disable once MemberCanBePrivate.Global - used as an Option for CliFix
     public bool ComparisonMode { get; private set; }
 
