@@ -123,6 +123,34 @@ public class Lexer
                         ctx.Position++;
                     break;
                 default:
+                    // This might actually be an RGB color literal
+                    if (directiveType.Length == 6 || directiveType.Length == 8)
+                    {
+                        string color = directiveType.ToString();
+                        bool valid = true;
+                        foreach (char hex in color)
+                        {
+                            if ((hex < '0' || hex > '9') && (hex < 'A' || hex > 'F') && (hex < 'a' || hex > 'f'))
+                            {
+                                valid = false;
+                                break;
+                            }
+                        }
+                        if (valid)
+                        {
+                            // Convert RGB to BGR and parse
+                            string converted = color[4..6] + color[2..4] + color[0..2];
+                            if (color.Length == 8)
+                                converted += color[6..8];
+                            if (long.TryParse(converted, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long value))
+                            {
+                                if (value >= int.MinValue && value <= int.MaxValue)
+                                    return new Token(ctx, new TokenConstant((double)value), startIndex);
+                                return new Token(ctx, new TokenConstant(value), startIndex);
+                            }
+                        }
+                    }
+
                     // Give an error at compile time (such as in the case of typos of "macro") to try to be helpful
                     ctx.Error($"Unrecognized directive \"{directiveType}\"", startIndex);
                     break;
