@@ -95,6 +95,11 @@ public static partial class Bytecode
     }
 
     /// <summary>
+    /// Helper record used for generating code for switch statements.
+    /// </summary>
+    public record SwitchCase(JumpForwardPatch Jump, int ChildIndex);
+
+    /// <summary>
     /// Represents a loop or context where break/continue need special behavior.
     /// </summary>
     public class Context

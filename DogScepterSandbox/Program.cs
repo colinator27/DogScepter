@@ -1,9 +1,26 @@
 ﻿// Project for testing random portions of code as features are developed
 
+using DogScepterLib.Core;
+using DogScepterLib.Core.Chunks;
+using DogScepterLib.Core.Models;
 using DogScepterLib.Project;
 using DogScepterLib.Project.GML.Compiler;
+using DogScepterLib.Project.GML.Decompiler;
 
 ProjectFile pf = DogScepterTest.Util.BasicLoadProject("data.win", null, Console.WriteLine);
+
+#if false
+
+GMUniquePointerList<GMCode> codeList = pf.DataHandle.GetChunk<GMChunkCODE>().List;
+foreach (var elem in codeList)
+{
+    if (elem.ParentEntry != null)
+        continue;
+    if (elem.Name.Content.Contains("persist_load"))
+        new DecompileContext(pf).DecompileWholeEntryString(elem);
+}
+
+#else
 
 var ctx = new CompileContext(pf);
 ctx.AddCode("Custom_Script",
@@ -13,6 +30,22 @@ enum TEST
     A = 123,
     B
 }
+
+//repeat (10)
+{
+    //with (obj_player)
+    {
+        switch (x)
+        {
+            case 0:
+                return TEST.A;
+            case 1:
+                return TEST.B;
+        }
+    }
+}
+
+colortest = #ff0000
 
 b = self
 with (other)
@@ -47,5 +80,7 @@ show_message(global.__TEST_GLOBAL__);
 Console.WriteLine(ctx.Compile() ? "Compile success" : "Compile failure");
 
 DogScepterTest.Util.BasicSaveProject(pf, "data_modded.win", Console.WriteLine);
+
+#endif
 
 return;

@@ -1,5 +1,6 @@
 ﻿using DogScepterLib.Core.Chunks;
 using DogScepterLib.Core.Models;
+using System.Collections.Generic;
 using static DogScepterLib.Core.Models.GMCode.Bytecode.Instruction;
 
 namespace DogScepterLib.Project.GML.Compiler;
@@ -114,7 +115,34 @@ public static partial class Bytecode
                 ctx.BytecodeContexts.Peek().UseContinueJump().Add(Emit(ctx, Opcode.B));
                 break;
             case NodeKind.Return:
-                // TODO
+                if (stmt.Children.Count == 0)
+                {
+                    // No return value (same as exit)
+                    ExitCleanup(ctx);
+                    Emit(ctx, Opcode.Exit, DataType.Int32);
+                }
+                else
+                {
+                    // Has a return value, so push it to the stack
+                    CompileExpression(ctx, stmt.Children[0]);
+                    ConvertTo(ctx, DataType.Variable);
+
+                    if (ctx.BytecodeContexts.Count != 0)
+                    {
+                        // Need to store the return value in a temporary local
+                        var tempVar = new TokenVariable("$$$$temp$$$$", null) { InstanceType = (int)InstanceType.Local };
+                        EmitVariable(ctx, Opcode.Pop, DataType.Variable, tempVar, DataType.Variable);
+
+                        // Then, clean up outer contexts
+                        ExitCleanup(ctx);
+
+                        // Finally, restore the return value to the stack
+                        EmitVariable(ctx, Opcode.Push, DataType.Variable, tempVar);
+                    }
+
+                    // Actual return instruction
+                    Emit(ctx, Opcode.Ret, DataType.Variable);
+                }
                 break;
             case NodeKind.If:
                 {
@@ -142,7 +170,102 @@ public static partial class Bytecode
                 }
                 break;
             case NodeKind.Switch:
-                // TODO
+                {
+                    // Expression to be checked
+                    CompileExpression(ctx, stmt.Children[0]);
+                    DataType exprType = ctx.TypeStack.Pop();
+
+                    // Ensure that this switch statement even has anything in it
+                    if (stmt.Children.Count < 2)
+                    {
+                        ctx.Error("Empty switch statement", stmt.Token.Index);
+                        break;
+                    }
+
+                    // Ensure that no statements come before cases
+                    NodeKind firstKind = stmt.Children[1].Kind;
+                    if (firstKind != NodeKind.SwitchCase && firstKind != NodeKind.SwitchDefault)
+                    {
+                        ctx.Error("Switch statement needs to start with 'case' or 'default' statement", stmt.Children[1].Token?.Index ?? stmt.Token.Index);
+                        break;
+                    }
+
+                    // Emit branch chains, which will have targets written after
+                    var endJump = new JumpForwardPatch();
+                    var continueJump = new JumpForwardPatch();
+                    JumpForwardPatch defaultJump = null;
+                    List<SwitchCase> cases = new();
+                    for (int i = 1; i < stmt.Children.Count; i++)
+                    {
+                        Node curr = stmt.Children[i];
+                        switch (curr.Kind)
+                        {
+                            case NodeKind.SwitchCase:
+                                {
+                                    // Duplicate original expression, and compare it to this case
+                                    Emit(ctx, Opcode.Dup, exprType);
+                                    CompileExpression(ctx, curr.Children[0]);
+                                    Emit(ctx, Opcode.Cmp, ctx.TypeStack.Pop(), exprType).ComparisonKind = ComparisonType.EQ;
+
+                                    // Branch to target code if equal (and add to list of cases)
+                                    cases.Add(new SwitchCase(new JumpForwardPatch(Emit(ctx, Opcode.Bt)), i));
+                                }
+                                break;
+                            case NodeKind.SwitchDefault:
+                                {
+                                    defaultJump = new JumpForwardPatch();
+                                    cases.Add(new SwitchCase(defaultJump, i));
+                                }
+                                break;
+                        }
+                    }
+                    defaultJump?.Add(Emit(ctx, Opcode.B));
+                    endJump.Add(Emit(ctx, Opcode.B));
+
+                    // Emit actual code blocks
+                    ctx.BytecodeContexts.Push(new Context(endJump, continueJump, exprType));
+                    for (int i = 0; i < cases.Count; i++)
+                    {
+                        var curr = cases[i];
+
+                        // Figure out statement indices for this case
+                        int startIndex = curr.ChildIndex;
+                        int nextIndex = (i + 1 < cases.Count) ? 
+                                            cases[i + 1].ChildIndex : 
+                                            stmt.Children.Count;
+
+                        // Finish jump and compile actual statements
+                        curr.Jump.Finish(ctx);
+                        for (int j = startIndex; j < nextIndex; j++)
+                            CompileStatement(ctx, stmt.Children[j]);
+                    }
+
+                    // Check if continue block is necessary
+                    Context bctx = ctx.BytecodeContexts.Pop();
+                    if (bctx.ContinueUsed)
+                    {
+                        // A continue statement was used inside the statement, applying to an outer loop
+                        // First, check to see if there IS any loop
+                        if (ctx.BytecodeContexts.Count == 0)
+                        {
+                            ctx.Error("Continue used without context in switch statement", stmt.Token.Index);
+                            break;
+                        }
+
+                        // Allow all other branches to skip past this block
+                        endJump.Add(Emit(ctx, Opcode.B));
+
+                        // All necessary continue statements inside will be routed here
+                        // Perform stack cleanup and branch
+                        continueJump.Finish(ctx);
+                        Emit(ctx, Opcode.Popz, exprType);
+                        ctx.BytecodeContexts.Peek().UseContinueJump().Add(Emit(ctx, Opcode.B));
+                    }
+
+                    // General end and stack cleanup
+                    endJump.Finish(ctx);
+                    Emit(ctx, Opcode.Popz, exprType);
+                }
                 break;
             case NodeKind.LocalVarDecl:
                 {
