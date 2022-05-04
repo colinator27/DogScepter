@@ -31,7 +31,7 @@ namespace DogScepterLib.Project
 
             public bool Dirty = false;
             public List<(TexturePacker.Page, byte[])> GeneratedPages = new List<(TexturePacker.Page, byte[])>();
-            
+
             // Set for easy access
             public string Name;
 
@@ -485,7 +485,7 @@ namespace DogScepterLib.Project
                     int group = findGroupWithPage(entry.TexturePageID);
                     PageToGroup[entry.TexturePageID] = group;
                     TextureGroups[group].Items.Add(entry);
-                }    
+                }
             }
         }
 
@@ -512,12 +512,16 @@ namespace DogScepterLib.Project
                 if (CachedTextures[ind] != null)
                     return CachedTextures[ind];
                 var data = Project.DataHandle.GetChunk<GMChunkTXTR>().List[ind].TextureData;
-                using Stream s = data.Data.Memory.AsStream();
                 if (data.IsQoi)
-                    return CachedTextures[ind] = QoiConverter.GetImageFromStream(s);
+                {
+                    return CachedTextures[ind] = QoiConverter.GetImageFromSpan(data.Data.Memory.Span);
+                }
                 else
+                {
+                    using Stream s = data.Data.Memory.AsStream();
                     return CachedTextures[ind] = new DSImage(s);
-            }       
+                }
+            }
         }
 
         public void ParseAllTextures()
@@ -525,11 +529,13 @@ namespace DogScepterLib.Project
             CachedTextures = new DSImage[8192];
             Parallel.ForEach(Project.DataHandle.GetChunk<GMChunkTXTR>().List, (elem, _, i) =>
             {
-                using Stream s = elem.TextureData.Data.Memory.AsStream();
                 if (elem.TextureData.IsQoi)
-                    CachedTextures[i] = QoiConverter.GetImageFromStream(s);
+                    CachedTextures[i] = QoiConverter.GetImageFromSpan(elem.TextureData.Data.Memory.Span);
                 else
+                {
+                    using Stream s = elem.TextureData.Data.Memory.AsStream();
                     CachedTextures[i] = new DSImage(s);
+                }
             });
         }
 
@@ -711,7 +717,7 @@ namespace DogScepterLib.Project
             {
                 // This is hand-crafted, and has a custom bitmap at the moment
                 DSImage texture = entry._Image;
-                
+
                 long key = (long)((entry.SourceWidth * 65535) + entry.SourceHeight) << 32;
                 fixed (byte* bytePtr = &texture.Data[0])
                 {
@@ -896,7 +902,7 @@ namespace DogScepterLib.Project
                 entryImage.CopyTo(res, item.X, item.Y);
 
                 if (!entry._EmptyBorder)
-                { 
+                {
                     int border = group.Border;
                     if (border != 0)
                     {
@@ -973,7 +979,7 @@ namespace DogScepterLib.Project
 
             return res;
         }
-        
+
         // Clears and re-initializes all the entries in the TGIN chunk
         public void RefreshTGIN()
         {

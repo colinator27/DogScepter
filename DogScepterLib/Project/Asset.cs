@@ -1,6 +1,5 @@
 ﻿using DogScepterLib.Core;
 using Microsoft.Toolkit.HighPerformance;
-using PropertyChanged;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,7 +10,6 @@ namespace DogScepterLib.Project
     /// <summary>
     /// A high-level asset inside a project, such as a sprite or room
     /// </summary>
-    [AddINotifyPropertyChangedInterface]
     public abstract class Asset
     {
         public string Name { get; set; }

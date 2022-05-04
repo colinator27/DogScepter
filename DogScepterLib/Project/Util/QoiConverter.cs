@@ -22,36 +22,31 @@ public static class QoiConverter
     private const byte QOI_MASK_3 = 0xe0;
     private const byte QOI_MASK_4 = 0xf0;
 
-    public unsafe static DSImage GetImageFromStream(Stream s)
+    public static DSImage GetImageFromSpan(Span<byte> data)
     {
-        byte[] header = new byte[12];
-        s.Read(header, 0, 12);
-        if (header[0] != (byte)'f' || header[1] != (byte)'i' || header[2] != (byte)'o' || header[3] != (byte)'q')
+        if (data[0] != (byte)'f' || data[1] != (byte)'i' || data[2] != (byte)'o' || data[3] != (byte)'q')
             throw new Exception("Invalid little-endian QOIF image magic");
 
-        int width = header[4] + (header[5] << 8);
-        int height = header[6] + (header[7] << 8);
-        int length = header[8] + (header[9] << 8) + (header[10] << 16) + (header[11] << 24);
-
-        byte[] pixelData = new byte[length];
-        s.Read(pixelData, 0, length);
+        int width = data[4] + (data[5] << 8);
+        int height = data[6] + (data[7] << 8);
+        int endPos = 12 + data[8] + (data[9] << 8) + (data[10] << 16) + (data[11] << 24);
 
         DSImage img = new(width, height);
         int imgPos = 0;
 
-        int pos = 0;
+        int pos = 12;
         int run = 0;
         byte r = 0, g = 0, b = 0, a = 255;
-        byte[] index = new byte[64 * 4];
+        Span<byte> index = stackalloc byte[64 * 4];
         while (imgPos < img.Data.Length)
         {
             if (run > 0)
             {
                 run--;
             }
-            else if (pos < pixelData.Length)
+            else if (pos < endPos)
             {
-                int b1 = pixelData[pos++];
+                int b1 = data[pos++];
 
                 if ((b1 & QOI_MASK_2) == QOI_INDEX)
                 {
@@ -67,7 +62,7 @@ public static class QoiConverter
                 }
                 else if ((b1 & QOI_MASK_3) == QOI_RUN_16)
                 {
-                    int b2 = pixelData[pos++];
+                    int b2 = data[pos++];
                     run = (((b1 & 0x1f) << 8) | b2) + 32;
                 }
                 else if ((b1 & QOI_MASK_2) == QOI_DIFF_8)
@@ -78,7 +73,7 @@ public static class QoiConverter
                 }
                 else if ((b1 & QOI_MASK_3) == QOI_DIFF_16)
                 {
-                    int b2 = pixelData[pos++];
+                    int b2 = data[pos++];
                     int merged = b1 << 8 | b2;
                     r += (byte)(((merged & 7936) << 19 >> 27) & 0xff);
                     g += (byte)(((merged & 240) << 24 >> 20 >> 8) & 0xff);
@@ -86,8 +81,8 @@ public static class QoiConverter
                 }
                 else if ((b1 & QOI_MASK_4) == QOI_DIFF_24)
                 {
-                    int b2 = pixelData[pos++];
-                    int b3 = pixelData[pos++];
+                    int b2 = data[pos++];
+                    int b3 = data[pos++];
                     int merged = b1 << 16 | b2 << 8 | b3;
                     r += (byte)(((merged & 1015808) << 12 >> 27) & 0xff);
                     g += (byte)(((merged & 31744) << 17 >> 19 >> 8) & 0xff);
@@ -97,13 +92,13 @@ public static class QoiConverter
                 else if ((b1 & QOI_MASK_4) == QOI_COLOR)
                 {
                     if ((b1 & 8) != 0)
-                        r = pixelData[pos++];
+                        r = data[pos++];
                     if ((b1 & 4) != 0)
-                        g = pixelData[pos++];
+                        g = data[pos++];
                     if ((b1 & 2) != 0)
-                        b = pixelData[pos++];
+                        b = data[pos++];
                     if ((b1 & 1) != 0)
-                        a = pixelData[pos++];
+                        a = data[pos++];
                 }
 
                 int indexPos2 = ((r ^ g ^ b ^ a) & 63) << 2;
@@ -122,7 +117,7 @@ public static class QoiConverter
         return img;
     }
 
-    public unsafe static byte[] GetArrayFromImage(DSImage img)
+    public static byte[] GetArrayFromImage(DSImage img)
     {
         byte[] res = new byte[(img.Width * img.Height * 4) + 12 + 4 + 128]; // default capacity (extra 128 bytes to be safe)
         res[0] = (byte)'f';
@@ -138,9 +133,9 @@ public static class QoiConverter
         int imgEnd = img.Data.Length;
 
         int resPos = 12;
-        byte r = 0, g = 0, b = 0, a = 255;
+        byte r, g, b, a;
         int run = 0;
-        int v = 0, vPrev = 0xff;
+        int v, vPrev = 0xff;
         int[] index = new int[64];
         while (imgPos < imgEnd)
         {
@@ -229,7 +224,7 @@ public static class QoiConverter
 
         // Add padding
         resPos += 4;
-            
+
         // Write final length
         int length = resPos - 12;
         res[8] = (byte)(length & 0xff);

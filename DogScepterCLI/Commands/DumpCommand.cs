@@ -12,6 +12,7 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using DogScepterLib.Core.Models;
+using System.Diagnostics;
 
 namespace DogScepterCLI.Commands;
 
@@ -127,25 +128,29 @@ public class DumpCommand : ICommand
         // If any dump options were specified, overwrite to true in respective methods, otherwise stays false.
         bool didAnything = false;
 
+        // Keep a stopwatch for statistics
+        Stopwatch sw = new();
+        sw.Start();
+
         if (DumpTextures)
         {
             didAnything = true;
             console.Output.WriteLine("Dumping textures...");
             projectFile.Textures.ParseAllTextures();
-            for (int i = 0; i < projectFile.Textures.CachedTextures.Length; i++)
+            Parallel.ForEach(projectFile.Textures.CachedTextures, (texture, _, index) =>
             {
-                DSImage curr = projectFile.Textures.CachedTextures[i];
-                if (curr == null)
-                    continue;
-                try
+                if (texture != null)
                 {
-                    curr.SavePng(Path.Combine(dir, $"texture_{i}.png"));
+                    try
+                    {
+                        texture.SavePng(Path.Combine(dir, $"texture_{index}.png"));
+                    }
+                    catch (Exception e)
+                    {
+                        console.Error.WriteLine($"Failed to save texture {index}: {e.Message}");
+                    }
                 }
-                catch (Exception e)
-                {
-                    console.Error.WriteLine($"Failed to save texture {i}: {e.Message}");
-                }
-            }
+            });
         }
 
         if (DumpStrings)
@@ -228,8 +233,10 @@ public class DumpCommand : ICommand
             }
         }
 
+        sw.Stop();
+
         if (didAnything)
-            console.Output.WriteLine("Complete.");
+            console.Output.WriteLine($"Complete. Took {sw.ElapsedMilliseconds} ms to dump.");
         else
             console.Output.WriteLine("Did nothing. Need to specify using parameters what to dump.");
 

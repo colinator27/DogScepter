@@ -4,7 +4,6 @@ using DogScepterLib.Core.Models;
 using DogScepterLib.Project.Assets;
 using DogScepterLib.Project.Converters;
 using DogScepterLib.Project.GML.Decompiler;
-using PropertyChanged;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -20,7 +19,6 @@ using static DogScepterLib.Core.Chunks.GMChunkOPTN;
 
 namespace DogScepterLib.Project
 {
-    [AddINotifyPropertyChangedInterface]
     public class ProjectFile
     {
         public enum WarningType
