@@ -156,6 +156,12 @@ public class GMObject : IGMNamedSerializable
     public bool Visible;
 
     /// <summary>
+    /// Whether the game object is marked as "managed."
+    /// This is used for rollback multiplayer functionality since mid-2022 betas, however the field exists in 2022.5+.
+    /// </summary>
+    public bool Managed;
+
+    /// <summary>
     /// Whether the game object is solid.
     /// </summary>
     /// <remarks>This will cause GameMaker to resolve any collisions,
@@ -207,6 +213,8 @@ public class GMObject : IGMNamedSerializable
         writer.WritePointerString(Name);
         writer.Write(SpriteID);
         writer.WriteWideBoolean(Visible);
+        if (writer.VersionInfo.IsVersionAtLeast(2022, 5))
+            writer.WriteWideBoolean(Managed);
         writer.WriteWideBoolean(Solid);
         writer.Write(Depth);
         writer.WriteWideBoolean(Persistent);
@@ -234,6 +242,8 @@ public class GMObject : IGMNamedSerializable
         Name = reader.ReadStringPointerObject();
         SpriteID = reader.ReadInt32();
         Visible = reader.ReadWideBoolean();
+        if (reader.VersionInfo.IsVersionAtLeast(2022, 5))
+            Managed = reader.ReadWideBoolean();
         Solid = reader.ReadWideBoolean();
         Depth = reader.ReadInt32();
         Persistent = reader.ReadWideBoolean();

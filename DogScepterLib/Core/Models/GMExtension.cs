@@ -13,6 +13,7 @@ namespace DogScepterLib.Core.Models
         public GMString Name;
         public GMString ClassName;
         public GMPointerList<ExtensionFile> Files;
+        public GMPointerList<ExtensionOption> Options;
 
         public Guid? ProductID = null; // Set seemingly in 1.4.9999 and up
 
@@ -36,7 +37,20 @@ namespace DogScepterLib.Core.Models
             writer.WritePointerString(EmptyString);
             writer.WritePointerString(Name);
             writer.WritePointerString(ClassName);
-            Files.Serialize(writer);
+
+            if (writer.VersionInfo.IsVersionAtLeast(2022, 6))
+            {
+                writer.WritePointer(Files);
+                writer.WritePointer(Options);
+                writer.WriteObjectPointer(Files);
+                Files.Serialize(writer);
+                writer.WriteObjectPointer(Options);
+                Options.Serialize(writer);
+            }
+            else
+            {
+                Files.Serialize(writer);
+            }
         }
 
         public void Deserialize(GMDataReader reader)
@@ -45,8 +59,16 @@ namespace DogScepterLib.Core.Models
             Name = reader.ReadStringPointerObject();
             ClassName = reader.ReadStringPointerObject();
 
-            Files = new GMPointerList<ExtensionFile>();
-            Files.Deserialize(reader);
+            if (reader.VersionInfo.IsVersionAtLeast(2022, 6))
+            {
+                Files = reader.ReadPointerObjectUnique<GMPointerList<ExtensionFile>>();
+                Options = reader.ReadPointerObjectUnique<GMPointerList<ExtensionOption>>();
+            }
+            else
+            {
+                Files = new GMPointerList<ExtensionFile>();
+                Files.Deserialize(reader);
+            }
         }
 
         public override string ToString()
@@ -126,6 +148,39 @@ namespace DogScepterLib.Core.Models
             public override string ToString()
             {
                 return $"Extension Function: \"{Name.Content}\"";
+            }
+        }
+
+        public class ExtensionOption : IGMSerializable
+        {
+            public enum OptionKind : int
+            {
+                Boolean = 0,
+                Number = 1,
+                String = 2
+            }
+
+            public GMString Name;
+            public GMString Value;
+            public OptionKind Kind;
+
+            public void Serialize(GMDataWriter writer)
+            {
+                writer.WritePointerString(Name);
+                writer.WritePointerString(Value);
+                writer.Write((int)Kind);
+            }
+
+            public void Deserialize(GMDataReader reader)
+            {
+                Name = reader.ReadStringPointerObject();
+                Value = reader.ReadStringPointerObject();
+                Kind = (OptionKind)reader.ReadInt32();
+            }
+
+            public override string ToString()
+            {
+                return $"Extension Option: \"{Name.Content}\"";
             }
         }
     }

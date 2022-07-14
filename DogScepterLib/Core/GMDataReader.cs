@@ -21,6 +21,8 @@ namespace DogScepterLib.Core
         public Dictionary<int, GMCode.Bytecode.Instruction> Instructions;
         public List<(GMTextureData, int)> TexturesToDecompress;
 
+        public GMChunk CurrentlyParsingChunk = null;
+
         public GMDataReader(Stream stream, string path) : base(stream)
         {
             Data = new GMData();
@@ -258,7 +260,7 @@ namespace DogScepterLib.Core
         public void Pad(int alignment)
         {
             if (Offset % alignment != 0)
-                Offset += alignment - (Offset % 4);
+                Offset += alignment - (Offset % alignment);
         }
     }
 

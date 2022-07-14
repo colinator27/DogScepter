@@ -8,6 +8,7 @@ namespace DogScepterLib.Core.Chunks
     public class GMChunkTXTR : GMChunk
     {
         public GMUniquePointerList<GMTexturePage> List;
+        public bool Checked2022_5 = false;
 
         public override void Serialize(GMDataWriter writer)
         {
@@ -25,6 +26,9 @@ namespace DogScepterLib.Core.Chunks
             base.Deserialize(reader);
 
             DoFormatCheck(reader);
+
+            // If on an earlier version than 2022.3, don't bother checking 2022.5
+            Checked2022_5 = !reader.VersionInfo.IsVersionAtLeast(2022, 3);
 
             List = new GMUniquePointerList<GMTexturePage>();
             List.Deserialize(reader);

@@ -1,4 +1,5 @@
-﻿using ICSharpCode.SharpZipLib.BZip2;
+﻿using DogScepterLib.Core.Chunks;
+using ICSharpCode.SharpZipLib.BZip2;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -50,6 +51,7 @@ namespace DogScepterLib.Core.Models
         public bool IsBZip2;
         public short QoiWidth = -1;
         public short QoiHeight = -1;
+        public uint QoiLength = 0;
 
         private static readonly byte[] PNGHeader = new byte[8] { 137, 80, 78, 71, 13, 10, 26, 10 };
         private static readonly byte[] QOIandBZip2Header = new byte[4] { 50, 122, 111, 113 };
@@ -81,6 +83,8 @@ namespace DogScepterLib.Core.Models
                 writer.Write(QOIandBZip2Header);
                 writer.Write(QoiWidth);
                 writer.Write(QoiHeight);
+                if (writer.VersionInfo.IsVersionAtLeast(2022, 5))
+                    writer.Write(QoiLength);
                 using MemoryStream input = new MemoryStream(Data.Memory.ToArray());
                 using MemoryStream output = new MemoryStream(1024);
                 BZip2.Compress(input, output, false, 9);
@@ -113,6 +117,37 @@ namespace DogScepterLib.Core.Models
 
                     QoiWidth = reader.ReadInt16();
                     QoiHeight = reader.ReadInt16();
+
+                    var txtr = reader.CurrentlyParsingChunk as GMChunkTXTR;
+                    if (!txtr.Checked2022_5)
+                    {
+                        // Check for 2022.5+ format
+                        txtr.Checked2022_5 = true;
+                        if (!reader.VersionInfo.IsVersionAtLeast(2022, 5))
+                        {
+                            int returnTo = reader.Offset;
+
+                            if (reader.ReadByte() != (byte)'B')
+                                reader.VersionInfo.SetVersion(2022, 5);
+                            else if (reader.ReadByte() != (byte)'Z')
+                                reader.VersionInfo.SetVersion(2022, 5);
+                            else if (reader.ReadByte() != (byte)'h')
+                                reader.VersionInfo.SetVersion(2022, 5);
+                            else
+                            {
+                                reader.ReadByte();
+                                if (reader.ReadUInt24() != 0x594131) // digits of pi... (block header)
+                                    reader.VersionInfo.SetVersion(2022, 5);
+                                else if (reader.ReadUInt24() != 0x595326)
+                                    reader.VersionInfo.SetVersion(2022, 5);
+                            }
+
+                            reader.Offset = returnTo;
+                        }
+                    }
+
+                    if (reader.VersionInfo.IsVersionAtLeast(2022, 5))
+                        QoiLength = reader.ReadUInt32();
 
                     // Queue the data to be decompressed later, and in parallel
                     reader.TexturesToDecompress.Add((this, reader.Offset));

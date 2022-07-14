@@ -127,6 +127,7 @@ namespace DogScepterLib.Project.Assets
 
         public string Sprite { get; set; }
         public bool Visible { get; set; }
+        public bool Managed { get; set; }
         public bool Solid { get; set; }
         public int Depth { get; set; }
         public bool Persistent { get; set; }

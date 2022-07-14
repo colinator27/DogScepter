@@ -186,6 +186,7 @@ namespace DogScepterLib.Project
                 {
                     texData.QoiWidth = (short)page.Item1.Width;
                     texData.QoiHeight = (short)page.Item1.Height;
+                    texData.QoiLength = (uint)texData.Data.Length;
                 }
                 foreach (TexturePacker.Page.Item item in page.Item1.Items)
                 {

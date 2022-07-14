@@ -166,8 +166,11 @@ public class GMChunkFORM : GMChunk
             // Actually parse the chunk, starting at its length
             reader.Offset += 4;
             GMChunk chunk = (GMChunk)Activator.CreateInstance(type);
+            reader.CurrentlyParsingChunk = chunk;
             Chunks.Add(ChunkNames[i], chunk);
             chunk.Deserialize(reader);
         }
+
+        reader.CurrentlyParsingChunk = null;
     }
 }
