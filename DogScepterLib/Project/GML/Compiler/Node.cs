@@ -17,10 +17,11 @@ public enum NodeKind
     FunctionCallChain, // Appears in cases like a.b() and a()(). First child is a ChainReference or another FunctionCallChain
     FunctionCallExpr, // Appears specifically in cases like a()(), representing the second call in this case
     Variable, // Represents a single variable name (and nothing else)
-    ChainReference, // Appears in cases like a.b.c and a.b[0].c (and so on). 
+    VariableAccessor, // Variable name followed by any number of accessors
+    Accessor, // Individual accessor (has sub-expressions)
+    ChainReference, // Appears in all cases of a.b, etc.
     Prefix, // Appears in cases like ++a, ++a.b.c, ++a.b[0] (and so on)
     Postfix, // Appears in cases like a++, a.b.c++, a.b[0]++ (and so on)
-    Accessor, // Arrays and accessors
 
     Conditional, // like (a ? b : c)
     NullCoalesce, // like (a ?? b)
@@ -114,5 +115,31 @@ public class NodeFunctionInfo : INodeInfo
     {
         return $"Func Info: constructor={IsConstructor}, locals={LocalVars.Count}, statics={StaticVars.Count}, " +
                 $"args={Arguments.Count}, inherits={InheritingIndex != -1}, optionals={OptionalArgsIndex != -1}";
+    }
+}
+
+public class NodeAccessorInfo : INodeInfo
+{
+    public readonly static Dictionary<TokenKind, NodeAccessorInfo> Accessors = new()
+    {
+        { TokenKind.ArrayOpen, new(TokenKind.ArrayOpen, true) },
+        { TokenKind.ArrayListOpen, new(TokenKind.ArrayListOpen, true) },
+        { TokenKind.ArrayMapOpen, new(TokenKind.ArrayMapOpen, false) },
+        { TokenKind.ArrayGridOpen, new(TokenKind.ArrayGridOpen, true) },
+        { TokenKind.ArrayDirectOpen, new(TokenKind.ArrayDirectOpen, true) },
+        { TokenKind.ArrayStructOpen, new(TokenKind.ArrayStructOpen, false) }
+    };
+
+    public TokenKind Kind { get; set; }
+    public bool DisallowStrings { get; set; }
+
+    public NodeAccessorInfo(TokenKind kind, bool verifyInteger)
+    {
+        Kind = kind;
+        DisallowStrings = verifyInteger;
+    }
+    public override string ToString()
+    {
+        return $"Accessor ({Kind})";
     }
 }

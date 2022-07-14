@@ -17,17 +17,14 @@ public static partial class Bytecode
                 break;
             case NodeKind.FunctionCall:
             case NodeKind.FunctionCallChain:
-                CompileFunctionCall(ctx, expr);
+                CompileFunctionCall(ctx, expr, false);
                 break;
             case NodeKind.Variable:
                 EmitVariable(ctx, Opcode.Push, DataType.Variable, expr.Token.Value as TokenVariable);
                 ctx.TypeStack.Push(DataType.Variable);
                 break;
-            case NodeKind.Accessor:
-                // TODO
-                break;
             case NodeKind.ChainReference:
-                // TODO
+                CompileChain(ctx, expr);
                 break;
             case NodeKind.Prefix:
                 // TODO
@@ -389,6 +386,30 @@ public static partial class Bytecode
                     ctx.TypeStack.Push(DataType.Int32);
                 }
                 Emit(ctx, Opcode.Not, type);
+                break;
+        }
+    }
+
+    private static void CompileChain(CodeContext ctx, Node chain)
+    {
+        // Compile left side first
+        CompileExpression(ctx, chain.Children[0]);
+
+        // Compile right side separately
+        switch (chain.Children[1].Kind)
+        {
+            case NodeKind.Variable:
+                ConvertToInstance(ctx);
+
+                var variable = chain.Children[1].Token.Value as TokenVariable;
+                variable.VariableType = VariableType.StackTop;
+                EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
+
+                ctx.TypeStack.Push(DataType.Variable);
+                break;
+            // todo, functions and arrays
+            default:
+                ctx.Error("Unsupported", chain.Children[1].Token);
                 break;
         }
     }

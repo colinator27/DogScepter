@@ -228,6 +228,23 @@ public static partial class Bytecode
     }
 
     /// <summary>
+    /// Emits a duplication instruction, with its parameter and type.
+    /// </summary>
+    private static Instruction EmitDup(CodeContext ctx, DataType type, byte param1)
+    {
+        Instruction res = new(ctx.BytecodeLength)
+        {
+            Kind = Opcode.Dup,
+            Type1 = type,
+            Extra = param1,
+            ComparisonKind = 0
+        };
+        ctx.Instructions.Add(res);
+        ctx.BytecodeLength += 4;
+        return res;
+    }
+
+    /// <summary>
     /// Emits a special "dup swap" instruction, with its parameters and type.
     /// </summary>
     private static Instruction EmitDupSwap(CodeContext ctx, DataType type, byte param1, byte param2)
@@ -320,5 +337,28 @@ public static partial class Bytecode
             return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// If the top of the stack isn't an instance ID type, this emits instructions necessary to
+    /// (theroetically) convert it to an instance later on. Depends on the GML version.
+    /// 
+    /// Will always pop from the type stack once.
+    /// </summary>
+    /// <returns>2 if used magic -9, 1 if used normal int32 conversion, 0 if no conversion necessary</returns>
+    private static int ConvertToInstance(CodeContext ctx)
+    {
+        if (ctx.BaseContext.IsGMS23 && ctx.TypeStack.Peek() == DataType.Variable)
+        {
+            ctx.TypeStack.Pop();
+
+            // Use magic -9 to reference stacktop instance
+            Emit(ctx, Opcode.PushI, DataType.Int16).Value = (short)-9;
+
+            return 2;
+        }
+
+        // Otherwise, if not an instance ID, need to convert to one
+        return ConvertTo(ctx, DataType.Int32) ? 1 : 0;
     }
 }

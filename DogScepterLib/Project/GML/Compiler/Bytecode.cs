@@ -58,7 +58,7 @@ public static partial class Bytecode
                 break;
             case NodeKind.FunctionCall:
             case NodeKind.FunctionCallChain:
-                CompileFunctionCall(ctx, stmt);
+                CompileFunctionCall(ctx, stmt, false);
                 Emit(ctx, Opcode.Popz, DataType.Variable);
                 break;
             case NodeKind.Assign:
@@ -436,6 +436,19 @@ public static partial class Bytecode
             case NodeKind.New:
                 // TODO
                 break;
+            case NodeKind.ChainReference:
+                int stackCount = ctx.TypeStack.Count;
+                CompileExpression(ctx, stmt);
+                if (ctx.TypeStack.Count > stackCount)
+                {
+                    // The chain produced garbage on the stack; clean it up
+                    Emit(ctx, Opcode.Popz, ctx.TypeStack.Pop());
+                }
+                break;
+            case NodeKind.Postfix:
+            case NodeKind.Prefix:
+                CompilePrefix(ctx, stmt, false);
+                break;
         }
     }
 
@@ -445,14 +458,19 @@ public static partial class Bytecode
             CompileStatement(ctx, n);
     }
 
-    private static void CompileFunctionCall(CodeContext ctx, Node func)
+    private static void CompileFunctionCall(CodeContext ctx, Node func, bool inChain)
     {
         Token token = func.Token;
         TokenFunction tokenFunc = token.Value as TokenFunction;
 
         if (ctx.BaseContext.IsGMS23)
         {
-            if (func.Kind == NodeKind.FunctionCall)
+            if (inChain)
+            {
+                // TODO
+                ctx.Error("Unsupported", -1);
+            }
+            else
             {
                 // Arguments get pushed in reverse order
                 for (int i = func.Children.Count - 1; i >= 0; i--)
@@ -461,217 +479,8 @@ public static partial class Bytecode
                     ConvertTo(ctx, DataType.Variable);
                 }
 
-                // Need to check for actual functions, otherwise default to variables
-                if (ctx.BaseContext.Builtins.Functions.TryGetValue(tokenFunc.Name, out BuiltinFunction builtinFunc))
-                {
-                    EmitCall(ctx, Opcode.Call, DataType.Int32, 
-                        new TokenFunction(tokenFunc.Name, builtinFunc), func.Children.Count, token);
-                }
-                else if (ctx.BaseContext.Functions.TryGetValue(tokenFunc.Name, out FunctionReference reference))
-                {
-                    EmitCall(ctx, Opcode.Call, DataType.Int32, tokenFunc, func.Children.Count, token, reference);
-                }
-                else if (ctx.BaseContext.Scripts.Contains(tokenFunc.Name))
-                {
-                    EmitCall(ctx, Opcode.Call, DataType.Int32, tokenFunc, func.Children.Count, token);
-                }
-                else
-                {
-                    // This is just a simple variable call
-                    EmitCall(ctx, Opcode.Call, DataType.Int32, new TokenFunction("@@This@@", null), 0);
-                    EmitVariable(ctx, Opcode.Push, DataType.Variable,
-                            new TokenVariable(tokenFunc.Name, null) { InstanceType = -6 /* for some reason */ });
-                    Emit(ctx, Opcode.CallV, DataType.Variable).Value = func.Children.Count;
-                }
-
+                EmitCall(ctx, Opcode.Call, DataType.Int32, tokenFunc, func.Children.Count, token);
                 ctx.TypeStack.Push(DataType.Variable);
-            }
-            else
-            {
-                // This is a function chain.
-                Node chainRef = func.Children[0];
-
-                // Expand all the chain reference nodes to be a more flat structure
-                void handleNode(Node n, Node parent, int parentIndex)
-                {
-                    for (int i = n.Children.Count - 1; i >= 0; i--)
-                    {
-                        Node curr = n.Children[i];
-                        if (curr.Kind == NodeKind.ChainReference ||
-                            curr.Kind == NodeKind.FunctionCallChain)
-                        {
-                            handleNode(curr, n, i);
-                        }
-                    }
-                    bool allFunctions = true;
-                    foreach (Node child in n.Children)
-                    {
-                        if (child.Kind != NodeKind.FunctionCall)
-                        {
-                            allFunctions = false;
-                            break;
-                        }    
-                    }
-                    if (allFunctions)
-                    {
-                        // This chain is now solely populated by function calls, so
-                        // push all of them up to the parent's children
-                        parent.Children.RemoveAt(parentIndex);
-                        parent.Children.InsertRange(parentIndex, n.Children);
-                    }
-                }
-                for (int i = chainRef.Children.Count - 1; i >= 0; i--)
-                {
-                    Node curr = chainRef.Children[i];
-                    if (curr.Kind == NodeKind.ChainReference ||
-                        curr.Kind == NodeKind.FunctionCallChain)
-                    {
-                        handleNode(curr, chainRef, i);
-                    }
-                }
-
-                // Now actually produce the bytecode
-                bool needToSwap = false;
-                bool needToDup = false;
-                bool alreadyPushedArgs = false;
-                for (int i = 0; i < chainRef.Children.Count; i++)
-                {
-                    Node curr = chainRef.Children[i];
-                    switch (curr.Kind)
-                    {
-                        case NodeKind.Constant:
-                            // This is a constant representing an object index.
-                            // In order to convert to an instance ID, this goes through @@GetInstance@@,
-                            // or other similar built-in constant functions.
-                            if (i != 0)
-                                ctx.Error("Invalid constant in function chain", curr.Token?.Index ?? -1);
-                            else
-                            {
-                                TokenConstant cst = curr.Token.Value as TokenConstant;
-                                if (cst.Kind == ConstantKind.Number && cst.ValueNumber < 0 && (int)cst.ValueNumber == cst.ValueNumber)
-                                {
-                                    string funcName = (int)cst.ValueNumber switch
-                                    {
-                                        // todo? check -6 for global?
-                                        -2 => "@@Other@@",
-                                        -5 => "@@Global@@",
-                                        _ => "@@This@@"
-                                    };
-                                    EmitCall(ctx, Opcode.Call, DataType.Int32, new TokenFunction(funcName, null), 0);
-                                }
-                                else
-                                {
-                                    CompileConstant(ctx, cst);
-                                    ConvertTo(ctx, DataType.Variable);
-                                    EmitCall(ctx, Opcode.Call, DataType.Int32, new TokenFunction("@@GetInstance@@", null), 1);
-                                }
-                            }
-                            needToSwap = true;
-                            needToDup = true;
-                            break;
-                        case NodeKind.FunctionCall:
-                            if (i != chainRef.Children.Count - 1 && !alreadyPushedArgs)
-                            {
-                                // Not the final part of this chain, so deal with this first
-
-                                // In this case, arguments get pushed before, apparently
-                                // In reverse order as usual
-                                for (int j = chainRef.Children.Count - 1; j > i; j--)
-                                {
-                                    Node n = chainRef.Children[j];
-                                    if (n.Kind == NodeKind.FunctionCall)
-                                    {
-                                        for (int k = n.Children.Count - 1; k >= 0; k--)
-                                        {
-                                            CompileExpression(ctx, n.Children[k]);
-                                            ConvertTo(ctx, DataType.Variable);
-                                        }
-                                    }
-                                }
-                                alreadyPushedArgs = true;
-
-                                CompileFunctionCall(ctx, curr);
-                                needToDup = true;
-                                ctx.TypeStack.Pop();
-                                break;
-                            }
-
-                            if (!alreadyPushedArgs)
-                            {
-                                // Arguments get pushed in reverse order
-                                for (int j = curr.Children.Count - 1; j >= 0; j--)
-                                {
-                                    CompileExpression(ctx, curr.Children[j]);
-                                    ConvertTo(ctx, DataType.Variable);
-                                }
-                            }
-
-                            if (needToSwap && needToDup && !alreadyPushedArgs)
-                            {
-                                // Need to move the instance ID to the top of the stack, then duplicate it
-                                EmitDupSwap(ctx, DataType.Variable, (byte)curr.Children.Count, 8);
-                                Emit(ctx, Opcode.Dup, DataType.Variable);
-
-                                // Push stacktop variable from instance ID on stack
-                                EmitVariable(ctx, Opcode.Push, DataType.Variable,
-                                        new TokenVariable((curr.Token.Value as TokenFunction).Name, null) { InstanceType = -9 });
-                            }
-                            else if (needToDup)
-                            {
-                                // We need to only duplicate
-                                Emit(ctx, Opcode.Dup, DataType.Variable);
-
-                                // Then we push the stacktop variable... using -9 magic
-                                Emit(ctx, Opcode.PushI, DataType.Int16).Value = (short)-9;
-                                EmitVariable(ctx, Opcode.Push, DataType.Variable,
-                                        new TokenVariable((curr.Token.Value as TokenFunction).Name, null) 
-                                            { InstanceType = -1, VariableType = VariableType.StackTop });
-                            }
-                            else
-                            {
-                                // This is just a simple variable push
-                                EmitVariable(ctx, Opcode.Push, DataType.Variable,
-                                        new TokenVariable((curr.Token.Value as TokenFunction).Name, null) { InstanceType = -6 /* for some reason */ });
-                            }
-
-                            // Finally, call the function, using the remaining
-                            // (possibly duplicated) instance ID, as well as function on the stack.
-                            Emit(ctx, Opcode.CallV, DataType.Variable).Value = curr.Children.Count;
-                            ctx.TypeStack.Push(DataType.Variable);
-
-                            needToSwap = true;
-                            needToDup = true;
-                            break;
-                        case NodeKind.FunctionCallChain:
-                            CompileFunctionCall(ctx, curr);
-                            needToSwap = true;
-                            needToDup = true;
-                            ctx.TypeStack.Pop();
-                            break;
-                        case NodeKind.Variable:
-                            if (i != 0)
-                            {
-                                // Need to push from stacktop specifically, using -9 magic
-                                Emit(ctx, Opcode.PushI, DataType.Int16).Value = (short)-9;
-                                EmitVariable(ctx, Opcode.Push, DataType.Variable,
-                                        new TokenVariable((curr.Token.Value as TokenVariable).Name, null)
-                                            { InstanceType = -1, VariableType = VariableType.StackTop });
-                            }
-                            else
-                                CompileExpression(ctx, curr);
-                            needToSwap = true;
-                            needToDup = true;
-                            break;
-                        case NodeKind.Accessor:
-                            // TODO
-                            ctx.Error("Arrays/accessors not yet implemented for function call chains", -1);
-                            break;
-                        case NodeKind.FunctionCallExpr:
-                            // TODO
-                            ctx.Error("Specific function expression chain not yet implemented", -1);
-                            break;
-                    }
-                }
             }
         }
         else
@@ -727,12 +536,196 @@ public static partial class Bytecode
         {
             EmitVariable(ctx, Opcode.Pop, DataType.Variable, lhs.Token.Value as TokenVariable, type);
         }
+        else if (lhs.Kind == NodeKind.ChainReference)
+        {
+            // Compile left side of dot first
+            CompileExpression(ctx, lhs.Children[0]);
 
-        // TODO
+            // Compile end of chain separately
+            switch (lhs.Children[1].Kind)
+            {
+                case NodeKind.Variable:
+                    ConvertToInstance(ctx);
+
+                    var variable = lhs.Children[1].Token.Value as TokenVariable;
+                    variable.VariableType = VariableType.StackTop;
+                    EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, type);
+                    break;
+                // todo support arrays here
+                default:
+                    ctx.Error("Unsupported assignment", lhs.Children[1].Token);
+                    break;
+            }
+        }
+        else
+            ctx.Error("Unsupported assignment #2", lhs.Token);
     }
 
     private static void CompileCompoundAssign(CodeContext ctx, Node assign, Opcode opcode, bool bitwise = false)
     {
-        // TODO
+        Node lhs = assign.Children[0], expr = assign.Children[1];
+
+        if (lhs.Kind == NodeKind.Variable)
+        {
+            // Push original variable value
+            EmitVariable(ctx, Opcode.Push, DataType.Variable, lhs.Token.Value as TokenVariable);
+
+            // Push expression and convert to necessary data types
+            CompileExpression(ctx, expr);
+            DataType type = ctx.TypeStack.Pop();
+            if (bitwise)
+            {
+                ConvertTo(ctx, DataType.Int64);
+                type = DataType.Int64;
+            }
+            else
+            {
+                if (type == DataType.Boolean)
+                {
+                    Emit(ctx, Opcode.Conv, DataType.Boolean, DataType.Int32);
+                    type = DataType.Int32;
+                }
+            }
+
+            // Actual specific operation
+            Emit(ctx, opcode, DataType.Variable);
+
+            // Store result in original variable
+            EmitVariable(ctx, Opcode.Pop, DataType.Variable, lhs.Token.Value as TokenVariable, type);
+        }
+        else if (lhs.Kind == NodeKind.ChainReference)
+        {
+            // Compile left side of dot first
+            CompileExpression(ctx, lhs.Children[0]);
+
+            // Compile end of chain separately
+            switch (lhs.Children[1].Kind)
+            {
+                case NodeKind.Variable:
+                    bool usedMagic = (ConvertToInstance(ctx) == 2);
+
+                    // Need to duplicate the instance on the stack
+                    EmitDup(ctx, DataType.Int32, usedMagic ? (byte)4 : (byte)0);
+
+                    // Push original variable value, finally
+                    var variable = lhs.Children[1].Token.Value as TokenVariable;
+                    variable.VariableType = VariableType.StackTop;
+                    EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
+
+                    // Push expression and convert to necessary data types
+                    CompileExpression(ctx, expr);
+                    DataType type = ctx.TypeStack.Pop();
+                    if (bitwise)
+                    {
+                        ConvertTo(ctx, DataType.Int64);
+                        type = DataType.Int64;
+                    }
+                    else
+                    {
+                        if (type == DataType.Boolean)
+                        {
+                            Emit(ctx, Opcode.Conv, DataType.Boolean, DataType.Int32);
+                            type = DataType.Int32;
+                        }
+                    }
+
+                    // Actual specific operation
+                    Emit(ctx, opcode, DataType.Variable);
+
+                    // Store result in original variable
+                    EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, type);
+                    break;
+                // todo support arrays here
+                default:
+                    ctx.Error("Unsupported compound assignment", lhs.Children[1].Token);
+                    break;
+            }
+        }
+        else
+            ctx.Error("Unsupported compound assignment #2", lhs.Token);
+    }
+
+    private static void CompilePrefix(CodeContext ctx, Node prefix, bool leaveOnStack)
+    {
+        Node expr = prefix.Children[0];
+
+        if (expr.Kind == NodeKind.Variable)
+        {
+            // Push original variable value
+            var variable = expr.Token.Value as TokenVariable;
+            EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
+
+            // Push int16 1 (special instruction here)
+            Emit(ctx, Opcode.Push, DataType.Int16).Value = (short)1;
+
+            // Actual operation
+            if (prefix.Token.Kind == TokenKind.Increment)
+                Emit(ctx, Opcode.Add, DataType.Int32, DataType.Variable);
+            else
+                Emit(ctx, Opcode.Sub, DataType.Int32, DataType.Variable);
+
+            if (leaveOnStack)
+            {
+                // Duplicate value to leave it on stack
+                EmitDup(ctx, DataType.Variable, 0);
+                ctx.TypeStack.Push(DataType.Variable);
+            }
+
+            // Store result into original variable
+            EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, DataType.Variable);
+        }
+        else if (expr.Kind == NodeKind.ChainReference)
+        {
+            // Compile left side of dot first
+            CompileExpression(ctx, expr.Children[0]);
+
+            // Compile end of chain separately
+            switch (expr.Children[1].Kind)
+            {
+                case NodeKind.Variable:
+                    bool usedMagic = (ConvertToInstance(ctx) == 2);
+
+                    // Need to duplicate the instance on the stack
+                    EmitDup(ctx, DataType.Int32, usedMagic ? (byte)4 : (byte)0);
+
+                    // Push original variable value, finally
+                    var variable = expr.Children[1].Token.Value as TokenVariable;
+                    variable.VariableType = VariableType.StackTop;
+                    EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
+
+                    // Push int16 1 (special instruction here)
+                    Emit(ctx, Opcode.Push, DataType.Int16).Value = (short)1;
+
+                    // Actual operation
+                    if (prefix.Token.Kind == TokenKind.Increment)
+                        Emit(ctx, Opcode.Add, DataType.Int32, DataType.Variable);
+                    else
+                        Emit(ctx, Opcode.Sub, DataType.Int32, DataType.Variable);
+
+                    if (leaveOnStack)
+                    {
+                        // Duplicate value to leave it on stack
+                        EmitDup(ctx, DataType.Variable, 1);
+                        if (ctx.BaseContext.IsGMS23)
+                            EmitDupSwap(ctx, DataType.Int32, 4, usedMagic ? (byte)8 : (byte)4);
+                        else
+                        {
+                            // pre-2.3 swap instruction
+                            Emit(ctx, Opcode.Pop, DataType.Int16, DataType.Variable).TypeInst = (InstanceType)5;
+                        }
+                        ctx.TypeStack.Push(DataType.Variable);
+                    }
+
+                    // Store result in original variable
+                    EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, DataType.Int32);
+                    break;
+                // todo support arrays here
+                default:
+                    ctx.Error("Unsupported prefix operation", expr.Children[1].Token);
+                    break;
+            }
+        }
+        else
+            ctx.Error("Unsupported prefix operation #2", expr.Token);
     }
 }

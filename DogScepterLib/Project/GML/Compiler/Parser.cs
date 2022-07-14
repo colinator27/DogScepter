@@ -253,149 +253,110 @@ public class Parser
         return left;
     }
 
-    // Check for [low level, dot, variable, <opt. ++/-->], or [low level, dot, function call],
-    // or [low level, open <for chain function calls>], or [low level, array open <for chain array accesses>]
-    // Then does the check again, in a chain, if necessary
-    private static Node ParseChain(CodeContext ctx, bool ignoreCalls = false)
+    private static Node ParseChain(CodeContext ctx, bool disallowCall = false, bool basic = false)
     {
         Node left = ParseBase(ctx);
         if (left == null)
             return null;
 
-        bool finishedChain = false;
-        while (!finishedChain)
+        do
         {
-            Token curr = ctx.Tokens[ctx.Position];
-            switch (curr.Kind)
+            // Check for actual chain references
+            while (ctx.Tokens[ctx.Position].Kind == TokenKind.Dot)
             {
-                case TokenKind.Dot:
+                Node chain = new(NodeKind.ChainReference);
+                chain.Children.Add(left);
+                left = chain;
+
+                if (ctx.Tokens[ctx.Position].Kind == TokenKind.FunctionCall)
+                {
+                    Node func = new(NodeKind.FunctionCall, ctx.Tokens[ctx.Position]);
+                    ctx.Position++;
+                    ParseCallArguments(ctx, func);
+                    // todo: need to do checks for accessors here - accessors should replace "left" with an "array reference"
+                    chain.Children.Add(func);
+                }
+                else
+                {
+                    ctx.Position++;
+                    chain.Children.Add(ParseVariable(ctx));
+                }
+            }
+
+            // Check for postfix and function calls
+            // todo
+        }
+        while (ctx.Tokens[ctx.Position].Kind == TokenKind.Dot);
+
+        return left;
+    }
+
+    private static Node ParseVariable(CodeContext ctx)
+    {
+        Node res = new Node(NodeKind.Variable, ctx.Tokens[ctx.Position]);
+        ctx.Position++;
+
+        // Check for array indices
+        Token curr = ctx.Tokens[ctx.Position];
+        if (curr.Kind != TokenKind.EOF)
+        {
+            if (curr.Kind == TokenKind.ArrayOpen || curr.Kind == TokenKind.ArrayListOpen || curr.Kind == TokenKind.ArrayMapOpen ||
+                curr.Kind == TokenKind.ArrayGridOpen || curr.Kind == TokenKind.ArrayDirectOpen || curr.Kind == TokenKind.ArrayStructOpen)
+            {
+                res.Kind = NodeKind.VariableAccessor;
+
+                do
+                {
+                    ctx.Position++;
+
+                    // Find accessor definition, add new node
+                    var info = NodeAccessorInfo.Accessors[curr.Kind];
+                    Node accessor = new Node(NodeKind.Accessor) { Info = info };
+                    res.Children.Add(accessor);
+
+                    // Parse expression(s), verify them
+                    Node expr = ParseExpression(ctx);
+                    accessor.Children.Add(expr);
+                    if (info.DisallowStrings && expr.Kind == NodeKind.Constant && (expr.Token.Value as TokenConstant).Kind == ConstantKind.String)
+                        ctx.Error("String used in invalid accessor context", expr.Token);
+
+                    curr = ctx.Tokens[ctx.Position];
+                    if (curr.Kind == TokenKind.Comma && (info.Kind == TokenKind.ArrayOpen || info.Kind == TokenKind.ArrayGridOpen))
                     {
                         ctx.Position++;
-                        Node next = ParseBase(ctx);
-                        if (next == null)
-                            return null;
-                        if (left.Kind != NodeKind.ChainReference)
+                        Node secondExpr = ParseExpression(ctx);
+                        if (info.Kind == TokenKind.ArrayOpen)
                         {
-                            // Convert left side to a chain reference
-                            Node chain = new(NodeKind.ChainReference);
-                            chain.Children.Add(left);
-                            left = chain;
+                            // Parse second argument if normal array
+                            Node secondAccessor = new Node(NodeKind.Accessor) { Info = info };
+                            res.Children.Add(secondAccessor);
+                            secondAccessor.Children.Add(secondExpr);
                         }
-                        if (left.Children[^1].Kind == NodeKind.Constant)
+                        else
                         {
-                            // The left side should be an instance type
-                            // This current node should be a variable. Need to propagate the instance type to it
-                            if (next.Kind != NodeKind.Variable)
-                            {
-                                if (next.Kind != NodeKind.FunctionCall) // Exception for cases like obj_example.func()
-                                    ctx.Error("Expected variable after instance type", left.Children[^1].Token);
-                            }
-                            else
-                            {
-                                TokenConstant constant = left.Children[^1].Token.Value as TokenConstant;
-                                if (constant.Kind != ConstantKind.Number || (int)constant.ValueNumber != constant.ValueNumber)
-                                    ctx.Error("Invalid instance type", left.Children[^1].Token);
-                                else
-                                {
-                                    TokenVariable tokenVar = (next.Token.Value as TokenVariable);
-                                    tokenVar.InstanceType = (int)constant.ValueNumber;
-                                    tokenVar.ExplicitInstType = true;
-                                    left.Children[^1] = next;
-
-                                    // Undo chain reference if only one
-                                    if (left.Children.Count == 1)
-                                        left = left.Children[0];
-
-                                    break;
-                                }
-                            }
-                        }
-                        left.Children.Add(next);
-                        if (next.Kind == NodeKind.FunctionCall)
-                        {
-                            // Wrap the chain with a new function call node
-                            Node call = new(NodeKind.FunctionCallChain);
-                            call.Children.Add(left);
-                            left = call;
-                        }
-                    }
-                    break;
-                case TokenKind.Open:
-                    {
-                        if (ignoreCalls)
-                        {
-                            finishedChain = true;
-                            break;
-                        }
-
-                        // Handle chain function calls, like a()()
-                        Node call = new(NodeKind.FunctionCallChain);
-                        call.Children.Add(left);
-                        Node nextCall = new(NodeKind.FunctionCallExpr);
-                        call.Children.Add(nextCall);
-                        ParseCallArguments(ctx, nextCall);
-                        left = call;
-                    }
-                    break;
-                case TokenKind.ArrayOpen:
-                case TokenKind.ArrayListOpen:
-                case TokenKind.ArrayMapOpen:
-                case TokenKind.ArrayGridOpen:
-                case TokenKind.ArrayDirectOpen:
-                case TokenKind.ArrayStructOpen:
-                    {
-                        Node accessor = new(NodeKind.Accessor, curr);
-                        if (left.Kind != NodeKind.ChainReference)
-                        {
-                            // Convert left side to a chain reference
-                            Node chain = new(NodeKind.ChainReference);
-                            chain.Children.Add(left);
-                            left = chain;
-                        }
-                        left.Children.Add(accessor);
-
-                        ctx.Position++;
-                        accessor.Children.Add(ParseExpression(ctx));
-                        if (ctx.Tokens[ctx.Position].Kind == TokenKind.Comma)
-                        {
+                            // Parse second argument if grid
                             ctx.Position++;
-                            if (curr.Kind == TokenKind.ArrayOpen && ctx.BaseContext.IsGMS23)
-                            {
-                                // This uses pre-2.3 comma syntax; deal with them separately
-                                accessor = new(NodeKind.Accessor, curr);
-                                left.Children.Add(accessor);
-                            }
-                            else if (curr.Kind != TokenKind.ArrayOpen && curr.Kind != TokenKind.ArrayGridOpen)
-                                ctx.Error("Invalid accessor (only takes 1 argument, supplied 2)", curr);
-
-                            // TODO: Need to remove this once functionality exists
-                            if (curr.Kind != TokenKind.ArrayOpen)
-                                ctx.Error("Accessor syntax currently unsupported (use functions for now)", curr);
-
-                            accessor.Children.Add(ParseExpression(ctx));
+                            accessor.Children.Add(secondExpr);
                         }
-                        ExpectToken(ctx, TokenKind.ArrayClose, "']'");
-                    }
-                    break;
-                case TokenKind.Increment:
-                case TokenKind.Decrement:
-                    {
-                        if (left.Kind != NodeKind.ChainReference && left.Kind != NodeKind.Variable &&
-                            left.Kind != NodeKind.Accessor)
-                            ctx.Error("Invalid postfix", curr);
 
-                        ctx.Position++;
-                        Node n = new(NodeKind.Postfix, curr);
-                        n.Children.Add(left);
-                        return n;
+                        // Also verify that argument isn't a string
+                        if (info.DisallowStrings && secondExpr.Kind == NodeKind.Constant && (secondExpr.Token.Value as TokenConstant).Kind == ConstantKind.String)
+                            ctx.Error("String used in invalid accessor context", secondExpr.Token);
                     }
-                default:
-                    finishedChain = true;
-                    break;
+
+                    // Advance past array close token
+                    if (info.Kind == TokenKind.ArrayOpen || info.Kind == TokenKind.ArrayGridOpen)
+                        ExpectToken(ctx, TokenKind.ArrayClose, "']' or ','");
+                    else
+                        ExpectToken(ctx, TokenKind.ArrayClose, "']'");
+                    curr = ctx.Tokens[ctx.Position];
+                }
+                while (curr.Kind == TokenKind.ArrayOpen || curr.Kind == TokenKind.ArrayListOpen || curr.Kind == TokenKind.ArrayMapOpen ||
+                       curr.Kind == TokenKind.ArrayGridOpen || curr.Kind == TokenKind.ArrayDirectOpen || curr.Kind == TokenKind.ArrayStructOpen);
             }
         }
 
-        return left;
+        return res;
     }
 
     private static Node ParseBase(CodeContext ctx)
@@ -415,8 +376,18 @@ public class Parser
                     return n;
                 }
             case TokenKind.Variable:
-                ctx.Position++;
-                return new Node(NodeKind.Variable, curr);
+                {
+                    Node n = ParseVariable(ctx);
+                    curr = ctx.Tokens[ctx.Position];
+                    if (curr.Kind == TokenKind.Increment || curr.Kind == TokenKind.Decrement)
+                    {
+                        ctx.Position++;
+                        Node postfix = new(NodeKind.Postfix, curr);
+                        postfix.Children.Add(n);
+                        return postfix;
+                    }
+                    return n;
+                }
             case TokenKind.Open:
                 {
                     ctx.Position++;
@@ -431,8 +402,7 @@ public class Parser
                     Node n = new(NodeKind.Prefix, curr);
                     Node n2 = ParseChain(ctx);
                     n.Children.Add(n2);
-                    if (n2 != null && n2.Kind != NodeKind.ChainReference && 
-                        n2.Kind != NodeKind.Variable && n2.Kind != NodeKind.Accessor)
+                    if (n2 != null && n2.Kind != NodeKind.ChainReference && n2.Kind != NodeKind.Variable)
                         ctx.Error("Invalid prefix", curr);
                     return n;
                 }
@@ -824,10 +794,12 @@ public class Parser
         Node makeNewArg(Node original)
         {
             res.Children.Add(original);
-            Node newArg = new(NodeKind.Accessor);
+            /* TODO 
+             Node newArg = new(NodeKind.Accessor);
             newArg.Children.Add(new Node(NodeKind.Variable, new Token(ctx, TokenKind.Variable, -1) { Value = new TokenVariable("argument", null) }));
             newArg.Children.Add(new Node(NodeKind.Constant, new Token(ctx, new TokenConstant((double)(argCount++)), -1)));
-            return newArg;
+            */
+            return null;
         }
         while (curr.Kind != TokenKind.EOF && curr.Kind != TokenKind.End)
         {
@@ -1282,7 +1254,7 @@ public class Parser
         }
         else
         {
-            res.Children.Add(ParseChain(ctx, true)); // ignore calls when parsing chain here (otherwise it's ambiguous)
+            res.Children.Add(ParseChain(ctx, true, true)); // ignore calls when parsing chain here (otherwise it's ambiguous)
         }
 
         ParseCallArguments(ctx, res);
