@@ -12,9 +12,10 @@ public static class SwitchStatements
     {
         List<SwitchStatement> res = new List<SwitchStatement>();
 
-        foreach (Block b in ctx.Blocks.List)
+        for (int blockInd = ctx.Blocks.List.Count - 1; blockInd >= 0; blockInd--)
         {
-            if (b.Instructions.Count >= 1)
+            Block b = ctx.Blocks.List[blockInd];
+            if (b.Instructions.Count >= 1 && !b.IsSwitchContinueBlock)
             {
                 var instr = b.Instructions[0];
                 if (instr.Kind == Instruction.Opcode.Popz)
@@ -257,7 +258,10 @@ public static class SwitchStatements
                         lastIndex = i;
                         lastBranchAddress = curr.Branches[0].Address;
                         if (curr.Branches[0].Address < endAddress) // Prevent adding unnecessary blocks at the end
-                            s.Branches.Insert(i, curr.Branches[0]); // todo? maybe wire up predecessors here
+                        {
+                            s.Branches.Insert(i, curr.Branches[0]);
+                            curr.Branches[0].Predecessors.Add(s);
+                        }
                         s.Branches.Insert(i, curr);
                     }
                     else
@@ -266,7 +270,10 @@ public static class SwitchStatements
                         s.Branches.Add(curr);
                         lastBranchAddress = curr.Branches[0].Address;
                         if (curr.Branches[0].Address < endAddress) // Prevent adding unnecessary blocks at the end
-                            s.Branches.Add(curr.Branches[0]); // todo? maybe wire up predecessors here
+                        {
+                            s.Branches.Add(curr.Branches[0]);
+                            curr.Branches[0].Predecessors.Add(s);
+                        }
                     }
                 }
 

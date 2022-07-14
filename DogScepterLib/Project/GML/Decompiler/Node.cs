@@ -114,6 +114,7 @@ public class Block : Node
     public bool Unreachable { get; set; } = false;
     public Node BelongingTo { get; set; } // Somewhat hacky field to mark a block as belonging to another node, as some control flow use blocks directly for detection
     public bool AfterFragment { get; set; } = false; // Whether this block was directly after a fragment
+    public bool IsSwitchContinueBlock { get; set; } = false; // Whether this block is a continue block of a switch statement
 
     public enum ControlFlowType
     {
@@ -400,6 +401,8 @@ public class SwitchStatement : Node
         DefaultCaseBranch = defaultCaseBranch;
         EndCasesBranch = endCasesBranch;
         ContinueBlock = continueBlock;
+        if (ContinueBlock != null)
+            ContinueBlock.IsSwitchContinueBlock = true;
         SurroundingLoop = surroundingLoop;
     }
 

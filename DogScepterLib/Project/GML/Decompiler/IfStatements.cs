@@ -108,8 +108,12 @@ public static class IfStatements
                                 foreach (var originalBranch in curr.Branches)
                                 {
                                     var branch = originalBranch;
-                                    if (branch.Kind == Node.NodeType.Block && (branch as Block).BelongingTo != null)
-                                        branch = (branch as Block).BelongingTo; // Short circuits can mess things up, so do this hack
+                                    if (branch.Kind == Node.NodeType.Block)
+                                    {
+                                        Block branchBlock = branch as Block;
+                                        if (branchBlock.BelongingTo != null)
+                                            branch = branchBlock.BelongingTo; // Short circuits can mess things up, so do this hack
+                                    }
 
                                     if (ignoreFirst)
                                     {
@@ -229,7 +233,7 @@ public static class IfStatements
                             jumpTarget = null;
                     }
 
-                    if (possible && endTruthyBlock.Branches[0].Address > endTruthyBlock.EndAddress)
+                    if (possible && endTruthyBlock.Branches.Count > 0 && endTruthyBlock.Branches[0].Address > endTruthyBlock.EndAddress)
                     {
                         // This was initially detected as a continue, but now we know it's (most likely) not
                         endTruthyBlock.Instructions.Insert(endTruthyBlock.Instructions.Count, endTruthyBlock.LastInstr);
