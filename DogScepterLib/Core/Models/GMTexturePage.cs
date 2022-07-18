@@ -53,9 +53,9 @@ namespace DogScepterLib.Core.Models
         public short QoiHeight = -1;
         public uint QoiLength = 0;
 
-        private static readonly byte[] PNGHeader = new byte[8] { 137, 80, 78, 71, 13, 10, 26, 10 };
-        private static readonly byte[] QOIandBZip2Header = new byte[4] { 50, 122, 111, 113 };
-        private static readonly byte[] QOIHeader = new byte[4] { 102, 105, 111, 113 };
+        public static readonly byte[] PNGHeader = new byte[8] { 137, 80, 78, 71, 13, 10, 26, 10 };
+        public static readonly byte[] QOIandBZip2Header = new byte[4] { 50, 122, 111, 113 };
+        public static readonly byte[] QOIHeader = new byte[4] { 102, 105, 111, 113 };
 
         // Offset to write the data length to when serializing
         public int WriteLengthOffset = -1;
@@ -117,35 +117,6 @@ namespace DogScepterLib.Core.Models
 
                     QoiWidth = reader.ReadInt16();
                     QoiHeight = reader.ReadInt16();
-
-                    var txtr = reader.CurrentlyParsingChunk as GMChunkTXTR;
-                    if (!txtr.Checked2022_5)
-                    {
-                        // Check for 2022.5+ format
-                        txtr.Checked2022_5 = true;
-                        if (!reader.VersionInfo.IsVersionAtLeast(2022, 5))
-                        {
-                            int returnTo = reader.Offset;
-
-                            if (reader.ReadByte() != (byte)'B')
-                                reader.VersionInfo.SetVersion(2022, 5);
-                            else if (reader.ReadByte() != (byte)'Z')
-                                reader.VersionInfo.SetVersion(2022, 5);
-                            else if (reader.ReadByte() != (byte)'h')
-                                reader.VersionInfo.SetVersion(2022, 5);
-                            else
-                            {
-                                reader.ReadByte();
-                                if (reader.ReadUInt24() != 0x594131) // digits of pi... (block header)
-                                    reader.VersionInfo.SetVersion(2022, 5);
-                                else if (reader.ReadUInt24() != 0x595326)
-                                    reader.VersionInfo.SetVersion(2022, 5);
-                            }
-
-                            reader.Offset = returnTo;
-                        }
-                    }
-
                     if (reader.VersionInfo.IsVersionAtLeast(2022, 5))
                         QoiLength = reader.ReadUInt32();
 
