@@ -117,7 +117,7 @@ public static class QoiConverter
         return img;
     }
 
-    public static byte[] GetArrayFromImage(DSImage img)
+    public static byte[] GetArrayFromImage(DSImage img, int padding)
     {
         byte[] res = new byte[(img.Width * img.Height * 4) + 12 + 4 + 128]; // default capacity (extra 128 bytes to be safe)
         res[0] = (byte)'f';
@@ -223,7 +223,7 @@ public static class QoiConverter
         }
 
         // Add padding
-        resPos += 4;
+        resPos += padding;
 
         // Write final length
         int length = resPos - 12;

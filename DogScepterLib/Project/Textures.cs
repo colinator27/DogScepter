@@ -127,6 +127,7 @@ namespace DogScepterLib.Project
             }
 
             bool failure = false;
+            bool is2022_3 = Project.DataHandle.VersionInfo.IsVersionAtLeast(2022, 3);
 
             // Do the tough work first
             Parallel.ForEach(toRegenerate, g =>
@@ -147,7 +148,7 @@ namespace DogScepterLib.Project
                         byte[] res;
                         if (g.UseQOI)
                         {
-                            res = QoiConverter.GetArrayFromImage(DrawPage(g, page));
+                            res = QoiConverter.GetArrayFromImage(DrawPage(g, page), is2022_3 ? 0 : 4);
                         }
                         else
                         {
