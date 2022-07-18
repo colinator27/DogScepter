@@ -68,16 +68,37 @@ namespace DogScepterLib.Core.Chunks
                         int optionCount = reader.ReadInt32();
                         if (optionCount > 0)
                         {
-                            reader.Offset += 4 * (optionCount - 1);
-                            reader.Offset = reader.ReadInt32() + 12; // jump past last option
+                            long newOffsetCheck = reader.Offset + (4 * (optionCount - 1));
+                            if (newOffsetCheck >= EndOffset)
+                            {
+                                // Option count would place us out of bounds
+                                definitely2022_6 = false;
+                            }
+                            else
+                            {
+                                reader.Offset += (4 * (optionCount - 1));
+                                newOffsetCheck = reader.ReadInt32() + 12; // jump past last option
+                                if (newOffsetCheck < 0 || newOffsetCheck >= EndOffset)
+                                {
+                                    // Pointer list element would place us out of bounds
+                                    definitely2022_6 = false;
+                                }
+                                else
+                                {
+                                    reader.Offset = (int)newOffsetCheck;
+                                }
+                            }
                         }
-                        if (extCount == 1)
+                        if (definitely2022_6)
                         {
-                            reader.Offset += 16; // skip GUID data (only one of them)
-                            reader.Pad(16); // align to chunk end
+                            if (extCount == 1)
+                            {
+                                reader.Offset += 16; // skip GUID data (only one of them)
+                                reader.Pad(16); // align to chunk end
+                            }
+                            if (reader.Offset != firstExtEndPtr)
+                                definitely2022_6 = false;
                         }
-                        if (reader.Offset != firstExtEndPtr)
-                            definitely2022_6 = false;
                     }
                 }
                 else
