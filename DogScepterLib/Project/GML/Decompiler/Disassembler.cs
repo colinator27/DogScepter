@@ -8,45 +8,46 @@ using System.Globalization;
 using DogScepterLib.Core.Chunks;
 
 using static DogScepterLib.Core.Models.GMCode.Bytecode;
+using static DogScepterLib.Core.Models.GMCode.Bytecode.Instruction;
 
 namespace DogScepterLib.Project.GML.Decompiler;
 
 public static class Disassembler
 {
-    public static Dictionary<Instruction.DataType, char> DataTypeToChar = new Dictionary<Instruction.DataType, char>()
+    public static Dictionary<DataType, char> DataTypeToChar = new Dictionary<DataType, char>()
     {
-        { Instruction.DataType.Double, 'd' },
-        { Instruction.DataType.Float, 'f' },
-        { Instruction.DataType.Int32, 'i' },
-        { Instruction.DataType.Int64, 'l' },
-        { Instruction.DataType.Boolean, 'b' },
-        { Instruction.DataType.Variable, 'v' },
-        { Instruction.DataType.String, 's' },
-        { Instruction.DataType.Int16, 'e' }
+        { DataType.Double, 'd' },
+        { DataType.Float, 'f' },
+        { DataType.Int32, 'i' },
+        { DataType.Int64, 'l' },
+        { DataType.Boolean, 'b' },
+        { DataType.Variable, 'v' },
+        { DataType.String, 's' },
+        { DataType.Int16, 'e' }
     };
-    public static Dictionary<char, Instruction.DataType> CharToDataType = new Dictionary<char, Instruction.DataType>()
+    public static Dictionary<char, DataType> CharToDataType = new Dictionary<char, DataType>()
     {
-        { 'd', Instruction.DataType.Double },
-        { 'f', Instruction.DataType.Float },
-        { 'i', Instruction.DataType.Int32 },
-        { 'l', Instruction.DataType.Int64 },
-        { 'b', Instruction.DataType.Boolean },
-        { 'v', Instruction.DataType.Variable },
-        { 's', Instruction.DataType.String },
-        { 'e', Instruction.DataType.Int16}
+        { 'd', DataType.Double },
+        { 'f', DataType.Float },
+        { 'i', DataType.Int32 },
+        { 'l', DataType.Int64 },
+        { 'b', DataType.Boolean },
+        { 'v', DataType.Variable },
+        { 's', DataType.String },
+        { 'e', DataType.Int16}
     };
     public static Dictionary<ushort, string> BreakIDToName = new Dictionary<ushort, string>()
     {
-        { 65535, "chkindex" },
-        { 65534, "pushaf" },
-        { 65533, "popaf" },
-        { 65532, "pushac" },
-        { 65531, "setowner" },
-        { 65530, "isstaticok" },
-        { 65529, "setstatic" },
-        { 65528, "savearef" },
-        { 65527, "restorearef" },
-        { 65526, "isnullish" }
+        { (ushort)BreakType.chkindex, "chkindex" },
+        { (ushort)BreakType.pushaf, "pushaf" },
+        { (ushort)BreakType.popaf, "popaf" },
+        { (ushort)BreakType.pushac, "pushac" },
+        { (ushort)BreakType.setowner, "setowner" },
+        { (ushort)BreakType.isstaticok, "isstaticok" },
+        { (ushort)BreakType.setstatic, "setstatic" },
+        { (ushort)BreakType.savearef, "savearef" },
+        { (ushort)BreakType.restorearef, "restorearef" },
+        { (ushort)BreakType.isnullish, "isnullish" }
     };
 
     public static string Disassemble(GMCode codeEntry, GMData data)
@@ -69,17 +70,17 @@ public static class Disassembler
                 sb.AppendLine($":[{ind}]");
             }
 
-            if (i.Kind != Instruction.Opcode.Break)
+            if (i.Kind != Opcode.Break)
                 sb.Append(i.Kind.ToString().ToLower());
 
-            switch (Instruction.GetInstructionType(i.Kind))
+            switch (GetInstructionType(i.Kind))
             {
-                case Instruction.InstructionType.SingleType:
+                case InstructionType.SingleType:
                     sb.Append($".{DataTypeToChar[i.Type1]}");
 
-                    if (i.Kind == Instruction.Opcode.CallV)
+                    if (i.Kind == Opcode.CallV)
                         sb.Append($" {i.Extra}");
-                    else if (i.Kind == Instruction.Opcode.Dup)
+                    else if (i.Kind == Opcode.Dup)
                     {
                         sb.Append($" {i.Extra}");
                         if ((byte)i.ComparisonKind != 0)
@@ -87,15 +88,15 @@ public static class Disassembler
                     }
                     break;
 
-                case Instruction.InstructionType.DoubleType:
+                case InstructionType.DoubleType:
                     sb.Append($".{DataTypeToChar[i.Type1]}.{DataTypeToChar[i.Type2]}");
                     break;
 
-                case Instruction.InstructionType.Comparison:
+                case InstructionType.Comparison:
                     sb.Append($".{DataTypeToChar[i.Type1]}.{DataTypeToChar[i.Type2]} {i.ComparisonKind}");
                     break;
 
-                case Instruction.InstructionType.Branch:
+                case InstructionType.Branch:
                     if (i.Address + (i.JumpOffset * 4) == codeEntry.Length)
                         sb.Append(" [end]");
                     else if (i.PopenvExitMagic)
@@ -104,13 +105,13 @@ public static class Disassembler
                         sb.Append($" [{blocks.IndexOf(i.Address + (i.JumpOffset * 4))}]");
                     break;
 
-                case Instruction.InstructionType.Pop:
+                case InstructionType.Pop:
                     sb.Append($".{DataTypeToChar[i.Type1]}.{DataTypeToChar[i.Type2]} ");
-                    if (i.Type1 == Instruction.DataType.Int16)
+                    if (i.Type1 == DataType.Int16)
                         sb.Append(((short)i.TypeInst).ToString()); // Special swap instruction
                     else
                     {
-                        if (i.Type1 == Instruction.DataType.Variable && i.TypeInst != Instruction.InstanceType.Undefined)
+                        if (i.Type1 == DataType.Variable && i.TypeInst != InstanceType.Undefined)
                         {
                             sb.Append($"{i.TypeInst.ToString().ToLower()}.");
                         }
@@ -119,16 +120,16 @@ public static class Disassembler
                     }
                     break;
 
-                case Instruction.InstructionType.Push:
+                case InstructionType.Push:
                     sb.Append($".{DataTypeToChar[i.Type1]} ");
-                    if (i.Type1 == Instruction.DataType.Variable)
+                    if (i.Type1 == DataType.Variable)
                     {
-                        if (i.TypeInst != Instruction.InstanceType.Undefined)
+                        if (i.TypeInst != InstanceType.Undefined)
                             sb.Append($"{i.TypeInst.ToString().ToLower()}.");
 
                         sb.Append(StringifyVariableRef(i.Variable));
                     }
-                    else if (i.Type1 == Instruction.DataType.String)
+                    else if (i.Type1 == DataType.String)
                         sb.Append($"\"{SanitizeString(strings[(int)i.Value].Content)}\"");
                     else if (i.Function != null)
                         sb.Append(i.Function.Target.Name.Content);
@@ -136,11 +137,11 @@ public static class Disassembler
                         sb.Append((i.Value as IFormattable)?.ToString(null, CultureInfo.InvariantCulture) ?? i.Value.ToString());
                     break;
 
-                case Instruction.InstructionType.Call:
+                case InstructionType.Call:
                     sb.Append($".{DataTypeToChar[i.Type1]} {i.Function.Target.Name.Content} {(short)i.Value}");
                     break;
 
-                case Instruction.InstructionType.Break:
+                case InstructionType.Break:
                     sb.Append($"{BreakIDToName[(ushort)i.Value]}.{DataTypeToChar[i.Type1]}");
                     break;
             }
@@ -165,22 +166,22 @@ public static class Disassembler
                 Instruction instr = bytecode.Instructions[i];
                 switch (instr.Kind)
                 {
-                    case Instruction.Opcode.B:
-                    case Instruction.Opcode.Bf:
-                    case Instruction.Opcode.Bt:
-                    case Instruction.Opcode.PushEnv:
+                    case Opcode.B:
+                    case Opcode.Bf:
+                    case Opcode.Bt:
+                    case Opcode.PushEnv:
                         addresses.Add(instr.Address + 4);
                         addresses.Add(instr.Address + (instr.JumpOffset * 4));
                         break;
-                    case Instruction.Opcode.PopEnv:
+                    case Opcode.PopEnv:
                         if (!instr.PopenvExitMagic)
                             addresses.Add(instr.Address + (instr.JumpOffset * 4));
                         break;
-                    case Instruction.Opcode.Exit:
-                    case Instruction.Opcode.Ret:
+                    case Opcode.Exit:
+                    case Opcode.Ret:
                         addresses.Add(instr.Address + 4);
                         break;
-                    case Instruction.Opcode.Call:
+                    case Opcode.Call:
                         if (slow && i >= 4 && instr.Function.Target.Name?.Content == "@@try_hook@@")
                         {
                             int finallyBlock = (int)bytecode.Instructions[i - 4].Value;
@@ -247,9 +248,9 @@ public static class Disassembler
         return sb.ToString();
     }
 
-    private static string StringifyVariableRef(Instruction.Reference<GMVariable> var)
+    private static string StringifyVariableRef(Reference<GMVariable> var)
     {
-        if (var.Type != Instruction.VariableType.Normal)
+        if (var.Type != VariableType.Normal)
             return $"({var.Type.ToString().ToLower()}){var.Target.Name.Content}";
         else
             return var.Target.Name.Content;

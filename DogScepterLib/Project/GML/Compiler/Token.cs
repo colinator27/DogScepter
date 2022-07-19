@@ -203,7 +203,7 @@ public class TokenVariable : ITokenValue
     public string Name { get; set; }
     public int InstanceType = -1; // assume self until told otherwise
     public GMCode.Bytecode.Instruction.VariableType VariableType = GMCode.Bytecode.Instruction.VariableType.Normal;
-    public bool ExplicitInstType = false;
+    public bool ExplicitInstType = false; // whether this has been assigned a direct instance type already (and shouldn't change)
     public BuiltinVariable Builtin { get; set; }
 
     public TokenVariable(string name, BuiltinVariable builtin)

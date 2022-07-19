@@ -61,7 +61,6 @@ public class GMCode : IGMSerializable
             Length = BytecodeEntry.GetLength() * 4;
         writer.Write(Length);
 
-        //TODO: double check if bytecode entry can be null here and below.
         if (writer.VersionInfo.FormatID <= 14)
         {
             BytecodeEntry.Serialize(writer);
@@ -344,6 +343,20 @@ public class GMCode : IGMSerializable
                 Int16 = 0x0f,
 
                 Unset = 0xFF
+            }
+
+            public enum BreakType : ushort
+            {
+                chkindex = 65535,
+                pushaf = 65534,
+                popaf = 65533,
+                pushac = 65532,
+                setowner = 65531,
+                isstaticok = 65530,
+                setstatic = 65529,
+                savearef = 65528,
+                restorearef = 65527,
+                isnullish = 65526
             }
 
             public static int GetDataTypeStackLength(DataType type)

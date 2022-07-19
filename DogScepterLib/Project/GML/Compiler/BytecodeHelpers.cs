@@ -306,6 +306,40 @@ public static partial class Bytecode
     }
 
     /// <summary>
+    /// Emits a break instruction of a given type.
+    /// </summary>
+    private static Instruction EmitBreak(CodeContext ctx, BreakType type)
+    {
+        Instruction res = new(ctx.BytecodeLength)
+        {
+            Kind = Opcode.Break,
+            Type1 = DataType.Int16,
+            Value = (ushort)type
+        };
+        ctx.Instructions.Add(res);
+        ctx.BytecodeLength += 4;
+        return res;
+    }
+
+    /// <summary>
+    /// Emits an integer push instruction referencing a function. (Used in 2.3+ GML only)
+    /// </summary>
+    private static Instruction EmitPushFunc(CodeContext ctx, TokenFunction function, FunctionReference reference)
+    {
+        Instruction res = new(ctx.BytecodeLength)
+        {
+            Kind = Opcode.Push,
+            Type1 = DataType.Int32
+        };
+
+        ctx.FunctionPatches.Add(new(res, function, reference));
+
+        ctx.Instructions.Add(res);
+        ctx.BytecodeLength += 8;
+        return res;
+    }
+
+    /// <summary>
     /// Emits an instruction that references a string, with data type.
     /// </summary>
     private static Instruction EmitString(CodeContext ctx, Opcode opcode, DataType type, string str)
@@ -360,5 +394,37 @@ public static partial class Bytecode
 
         // Otherwise, if not an instance ID, need to convert to one
         return ConvertTo(ctx, DataType.Int32) ? 1 : 0;
+    }
+
+    /// <summary>
+    /// Processes a TokenVariable class to have proper instance type and potentially argument name.
+    /// Primarily just for 2.3+ GML.
+    /// </summary>
+    private static void ProcessTokenVariable(CodeContext ctx, ref TokenVariable tokenVar)
+    {
+        if (tokenVar.ExplicitInstType)
+            return;
+        if (ctx.BaseContext.IsGMS23)
+        {
+            // Check for builtin variable
+            if (tokenVar.Builtin != null)
+            {
+                tokenVar.InstanceType = (int)InstanceType.Builtin;
+            }
+
+            // Check for static variable
+            if (ctx.StaticVars.Contains(tokenVar.Name))
+            {
+                tokenVar.InstanceType = (int)InstanceType.Static;
+            }
+
+            // Check for argument
+            int argIndex = ctx.ArgumentVars.IndexOf(tokenVar.Name);
+            if (argIndex != -1)
+            {
+                tokenVar = new($"argument{argIndex}", null);
+                tokenVar.InstanceType = (int)InstanceType.Argument;
+            }
+        }
     }
 }

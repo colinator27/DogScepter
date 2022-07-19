@@ -17,8 +17,7 @@ public enum NodeKind
     FunctionCallChain, // Appears in cases like a.b() and a()(). First child is a ChainReference or another FunctionCallChain
     FunctionCallExpr, // Appears specifically in cases like a()(), representing the second call in this case
     Variable, // Represents a single variable name (and nothing else)
-    VariableAccessor, // Variable name followed by any number of accessors
-    Accessor, // Individual accessor (has sub-expressions)
+    Accessor, // Individual accessor, has a sub-expression
     ChainReference, // Appears in all cases of a.b, etc.
     Prefix, // Appears in cases like ++a, ++a.b.c, ++a.b[0] (and so on)
     Postfix, // Appears in cases like a++, a.b.c++, a.b[0]++ (and so on)
@@ -74,6 +73,12 @@ public class Node
     {
         Kind = NodeKind.Variable;
         Token = new Token(context, new TokenVariable(builtin.Name, builtin), -1);
+    }
+
+    public Node(NodeAccessorInfo accessor)
+    {
+        Kind = NodeKind.Accessor;
+        Token = NullToken;
     }
 
     public override string ToString()

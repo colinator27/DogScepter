@@ -285,7 +285,11 @@ public class CompileContext
             else
             {
                 // This is a new code entry - create it
-                GMCode newEntry = new() { Name = Project.DataHandle.DefineString(code.Name), LocalsCount = 1 };
+                GMCode newEntry = new() 
+                { 
+                    Name = Project.DataHandle.DefineString(code.Name), 
+                    LocalsCount = 1 
+                };
                 newEntry.BytecodeEntry = new(newEntry) { Instructions = code.Instructions };
                 codeChunk.List.Add(newEntry);
 
@@ -312,7 +316,31 @@ public class CompileContext
                         });
                     }
                         
-                    // TODO: handle sub-functions
+                    // Handle function declarations
+                    foreach (var decl in code.FunctionDeclsToRegister)
+                    {
+                        // Add code entry, as a child
+                        GMCode declCodeEntry = new() 
+                        { 
+                            Name = Project.DataHandle.DefineString(decl.Name), 
+                            LocalsCount = (short)decl.LocalCount,
+                            ArgumentsCount = (short)decl.ArgCount,
+                            Length = code.BytecodeLength,
+                            BytecodeOffset = decl.Offset,
+                            ParentEntry = newEntry,
+                            BytecodeEntry = newEntry.BytecodeEntry
+                        };
+                        newEntry.ChildEntries.Add(declCodeEntry);
+                        codeChunk.List.Add(declCodeEntry);
+
+                        // Add script entry
+                        scpt.List.Add(new()
+                        {
+                            Name = Project.DataHandle.DefineString(decl.Name),
+                            CodeID = codeChunk.List.Count - 1,
+                            Constructor = decl.Constructor
+                        });
+                    }
                 }
                 else if (code.IsScript)
                 {
@@ -368,10 +396,12 @@ public class CodeContext
     public List<Instruction> Instructions { get; set; } = new(64);
     public int BytecodeLength { get; set; } = 0;
     public Stack<DataType> TypeStack { get; set; } = new();
+    public bool InStaticBlock { get; set; } = false;
     public List<Bytecode.FunctionPatch> FunctionPatches { get; set; } = new();
     public List<Bytecode.VariablePatch> VariablePatches { get; set; } = new();
     public List<Bytecode.StringPatch> StringPatches { get; set; } = new();
     public Stack<Bytecode.Context> BytecodeContexts { get; set; } = new();
+    public List<FunctionDeclInfo> FunctionDeclsToRegister { get; set; } = new();
 
     public CodeContext(CompileContext baseContext, string name, string code, CodeMode mode, bool isScript)
     {
@@ -537,3 +567,5 @@ public class FunctionReference
         Resolved = true;
     }
 }
+
+public record FunctionDeclInfo(string Name, int LocalCount, int ArgCount, int Offset, bool Constructor);

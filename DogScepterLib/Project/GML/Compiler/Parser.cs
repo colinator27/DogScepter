@@ -212,15 +212,7 @@ public class Parser
                 }
                 else if (left.Kind == NodeKind.ChainReference)
                 {
-                    // Find last variable reference in the chain
-                    int i = left.Children.Count - 1;
-                    do
-                    {
-                        varNode = left.Children[i];
-                        i--;
-                    }
-                    while (i >= 0 && varNode.Kind != NodeKind.Variable);
-
+                    varNode = left.Children[1];
                     if (varNode.Kind != NodeKind.Variable)
                     {
                         ctx.Error("Invalid variable chain in assignment", varNode.Token?.Index ?? -1);
@@ -273,7 +265,7 @@ public class Parser
                     Node func = new(NodeKind.FunctionCall, ctx.Tokens[ctx.Position]);
                     ctx.Position++;
                     ParseCallArguments(ctx, func);
-                    // todo: need to do checks for accessors here - accessors should replace "left" with an "array reference"
+                    // todo: need to do checks for accessors here
                     chain.Children.Add(func);
                 }
                 else
@@ -303,8 +295,6 @@ public class Parser
             if (curr.Kind == TokenKind.ArrayOpen || curr.Kind == TokenKind.ArrayListOpen || curr.Kind == TokenKind.ArrayMapOpen ||
                 curr.Kind == TokenKind.ArrayGridOpen || curr.Kind == TokenKind.ArrayDirectOpen || curr.Kind == TokenKind.ArrayStructOpen)
             {
-                res.Kind = NodeKind.VariableAccessor;
-
                 do
                 {
                     ctx.Position++;
@@ -420,7 +410,7 @@ public class Parser
                 if (ctx.BaseContext.IsGMS2)
                 {
                     ctx.Position++;
-                    Node n = new(NodeKind.FunctionCall, new Token(ctx, TokenKind.FunctionCall, -1) { Value = new TokenFunction("@@NewGMLArray@@", null) });
+                    Node n = new(NodeKind.FunctionCall, new Token(ctx, TokenKind.FunctionCall, -1) { Value = Builtins.MakeFuncToken(ctx, "@@NewGMLArray@@") });
                     curr = ctx.Tokens[ctx.Position];
                     while (curr.Kind != TokenKind.EOF && curr.Kind != TokenKind.ArrayClose)
                     {
@@ -764,7 +754,7 @@ public class Parser
 
     private static Node ParseStruct(CodeContext ctx)
     {
-        Node res = new(NodeKind.FunctionCall, new Token(ctx, TokenKind.FunctionCall, -1) { Value = new TokenFunction("@@NewGMLObject@@", null) });
+        Node res = new(NodeKind.FunctionCall, new Token(ctx, TokenKind.FunctionCall, -1) { Value = Builtins.MakeFuncToken(ctx, "@@NewGMLArray@@") });
         Node decl = new(NodeKind.FunctionDecl, ctx.Tokens[ctx.Position++]);
         res.Children.Add(decl);
         string structFuncName = $"___struct___{++ctx.BaseContext.Project.DataHandle.Stats.LastStructID}";
@@ -786,7 +776,7 @@ public class Parser
 
         FunctionReference reference = new FunctionReference(ctx.BaseContext, $"gml_Script_{structFuncName}_{ctx.CurrentName}", false);
         string prevName = ctx.CurrentName;
-        ctx.CurrentName = structFuncName + ctx.CurrentName;
+        ctx.CurrentName = structFuncName + "_" + ctx.CurrentName;
 
         // Read variables, and add assignments to function body
         Token curr = ctx.Tokens[ctx.Position];
@@ -794,11 +784,10 @@ public class Parser
         Node makeNewArg(Node original)
         {
             res.Children.Add(original);
-            /* TODO 
-             Node newArg = new(NodeKind.Accessor);
-            newArg.Children.Add(new Node(NodeKind.Variable, new Token(ctx, TokenKind.Variable, -1) { Value = new TokenVariable("argument", null) }));
-            newArg.Children.Add(new Node(NodeKind.Constant, new Token(ctx, new TokenConstant((double)(argCount++)), -1)));
-            */
+            Node newArg = new(NodeKind.Variable, new Token(ctx, TokenKind.Variable, -1) { Value = new TokenVariable("argument", null) });
+            Node accessor = new(NodeAccessorInfo.Accessors[TokenKind.ArrayOpen]);
+            newArg.Children.Add(accessor);
+            accessor.Children.Add(new Node(NodeKind.Constant, new Token(ctx, new TokenConstant((double)(argCount++)), -1)));
             return null;
         }
         while (curr.Kind != TokenKind.EOF && curr.Kind != TokenKind.End)
@@ -950,16 +939,14 @@ public class Parser
             inheriting = true;
 
             ctx.Position++;
-            Node inheritance = new(NodeKind.Group);
-            res.Children.Add(inheritance);
             curr = ExpectToken(ctx, TokenKind.FunctionCall, "constructor call");
             if (curr != null)
             {
-                inheritance.Children.Add(new Node(NodeKind.Variable,
-                                            new Token(ctx, new TokenVariable((curr.Value as TokenFunction).Name, null), curr.Index)));
+                Node inheritedFunc = new Node(NodeKind.Variable,
+                                              new Token(ctx, new TokenVariable((curr.Value as TokenFunction).Name, null), curr.Index));
+                res.Children.Add(inheritedFunc);
+                ParseCallArguments(ctx, inheritedFunc);
             }
-
-            ParseCallArguments(ctx, inheritance);
 
             curr = ctx.Tokens[ctx.Position];
         }
@@ -1018,7 +1005,7 @@ public class Parser
         }
         else
         {
-            name = $"anon_{res.Children[0].Token.Index}";
+            name = $"anon_{res.Token.Index}";
             anonymous = true;
         }
         if (ctx.IsScript && !anonymous)
@@ -1047,7 +1034,7 @@ public class Parser
 
         // Parse actual block
         string prevName = ctx.CurrentName;
-        ctx.CurrentName = name + ctx.CurrentName;
+        ctx.CurrentName = name + "_" + ctx.CurrentName;
         res.Children.Add(ParseBlock(ctx, true));
         ctx.CurrentName = prevName;
 
@@ -1251,6 +1238,7 @@ public class Parser
         {
             res.Children.Add(new Node(NodeKind.Variable,
                                 new Token(ctx, new TokenVariable((curr.Value as TokenFunction).Name, null), curr.Index)));
+            ctx.Position++;
         }
         else
         {

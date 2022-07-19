@@ -20,8 +20,7 @@ public static partial class Bytecode
                 CompileFunctionCall(ctx, expr, false);
                 break;
             case NodeKind.Variable:
-                EmitVariable(ctx, Opcode.Push, DataType.Variable, expr.Token.Value as TokenVariable);
-                ctx.TypeStack.Push(DataType.Variable);
+                CompileVariable(ctx, expr);
                 break;
             case NodeKind.ChainReference:
                 CompileChain(ctx, expr);
@@ -61,6 +60,15 @@ public static partial class Bytecode
                 break;
             case NodeKind.Unary:
                 CompileUnary(ctx, expr);
+                break;
+            case NodeKind.Accessor:
+                CompileExpression(ctx, expr.Children[0]);
+                break;
+            case NodeKind.FunctionDecl:
+                CompileFunctionDecl(ctx, expr);
+                break;
+            case NodeKind.New:
+                CompileNew(ctx, expr);
                 break;
         }
     }
@@ -412,5 +420,25 @@ public static partial class Bytecode
                 ctx.Error("Unsupported", chain.Children[1].Token);
                 break;
         }
+    }
+
+    private static void CompileVariable(CodeContext ctx, Node variable)
+    {
+        // todo, arrays here
+        TokenVariable tokenVar = variable.Token.Value as TokenVariable;
+
+        // Process variable and instance type
+        ProcessTokenVariable(ctx, ref tokenVar);
+
+        // Emit actual push instruction
+        var opcode = tokenVar.InstanceType switch
+        {
+            (int)InstanceType.Global => Opcode.PushGlb,
+            (int)InstanceType.Builtin => Opcode.PushBltn,
+            (int)InstanceType.Local => Opcode.PushLoc,
+            _ => (tokenVar.Builtin == null ? Opcode.Push : Opcode.PushBltn),
+        };
+        EmitVariable(ctx, opcode, DataType.Variable, tokenVar);
+        ctx.TypeStack.Push(DataType.Variable);
     }
 }

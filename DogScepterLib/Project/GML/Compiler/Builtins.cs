@@ -74,6 +74,10 @@ public class Builtins
         FunctionDefine("@@This@@", 0);
         FunctionDefine("@@Other@@", 0);
         FunctionDefine("@@Global@@", 0);
+        FunctionDefine("@@NewGMLArray@@", -1);
+        FunctionDefine("@@NewGMLObject@@", -1);
+        FunctionDefine("@@NullObject@@", 0);
+        FunctionDefine("@@CopyStatic@@", 1);
 
         FunctionDefine("variable_global_set", 2);
         FunctionDefine("get_integer", 2);
@@ -83,6 +87,8 @@ public class Builtins
         FunctionDefine("int64", 1);
         FunctionDefine("real", 1);
         FunctionDefine("string", 1);
+
+        FunctionDefine("method", 2);
 
         ConstantDefine("self", -1);
         ConstantDefine("other", -2);
@@ -111,5 +117,10 @@ public class Builtins
     private void ConstantDefine(string name, double val)
     {
         Constants[name] = val;
+    }
+
+    public static TokenFunction MakeFuncToken(CodeContext ctx, string name)
+    {
+        return new TokenFunction(name, ctx.BaseContext.Builtins.Functions[name]);
     }
 }

@@ -722,9 +722,8 @@ public static class ASTBuilder
                 case Instruction.Opcode.Break:
                     switch ((ushort)inst.Value)
                     {
-                        case 65534:
-                        case 65532:
-                            // pushaf / pushac
+                        case (ushort)Instruction.BreakType.pushaf:
+                        case (ushort)Instruction.BreakType.pushac:
                             {
                                 ASTNode ind = stack.Pop();
                                 ASTVariable variable = stack.Pop() as ASTVariable;
@@ -736,8 +735,7 @@ public static class ASTBuilder
                                 stack.Push(newVar);
                             }
                             break;
-                        case 65533:
-                            // popaf
+                        case (ushort)Instruction.BreakType.popaf:
                             {
                                 ASTNode ind = stack.Pop();
                                 ASTVariable variable = stack.Pop() as ASTVariable;
@@ -773,9 +771,9 @@ public static class ASTBuilder
                                 }
                             }
                             break;
-                        case 65531: 
-                            // setowner
-                            // Used for a unique ID for array copy-on-write functionality
+                        case (ushort)Instruction.BreakType.setowner: 
+                            // Used for a unique ID for array copy-on-write functionality, when enabled
+                            // For now, at least, we don't really care about it...
                             stack.Pop();
                             break;
                     }

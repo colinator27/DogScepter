@@ -137,7 +137,7 @@ public static partial class Bytecode
                         ExitCleanup(ctx);
 
                         // Finally, restore the return value to the stack
-                        EmitVariable(ctx, Opcode.Push, DataType.Variable, tempVar);
+                        EmitVariable(ctx, Opcode.PushLoc, DataType.Variable, tempVar);
                     }
 
                     // Actual return instruction
@@ -275,7 +275,10 @@ public static partial class Bytecode
                             continue;
 
                         // Compile initial assignment
-                        CompileExpression(ctx, stmt.Children[i].Children[0]);
+                        // Remove the expression from it first so it's not an array
+                        Node expr = stmt.Children[i].Children[0];
+                        stmt.Children[i].Children.Clear();
+                        CompileExpression(ctx, expr);
                         CompileAssign(ctx, stmt.Children[i]);
                     }
                 }
@@ -428,21 +431,23 @@ public static partial class Bytecode
                 }
                 break;
             case NodeKind.FunctionDecl:
-                // TODO
+                CompileFunctionDecl(ctx, stmt);
+
+                // The declaration produces garbage on the stack; clean it up
+                Emit(ctx, Opcode.Popz, ctx.TypeStack.Pop());
                 break;
             case NodeKind.Static:
-                // TODO
-                break;
-            case NodeKind.New:
-                // TODO
+                CompileStatic(ctx, stmt);
                 break;
             case NodeKind.ChainReference:
-                int stackCount = ctx.TypeStack.Count;
-                CompileExpression(ctx, stmt);
-                if (ctx.TypeStack.Count > stackCount)
                 {
-                    // The chain produced garbage on the stack; clean it up
-                    Emit(ctx, Opcode.Popz, ctx.TypeStack.Pop());
+                    int stackCount = ctx.TypeStack.Count;
+                    CompileExpression(ctx, stmt);
+                    if (ctx.TypeStack.Count > stackCount)
+                    {
+                        // The chain produced garbage on the stack; clean it up
+                        Emit(ctx, Opcode.Popz, ctx.TypeStack.Pop());
+                    }
                 }
                 break;
             case NodeKind.Postfix:
@@ -462,6 +467,29 @@ public static partial class Bytecode
     {
         Token token = func.Token;
         TokenFunction tokenFunc = token.Value as TokenFunction;
+        FunctionReference funcRef = null;
+        if (func.Kind == NodeKind.Variable)
+        {
+            if (ctx.BaseContext.Functions.TryGetValue((token.Value as TokenVariable).Name, out funcRef))
+            {
+                // TODO: check argument counts if possible here?
+                tokenFunc = new TokenFunction(funcRef.Name, null);
+            }
+        }
+        else if (tokenFunc != null && tokenFunc.Builtin == null)
+        {
+            if (ctx.BaseContext.Functions.TryGetValue(tokenFunc.Name, out funcRef))
+            {
+                // TODO: check argument counts if possible here?
+                tokenFunc = new TokenFunction(funcRef.Name, null);
+            }
+        }
+        if (funcRef == null && tokenFunc?.Builtin == null)
+        {
+            // TODO: properly handle single variable calls
+            ctx.Error("Unsupported", token);
+            return;
+        }
 
         if (ctx.BaseContext.IsGMS23)
         {
@@ -479,7 +507,7 @@ public static partial class Bytecode
                     ConvertTo(ctx, DataType.Variable);
                 }
 
-                EmitCall(ctx, Opcode.Call, DataType.Int32, tokenFunc, func.Children.Count, token);
+                EmitCall(ctx, Opcode.Call, DataType.Int32, tokenFunc, func.Children.Count, token, funcRef);
                 ctx.TypeStack.Push(DataType.Variable);
             }
         }
@@ -492,7 +520,7 @@ public static partial class Bytecode
                 ConvertTo(ctx, DataType.Variable);
             }
 
-            EmitCall(ctx, Opcode.Call, DataType.Int32, tokenFunc, func.Children.Count, token);
+            EmitCall(ctx, Opcode.Call, DataType.Int32, tokenFunc, func.Children.Count, token, funcRef);
             ctx.TypeStack.Push(DataType.Variable);
         }
     }
@@ -534,31 +562,145 @@ public static partial class Bytecode
 
         if (lhs.Kind == NodeKind.Variable)
         {
-            EmitVariable(ctx, Opcode.Pop, DataType.Variable, lhs.Token.Value as TokenVariable, type);
+            if (lhs.Children.Count == 0)
+            {
+                // Simple variable
+                TokenVariable tokenVar = lhs.Token.Value as TokenVariable;
+                ProcessTokenVariable(ctx, ref tokenVar);
+                EmitVariable(ctx, Opcode.Pop, DataType.Variable, tokenVar, type);
+            }
+            else
+            {
+                // Variable with array
+                var variable = lhs.Token.Value as TokenVariable;
+                ProcessTokenVariable(ctx, ref variable);
+
+                // If 2.3, convert expression to variable
+                if (ctx.BaseContext.IsGMS23)
+                {
+                    if (type != DataType.Variable)
+                    {
+                        Emit(ctx, Opcode.Conv, type, DataType.Variable);
+                        type = DataType.Variable;
+                    }
+                }
+
+                // Compile instance type
+                CompileConstant(ctx, new TokenConstant((double)variable.InstanceType));
+                ConvertToInstance(ctx);
+
+                // Array index
+                CompileExpression(ctx, lhs.Children[0]);
+                ConvertTo(ctx, DataType.Int32);
+
+                if (lhs.Children.Count > 1)
+                {
+                    // 2d array or above
+                    if (!ctx.BaseContext.IsGMS23)
+                        ctx.Error("Chained array usage not supported pre-2.3", lhs.Token);
+                    variable.VariableType = VariableType.MultiPushPop;
+                    if (ctx.BaseContext.IsGMS23)
+                        variable.InstanceType = (int)InstanceType.Self;
+                    EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
+                    CompileMultiArrayPop(ctx, lhs);
+                }
+                else
+                {
+                    // 1d array
+                    variable.VariableType = VariableType.Array;
+                    if (ctx.BaseContext.IsGMS23)
+                        variable.InstanceType = (int)InstanceType.Self;
+                    EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, type);
+                }
+            }
         }
         else if (lhs.Kind == NodeKind.ChainReference)
         {
-            // Compile left side of dot first
-            CompileExpression(ctx, lhs.Children[0]);
-
-            // Compile end of chain separately
-            switch (lhs.Children[1].Kind)
+            Node end = lhs.Children[1];
+            if (end.Kind != NodeKind.Variable)
             {
-                case NodeKind.Variable:
-                    ConvertToInstance(ctx);
+                ctx.Error("Invalid end of chain reference", end.Token);
+                return;
+            }
+            var variable = end.Token.Value as TokenVariable;
 
-                    var variable = lhs.Children[1].Token.Value as TokenVariable;
-                    variable.VariableType = VariableType.StackTop;
+            // If this is an array
+            if (end.Children.Count != 0)
+            {
+                // In 2.3+, convert expression to variable data type (in case it's needed, apparently)
+                if (ctx.BaseContext.IsGMS23)
+                {
+                    if (type != DataType.Variable)
+                    {
+                        Emit(ctx, Opcode.Conv, type, DataType.Variable);
+                        type = DataType.Variable;
+                    }
+                }
+            }
+
+            // Compile left side of dot
+            CompileExpression(ctx, lhs.Children[0]);
+            ConvertToInstance(ctx);
+
+            // If this is an array (again)
+            if (end.Children.Count != 0)
+            {
+                // Array index
+                if (ctx.BaseContext.IsGMS23)
+                {
+                    CompileExpression(ctx, end.Children[0]);
+                    ConvertTo(ctx, DataType.Int32);
+
+                    if (end.Children.Count > 1)
+                    {
+                        // 2d array or above
+                        variable.VariableType = VariableType.MultiPushPop;
+                        EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
+                        CompileMultiArrayPop(ctx, end);
+                    }
+                    else
+                    {
+                        // 1d array
+                        variable.VariableType = VariableType.Array;
+                        EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, type);
+                    }
+                }
+                else
+                {
+                    if (end.Children.Count >= 2)
+                    {
+                        // Prior to 2.3, there's fake "2d" arrays... this is how they're handled
+                        // Essentially just ((index1 * 32000) + index2)
+                        CompileExpression(ctx, end.Children[0]); // first index
+                        ConvertTo(ctx, DataType.Int32);
+                        Emit(ctx, Opcode.Push, DataType.Int32).Value = (int)32000;
+                        Emit(ctx, Opcode.Mul, DataType.Int32, DataType.Int32);
+                        CompileExpression(ctx, end.Children[1]); // second index
+                        ConvertTo(ctx, DataType.Int32);
+                        EmitBreak(ctx, BreakType.chkindex);
+                        Emit(ctx, Opcode.Add, DataType.Int32, DataType.Int32);
+                    }
+                    else
+                    {
+                        // Only compile single index
+                        CompileExpression(ctx, end.Children[0]);
+                        ConvertTo(ctx, DataType.Int32);
+                    }
+
+                    // Actually store into variable now
+                    variable.VariableType = VariableType.Array;
                     EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, type);
-                    break;
-                // todo support arrays here
-                default:
-                    ctx.Error("Unsupported assignment", lhs.Children[1].Token);
-                    break;
+                }
+            }
+            else
+            {
+                // Normal variable at the end, no arrays or anything
+                variable.VariableType = VariableType.StackTop;
+                EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, type);
             }
         }
         else
-            ctx.Error("Unsupported assignment #2", lhs.Token);
+            ctx.Error("Unsupported assignment", lhs.Token);
     }
 
     private static void CompileCompoundAssign(CodeContext ctx, Node assign, Opcode opcode, bool bitwise = false)
@@ -588,61 +730,61 @@ public static partial class Bytecode
             }
 
             // Actual specific operation
-            Emit(ctx, opcode, DataType.Variable);
+            Emit(ctx, opcode, type, DataType.Variable);
 
             // Store result in original variable
-            EmitVariable(ctx, Opcode.Pop, DataType.Variable, lhs.Token.Value as TokenVariable, type);
+            TokenVariable tokenVar = lhs.Token.Value as TokenVariable;
+            ProcessTokenVariable(ctx, ref tokenVar);
+            EmitVariable(ctx, Opcode.Pop, DataType.Variable, tokenVar, DataType.Variable);
         }
         else if (lhs.Kind == NodeKind.ChainReference)
         {
+            Node end = lhs.Children[1];
+            if (end.Kind != NodeKind.Variable)
+            {
+                ctx.Error("Invalid end of chain reference", end.Token);
+                return;
+            }
+            var variable = end.Token.Value as TokenVariable;
+
             // Compile left side of dot first
             CompileExpression(ctx, lhs.Children[0]);
 
             // Compile end of chain separately
-            switch (lhs.Children[1].Kind)
+            bool usedMagic = (ConvertToInstance(ctx) == 2);
+
+            // Need to duplicate the instance on the stack
+            EmitDup(ctx, DataType.Int32, usedMagic ? (byte)4 : (byte)0);
+
+            // Push original variable value, finally
+            variable.VariableType = VariableType.StackTop;
+            EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
+
+            // Push expression and convert to necessary data types
+            CompileExpression(ctx, expr);
+            DataType type = ctx.TypeStack.Pop();
+            if (bitwise)
             {
-                case NodeKind.Variable:
-                    bool usedMagic = (ConvertToInstance(ctx) == 2);
-
-                    // Need to duplicate the instance on the stack
-                    EmitDup(ctx, DataType.Int32, usedMagic ? (byte)4 : (byte)0);
-
-                    // Push original variable value, finally
-                    var variable = lhs.Children[1].Token.Value as TokenVariable;
-                    variable.VariableType = VariableType.StackTop;
-                    EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
-
-                    // Push expression and convert to necessary data types
-                    CompileExpression(ctx, expr);
-                    DataType type = ctx.TypeStack.Pop();
-                    if (bitwise)
-                    {
-                        ConvertTo(ctx, DataType.Int64);
-                        type = DataType.Int64;
-                    }
-                    else
-                    {
-                        if (type == DataType.Boolean)
-                        {
-                            Emit(ctx, Opcode.Conv, DataType.Boolean, DataType.Int32);
-                            type = DataType.Int32;
-                        }
-                    }
-
-                    // Actual specific operation
-                    Emit(ctx, opcode, DataType.Variable);
-
-                    // Store result in original variable
-                    EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, type);
-                    break;
-                // todo support arrays here
-                default:
-                    ctx.Error("Unsupported compound assignment", lhs.Children[1].Token);
-                    break;
+                ConvertTo(ctx, DataType.Int64);
+                type = DataType.Int64;
             }
+            else
+            {
+                if (type == DataType.Boolean)
+                {
+                    Emit(ctx, Opcode.Conv, DataType.Boolean, DataType.Int32);
+                    type = DataType.Int32;
+                }
+            }
+
+            // Actual specific operation
+            Emit(ctx, opcode, type, DataType.Variable);
+
+            // Store result in original variable
+            EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, DataType.Variable);
         }
         else
-            ctx.Error("Unsupported compound assignment #2", lhs.Token);
+            ctx.Error("Unsupported compound assignment", lhs.Token);
     }
 
     private static void CompilePrefix(CodeContext ctx, Node prefix, bool leaveOnStack)
@@ -719,7 +861,6 @@ public static partial class Bytecode
                     // Store result in original variable
                     EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, DataType.Int32);
                     break;
-                // todo support arrays here
                 default:
                     ctx.Error("Unsupported prefix operation", expr.Children[1].Token);
                     break;
@@ -727,5 +868,195 @@ public static partial class Bytecode
         }
         else
             ctx.Error("Unsupported prefix operation #2", expr.Token);
+    }
+
+    private static void CompileMultiArrayPop(CodeContext ctx, Node variable)
+    {
+        for (int i = 1; i < variable.Children.Count; i++)
+        {
+            // Push next array index to stack
+            CompileExpression(ctx, variable.Children[i]);
+            ConvertTo(ctx, DataType.Int32);
+
+            // Actual array access/pop instructions
+            if (i == variable.Children.Count - 1)
+            {
+                // For the last one, pop
+                EmitBreak(ctx, BreakType.popaf);
+            }
+            else
+            {
+                // For every other one, push
+                EmitBreak(ctx, BreakType.pushac);
+            }
+        }
+    }
+
+    private static void CompileStatic(CodeContext ctx, Node block)
+    {
+        // Enter the static state
+        bool prevStatic = ctx.InStaticBlock;
+        ctx.InStaticBlock = true;
+
+        // Jump past static block if already initialized statics
+        EmitBreak(ctx, BreakType.isstaticok);
+        var conditionJump = new JumpForwardPatch(Emit(ctx, Opcode.Bt));
+
+        // Actually compile assignments
+        foreach (Node variable in block.Children)
+        {
+            // Remove and compile inner expression
+            Node expr = variable.Children[0];
+            variable.Children.Clear();
+            CompileExpression(ctx, expr);
+
+            // Assign to static variable
+            CompileAssign(ctx, variable);
+        }
+
+        // End of the static block (mark function as having statics initialized)
+        conditionJump.Finish(ctx);
+        EmitBreak(ctx, BreakType.setstatic);
+
+        // Return to previous static state
+        ctx.InStaticBlock = prevStatic;
+    }
+
+    private static void CompileFunctionDecl(CodeContext ctx, Node func)
+    {
+        NodeFunctionInfo info = func.Info as NodeFunctionInfo;
+
+        // When running the outer code, branch past the function contents
+        var jump = new JumpForwardPatch(Emit(ctx, Opcode.B));
+
+        // Going into a new scope; need to setup variables and structures
+        var outerLocalVars = ctx.LocalVars;
+        var outerStaticVars = ctx.StaticVars;
+        var outerArgumentVars = ctx.ArgumentVars;
+        var outerBytecodeContexts = ctx.BytecodeContexts;
+        bool outerInStatic = ctx.InStaticBlock;
+        ctx.LocalVars = info.LocalVars;
+        ctx.StaticVars = info.StaticVars;
+        ctx.ArgumentVars = info.Arguments;
+        ctx.BytecodeContexts = new();
+        ctx.InStaticBlock = false;
+
+        // Make sure this declaration is linked up for later
+        ctx.FunctionDeclsToRegister.Add(new(info.Reference.Name, info.LocalVars.Count, 
+                                            info.Arguments.Count, ctx.BytecodeLength, info.IsConstructor));
+
+        if (info.OptionalArgsIndex != -1)
+        {
+            // Compile optional arguments into if statements
+            CompileBlock(ctx, func.Children[info.OptionalArgsIndex]);
+        }
+        if (info.InheritingIndex != -1)
+        {
+            // Compile function inheritance
+            Node inheritedFuncCall = func.Children[info.InheritingIndex];
+            CompileFunctionCall(ctx, inheritedFuncCall, false);
+
+            if (ctx.BaseContext.Functions.TryGetValue((inheritedFuncCall.Token.Value as TokenVariable).Name, out var funcRef))
+            {
+                // Push inherited function ID
+                EmitPushFunc(ctx, new TokenFunction(funcRef.Name, null), funcRef);
+
+                // Using that ID, call @@CopyStatic@@ to have the runner
+                // magically copy static variables from inherited function!
+                Emit(ctx, Opcode.Conv, DataType.Int32, DataType.Variable);
+                EmitCall(ctx, Opcode.Call, DataType.Int32, Builtins.MakeFuncToken(ctx, "@@CopyStatic@@"), 1);
+            }
+            else
+                ctx.Error("Couldn't find inherited/base function", inheritedFuncCall.Token);
+        }
+
+        // Actually compile the main function contents
+        CompileBlock(ctx, func.Children[^1]);
+        Emit(ctx, Opcode.Exit, DataType.Int32);
+
+        // Leaving scope; restore variables from outer scope
+        ctx.LocalVars = outerLocalVars;
+        ctx.StaticVars = outerStaticVars;
+        ctx.ArgumentVars = outerArgumentVars;
+        ctx.BytecodeContexts = outerBytecodeContexts;
+        ctx.InStaticBlock = outerInStatic;
+
+        // Now, after function contents, emit instructions to register the function
+        jump.Finish(ctx);
+
+        // Push function ID
+        EmitPushFunc(ctx, new TokenFunction(info.Reference.Name, null), info.Reference);
+        Emit(ctx, Opcode.Conv, DataType.Int32, DataType.Variable);
+
+        if (info.IsConstructor)
+        {
+            // Constructors instantiate a null object in the runner for a context
+            EmitCall(ctx, Opcode.Call, DataType.Int32, Builtins.MakeFuncToken(ctx, "@@NullObject@@"), 0);
+        }
+        else
+        {
+            // Normal functions either bind to -1 (self) or -16 (static) as a context
+            Emit(ctx, Opcode.PushI, DataType.Int16).Value = (short)(ctx.InStaticBlock ? -16 : -1);
+            Emit(ctx, Opcode.Conv, DataType.Int32, DataType.Variable);
+        }
+
+        // Create the method using the context and function ID
+        EmitCall(ctx, Opcode.Call, DataType.Int32, Builtins.MakeFuncToken(ctx, "method"), 2);
+
+        if (func.Children[0].Kind != NodeKind.Empty)
+        {
+            // This isn't anonymous, so assign the function to a real name
+            // Need to duplicate the return value of method(), then store it
+            EmitDup(ctx, DataType.Variable, 0);
+            ctx.TypeStack.Push(DataType.Variable);
+
+            // For some reason storing here happens with a -6 (builtin?) instance
+            // Need to build a chain node for that, I guess...?
+            Node store = new(NodeKind.ChainReference);
+            store.Children.Add(new(NodeKind.Constant, new Token(ctx, new TokenConstant((double)-6), -1)));
+            store.Children.Add(func.Children[0]);
+            CompileAssign(ctx, store);
+        }
+
+        // The result of method() is still on the stack after this
+        ctx.TypeStack.Push(DataType.Variable);
+    }
+
+    private static void CompileNew(CodeContext ctx, Node stmt)
+    {
+        // Push arguments in reverse order
+        for (int i = stmt.Children.Count - 1; i >= 1; i--)
+        {
+            CompileExpression(ctx, stmt.Children[i]);
+            ConvertTo(ctx, DataType.Variable);
+        }
+
+        // Push function reference
+        Node func = stmt.Children[0];
+        if (func.Kind == NodeKind.Variable)
+        {
+            TokenVariable tokenVar = func.Token.Value as TokenVariable;
+            if (ctx.BaseContext.Functions.TryGetValue(tokenVar.Name, out FunctionReference reference))
+            {
+                // Known function ID/reference
+                EmitPushFunc(ctx, new TokenFunction(reference.Name, null), reference);
+                Emit(ctx, Opcode.Conv, DataType.Int32, DataType.Variable);
+            }
+            else
+            {
+                // Unknown function variable
+                CompileExpression(ctx, stmt.Children[0]);
+                ConvertTo(ctx, DataType.Variable);
+            }
+        }
+        else
+        {
+            // Unknown function expression
+            CompileExpression(ctx, stmt.Children[0]);
+            ConvertTo(ctx, DataType.Variable);
+        }
+
+        EmitCall(ctx, Opcode.Call, DataType.Int32, Builtins.MakeFuncToken(ctx, "@@NewGMLObject@@"), stmt.Children.Count);
+        ctx.TypeStack.Push(DataType.Variable);
     }
 }

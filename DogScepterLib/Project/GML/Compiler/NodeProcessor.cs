@@ -17,6 +17,38 @@ public static class NodeProcessor
                 ctx.LocalVars = (n.Info as NodeFunctionInfo).LocalVars;
                 break;
             case NodeKind.ChainReference:
+                if (n.Children[0].Kind == NodeKind.Constant && n.Children[1].Kind == NodeKind.Variable)
+                {
+                    // Collapse self/other/global when in a single variable
+                    int type = (int)InstanceType.Undefined;
+
+                    TokenConstant c = (n.Children[0].Token.Value as TokenConstant);
+                    if (c.Kind == ConstantKind.Number)
+                    {
+                        switch (c.ValueNumber)
+                        {
+                            case -1:
+                                type = (int)InstanceType.Self;
+                                break;
+                            case -2:
+                                type = (int)InstanceType.Other;
+                                break;
+                            case -5:
+                                type = (int)InstanceType.Global;
+                                break;
+                        }
+                    }
+                    if (type != (int)InstanceType.Undefined)
+                    {
+                        n = n.Children[1];
+
+                        TokenVariable tokenVar = (n.Token.Value as TokenVariable);
+                        tokenVar.InstanceType = type;
+                        tokenVar.ExplicitInstType = true;
+                        break; // don't deal with this like a chain reference anymore
+                    }
+                }
+
                 // Check for local variables
                 if (ctx.LocalVars == null)
                     break;
@@ -84,17 +116,17 @@ public static class NodeProcessor
 
                     if (c.ValueNumber == -1 && t.Text == "self")
                     {
-                        n = new Node(NodeKind.FunctionCall, new Token(null, TokenKind.FunctionCall, -1) { Value = new TokenFunction("@@This@@", null) });
+                        n = new Node(NodeKind.FunctionCall, new Token(null, TokenKind.FunctionCall, -1) { Value = Builtins.MakeFuncToken(ctx, "@@This@@") });
                         break;
                     }
                     if (c.ValueNumber == -2 && t.Text == "other")
                     {
-                        n = new Node(NodeKind.FunctionCall, new Token(null, TokenKind.FunctionCall, -1) { Value = new TokenFunction("@@Other@@", null) });
+                        n = new Node(NodeKind.FunctionCall, new Token(null, TokenKind.FunctionCall, -1) { Value = Builtins.MakeFuncToken(ctx, "@@Other@@") });
                         break;
                     }
                     if (c.ValueNumber == -5 && t.Text == "global")
                     {
-                        n = new Node(NodeKind.FunctionCall, new Token(null, TokenKind.FunctionCall, -1) { Value = new TokenFunction("@@Global@@", null) });
+                        n = new Node(NodeKind.FunctionCall, new Token(null, TokenKind.FunctionCall, -1) { Value = Builtins.MakeFuncToken(ctx, "@@Global@@") });
                         break;
                     }
                 }
