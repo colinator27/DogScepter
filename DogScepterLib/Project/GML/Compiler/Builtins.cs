@@ -78,6 +78,7 @@ public class Builtins
         FunctionDefine("@@NewGMLObject@@", -1);
         FunctionDefine("@@NullObject@@", 0);
         FunctionDefine("@@CopyStatic@@", 1);
+        FunctionDefine("@@GetInstance@@", 1);
 
         FunctionDefine("variable_global_set", 2);
         FunctionDefine("get_integer", 2);

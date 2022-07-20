@@ -415,7 +415,12 @@ public static partial class Bytecode
 
                 ctx.TypeStack.Push(DataType.Variable);
                 break;
-            // todo, functions and arrays
+            case NodeKind.FunctionCall:
+                if (ConvertTo(ctx, DataType.Variable))
+                    EmitCall(ctx, Opcode.Call, DataType.Int32, Builtins.MakeFuncToken(ctx, "@@GetInstance@@"), 1);
+                CompileFunctionCall(ctx, chain.Children[1], true);
+                break;
+            // todo, arrays
             default:
                 ctx.Error("Unsupported", chain.Children[1].Token);
                 break;
@@ -425,6 +430,7 @@ public static partial class Bytecode
     private static void CompileVariable(CodeContext ctx, Node variable)
     {
         // todo, arrays here
+
         TokenVariable tokenVar = variable.Token.Value as TokenVariable;
 
         // Process variable and instance type

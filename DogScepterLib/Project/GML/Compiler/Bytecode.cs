@@ -484,10 +484,56 @@ public static partial class Bytecode
                 tokenFunc = new TokenFunction(funcRef.Name, null);
             }
         }
-        if (funcRef == null && tokenFunc?.Builtin == null)
+        if (funcRef == null && tokenFunc?.Builtin == null && !inChain)
         {
-            // TODO: properly handle single variable calls
-            ctx.Error("Unsupported", token);
+            // Handle single variable calls
+
+            // Arguments get pushed in reverse order
+            for (int i = func.Children.Count - 1; i >= 0; i--)
+            {
+                CompileExpression(ctx, func.Children[i]);
+                ConvertTo(ctx, DataType.Variable);
+            }
+
+            // Push instance to stack first, either self/other/global
+            string funcName;
+            InstanceType explicitType = InstanceType.Undefined;
+            switch (tokenFunc.ExplicitInstType)
+            {
+                case InstanceType.Other:
+                    funcName = "@@Other@@";
+                    explicitType = InstanceType.Other;
+                    break;
+                case InstanceType.Global:
+                    funcName = "@@Global@@";
+                    explicitType = InstanceType.Global;
+                    break;
+                case InstanceType.Self:
+                    explicitType = InstanceType.Self;
+                    funcName = "@@This@@";
+                    break;
+                default:
+                    funcName = "@@This@@";
+                    break;
+            }
+            EmitCall(ctx, Opcode.Call, DataType.Int32, Builtins.MakeFuncToken(ctx, funcName), 0);
+
+            // Push function ID to stack using the variable
+            // Need to figure out the variable's type since it wasn't processed earlier
+            Node newVariable = new Node(NodeKind.Variable, new Token(ctx, -1));
+            var tokenVar = new TokenVariable(tokenFunc.Name, null) 
+            { 
+                InstanceType = (int)explicitType, 
+                ExplicitInstType = (explicitType != InstanceType.Undefined) 
+            };
+            ProcessTokenVariable(ctx, ref tokenVar);
+            newVariable.Token.Value = tokenVar;
+            CompileVariable(ctx, newVariable);
+            ctx.TypeStack.Pop();
+
+            // Actual call instruction
+            Emit(ctx, Opcode.CallV, DataType.Variable).Extra = (byte)func.Children.Count;
+            ctx.TypeStack.Push(DataType.Variable);
             return;
         }
 
@@ -495,8 +541,20 @@ public static partial class Bytecode
         {
             if (inChain)
             {
-                // TODO
-                ctx.Error("Unsupported", -1);
+                // Handle calling at the end of a chain
+
+                // Move around instance on the stack as needed
+                EmitDupSwap(ctx, DataType.Variable, (byte)func.Children.Count, 1);
+                EmitDup(ctx, DataType.Variable, 0);
+
+                // Push function ID to stack using variable
+                var tokenVar = new TokenVariable(tokenFunc.Name, null);
+                tokenVar.InstanceType = (int)InstanceType.StackTop; // different from other places!
+                EmitVariable(ctx, Opcode.Push, DataType.Variable, tokenVar);
+
+                // Actual call instruction
+                Emit(ctx, Opcode.CallV, DataType.Variable).Extra = (byte)func.Children.Count;
+                ctx.TypeStack.Push(DataType.Variable);
             }
             else
             {
@@ -847,9 +905,9 @@ public static partial class Bytecode
                     if (leaveOnStack)
                     {
                         // Duplicate value to leave it on stack
-                        EmitDup(ctx, DataType.Variable, 1);
+                        EmitDup(ctx, DataType.Variable, 0);
                         if (ctx.BaseContext.IsGMS23)
-                            EmitDupSwap(ctx, DataType.Int32, 4, usedMagic ? (byte)8 : (byte)4);
+                            EmitDupSwap(ctx, DataType.Int32, 4, usedMagic ? (byte)9 : (byte)5);
                         else
                         {
                             // pre-2.3 swap instruction

@@ -240,7 +240,12 @@ public class Parser
 
         if (left.Kind != NodeKind.FunctionCall && left.Kind != NodeKind.FunctionCallChain &&
             left.Kind != NodeKind.Prefix && left.Kind != NodeKind.Postfix)
+        {
+            if (left.Kind == NodeKind.ChainReference && left.Children[1].Kind == NodeKind.FunctionCall)
+                return left;
+
             ctx.Error("Incomplete statement", curr);
+        }
 
         return left;
     }
@@ -260,6 +265,7 @@ public class Parser
                 chain.Children.Add(left);
                 left = chain;
 
+                ctx.Position++;
                 if (ctx.Tokens[ctx.Position].Kind == TokenKind.FunctionCall)
                 {
                     Node func = new(NodeKind.FunctionCall, ctx.Tokens[ctx.Position]);
@@ -270,7 +276,6 @@ public class Parser
                 }
                 else
                 {
-                    ctx.Position++;
                     chain.Children.Add(ParseVariable(ctx));
                 }
             }

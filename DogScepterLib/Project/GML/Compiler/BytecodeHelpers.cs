@@ -254,7 +254,7 @@ public static partial class Bytecode
             Kind = Opcode.Dup,
             Type1 = type,
             Extra = param1,
-            ComparisonKind = (ComparisonType)(param2 | 0x80)
+            ComparisonKind = (ComparisonType)((param2 << 3) | 0x80)
         };
         ctx.Instructions.Add(res);
         ctx.BytecodeLength += 4;
@@ -404,6 +404,16 @@ public static partial class Bytecode
     {
         if (tokenVar.ExplicitInstType)
             return;
+
+        if (tokenVar.InstanceType == (int)InstanceType.Undefined)
+        {
+            if (ctx.LocalVars.Contains(tokenVar.Name))
+            {
+                tokenVar.InstanceType = (int)InstanceType.Local;
+                return;
+            }
+        }
+
         if (ctx.BaseContext.IsGMS23)
         {
             // Check for builtin variable
@@ -425,6 +435,12 @@ public static partial class Bytecode
                 tokenVar = new($"argument{argIndex}", null);
                 tokenVar.InstanceType = (int)InstanceType.Argument;
             }
+        }
+
+        if (tokenVar.InstanceType == (int)InstanceType.Undefined)
+        {
+            // Default to self
+            tokenVar.InstanceType = (int)InstanceType.Self;
         }
     }
 }

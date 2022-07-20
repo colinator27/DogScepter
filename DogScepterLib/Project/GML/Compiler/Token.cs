@@ -222,6 +222,7 @@ public class TokenFunction : ITokenValue
 {
     public string Name { get; set; }
     public BuiltinFunction Builtin { get; set; }
+    public GMCode.Bytecode.Instruction.InstanceType ExplicitInstType { get; set; } = GMCode.Bytecode.Instruction.InstanceType.Undefined;
 
     public TokenFunction(string name, BuiltinFunction builtin)
     {

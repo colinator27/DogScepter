@@ -17,7 +17,9 @@ public static class NodeProcessor
                 ctx.LocalVars = (n.Info as NodeFunctionInfo).LocalVars;
                 break;
             case NodeKind.ChainReference:
-                if (n.Children[0].Kind == NodeKind.Constant && n.Children[1].Kind == NodeKind.Variable)
+                if (n.Children[0].Kind == NodeKind.Constant && 
+                    (n.Children[1].Kind == NodeKind.Variable || 
+                     n.Children[1].Kind == NodeKind.FunctionCall))
                 {
                     // Collapse self/other/global when in a single variable
                     int type = (int)InstanceType.Undefined;
@@ -42,9 +44,17 @@ public static class NodeProcessor
                     {
                         n = n.Children[1];
 
-                        TokenVariable tokenVar = (n.Token.Value as TokenVariable);
-                        tokenVar.InstanceType = type;
-                        tokenVar.ExplicitInstType = true;
+                        if (n.Kind == NodeKind.Variable)
+                        {
+                            TokenVariable tokenVar = (n.Token.Value as TokenVariable);
+                            tokenVar.InstanceType = type;
+                            tokenVar.ExplicitInstType = true;
+                        }
+                        else
+                        {
+                            TokenFunction tokenFunc = (n.Token.Value as TokenFunction);
+                            tokenFunc.ExplicitInstType = (InstanceType)type;
+                        }
                         break; // don't deal with this like a chain reference anymore
                     }
                 }
