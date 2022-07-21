@@ -779,7 +779,7 @@ public class Parser
         ctx.LocalVars = new();
         ctx.StaticVars = new();
 
-        FunctionReference reference = new FunctionReference(ctx.BaseContext, $"gml_Script_{structFuncName}_{ctx.CurrentName}", false);
+        FunctionReference reference = new FunctionReference(ctx.BaseContext, $"gml_Script_{structFuncName}_{ctx.CurrentName}", true);
         string prevName = ctx.CurrentName;
         ctx.CurrentName = structFuncName + "_" + ctx.CurrentName;
 

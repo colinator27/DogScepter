@@ -22,6 +22,7 @@ public class CompileContext
     public Dictionary<string, int> AssetIds = new();
     public Dictionary<string, int> VariableIds = new();
     public Dictionary<string, FunctionReference> Functions = new();
+    public Dictionary<string, GMCode> NameToCode = new();
     public List<FunctionReference> FunctionsToResolveLater { get; set; } = new();
     public List<string> Scripts = new();
 
@@ -39,6 +40,11 @@ public class CompileContext
         AddAssets(pf.Paths);
         AddAssets(pf.Objects);
         AddAssets(pf.Rooms);
+
+        // Make a map of code entry names to their references, to speed up further operations
+        GMChunkCODE codeChunk = Project.DataHandle.GetChunk<GMChunkCODE>();
+        foreach (var code in codeChunk.List)
+            NameToCode[code.Name.Content] = code;
 
         // Initialize builtin variables/functions
         Builtins = new(this);
@@ -242,14 +248,23 @@ public class CompileContext
         }
     }
 
+    private string NextUnreferencedName(ref int index)
+    {
+        string currUnreferencedName;
+        do
+        {
+            currUnreferencedName = $"@@DS_EMPTY_CODE_{index++}@@";
+        }
+        while (NameToCode.ContainsKey(currUnreferencedName));
+
+        return currUnreferencedName;
+    }
+
     private void LinkToData()
     {
-        // Make a map of code entry names to their references, to speed up further operations
-        Dictionary<string, GMCode> nameToCode = new();
-        GMChunkCODE codeChunk = Project.DataHandle.GetChunk<GMChunkCODE>();
-        foreach (var code in codeChunk.List)
-            nameToCode[code.Name.Content] = code;
+        int unreferencedIndex = 0;
 
+        GMChunkCODE codeChunk = Project.DataHandle.GetChunk<GMChunkCODE>();
         GMChunkGLOB glob = Project.DataHandle.GetChunk<GMChunkGLOB>();
         GMChunkSCPT scpt = Project.DataHandle.GetChunk<GMChunkSCPT>();
         GMChunkFUNC func = Project.DataHandle.GetChunk<GMChunkFUNC>();
@@ -257,19 +272,24 @@ public class CompileContext
         // Link all of our code contexts
         foreach (var code in Code)
         {
-            if (nameToCode.TryGetValue(code.Name, out GMCode existing))
+            if (NameToCode.TryGetValue(code.Name, out GMCode existing))
             {
                 // This is an existing code entry
+                int codeOffset = 0, codeLength = 0;
                 switch (code.Mode)
                 {
                     case CodeContext.CodeMode.Replace:
                         existing.BytecodeEntry.Instructions = code.Instructions;
+                        codeLength = code.BytecodeLength;
                         break;
                     case CodeContext.CodeMode.InsertBegin:
                         existing.BytecodeEntry.Instructions.InsertRange(0, code.Instructions);
+                        codeLength = existing.BytecodeEntry.GetLength() * 4;
                         break;
                     case CodeContext.CodeMode.InsertEnd:
+                        codeOffset = existing.BytecodeEntry.GetLength() * 4;
                         existing.BytecodeEntry.Instructions.AddRange(code.Instructions);
+                        codeLength = codeOffset + code.BytecodeLength;
                         break;
                 }
 
@@ -280,7 +300,118 @@ public class CompileContext
                 foreach (string local in code.ReferencedLocalVars)
                     localsEntry.AddLocal(Project.DataHandle, local, existing);
 
-                // TODO: handle 2.3+ sub-functions
+                if (Project.DataHandle.VersionInfo.IsVersionAtLeast(2, 3))
+                {
+                    // Handle updating function declarations
+                    List<GMCode> oldChildren = new(existing.ChildEntries);
+
+                    foreach (var decl in code.FunctionDeclsToRegister)
+                    {
+                        GMCode declCodeEntry = oldChildren.Find(c => c.Name.Content == decl.Reference.Name);
+                        if (declCodeEntry == null)
+                        {
+                            // Need to make a new entry
+                            declCodeEntry = new()
+                            {
+                                Name = Project.DataHandle.DefineString(decl.Reference.Name),
+                                LocalsCount = (short)decl.LocalCount,
+                                ArgumentsCount = (short)decl.ArgCount,
+                                Length = codeLength,
+                                BytecodeOffset = codeOffset + decl.Offset,
+                                ParentEntry = existing,
+                                BytecodeEntry = existing.BytecodeEntry
+                            };
+                            existing.ChildEntries.Add(declCodeEntry);
+
+                            if (NameToCode.ContainsKey(decl.Reference.Name))
+                            {
+                                // There's a conflicting code entry already, outside of this code
+                                throw new System.Exception($"Code entry with name \"{decl.Reference.Name}\" already exists in game");
+                            }
+                            else
+                            {
+                                // Add to CODE chunk
+                                codeChunk.List.Add(declCodeEntry);
+
+                                // Add script entry
+                                scpt.List.Add(new()
+                                {
+                                    Name = Project.DataHandle.DefineString(decl.Reference.Name),
+                                    CodeID = codeChunk.List.Count - 1,
+                                    Constructor = decl.Constructor
+                                });
+                            }
+                        }
+                        else
+                        {
+                            if (code.Mode == CodeContext.CodeMode.Replace)
+                            {
+                                // Change existing entry to point to new one
+                                declCodeEntry.LocalsCount = (short)decl.LocalCount;
+                                declCodeEntry.ArgumentsCount = (short)decl.ArgCount;
+                                declCodeEntry.Length = codeLength;
+                                declCodeEntry.BytecodeOffset = codeOffset + decl.Offset;
+                                declCodeEntry.Flags = 0;
+
+                                // Modify script entry
+                                GMScript declScript = scpt.List.Find(s => s.Name.Content == decl.Reference.Name);
+                                declScript.Constructor = decl.Constructor;
+
+                                // Remove from old children list
+                                oldChildren.Remove(declCodeEntry);
+                            }
+                            else
+                            {
+                                // Shouldn't be redeclaring an existing sub-code entry, so error out
+                                throw new System.Exception($"Duplicate function declaration named \"{decl.Reference.Name}\"");
+                            }
+                        }
+                    }
+
+                    if (code.Mode == CodeContext.CodeMode.Replace)
+                    {
+                        // Get rid of unreferenced children
+                        foreach (var child in oldChildren)
+                        {
+                            // Generate new (unique) name for this
+                            GMString name = Project.DataHandle.DefineString(
+                                                NextUnreferencedName(ref unreferencedIndex));
+
+                            // Rename function
+                            GMFunctionEntry funcEntry = func.FindOrDefine(child.Name.Content, Project.DataHandle);
+                            funcEntry.Name = name;
+
+                            // Clear out script entry
+                            GMScript declScript = scpt.List.Find(s => s.Name.Content == child.Name.Content);
+                            declScript.Name = name;
+                            declScript.Constructor = false;
+
+                            // Clear out code entry
+                            child.Name = name;
+                            child.Length = 0;
+                            child.BytecodeOffset = 0;
+                            child.BytecodeEntry = new GMCode.Bytecode(child);
+                            child.Flags = 0;
+                            child.LocalsCount = 0;
+                            child.ArgumentsCount = 0;
+                            child.ParentEntry = null;
+
+                            // Add locals entry since this is now standalone
+                            GMLocalsEntry fakeLocals = new(child.Name);
+                            func.Locals.Add(fakeLocals);
+                            fakeLocals.AddLocal(Project.DataHandle, "arguments", child);
+                        }
+                    }
+                    else if (code.Mode == CodeContext.CodeMode.InsertBegin)
+                    {
+                        // Push old children back by inserted instruction length, and update their length
+                        foreach (var child in oldChildren)
+                        {
+                            child.BytecodeOffset += code.BytecodeLength;
+                            child.Length = codeLength;
+                        }
+                    }
+                }
             }
             else
             {
@@ -322,7 +453,7 @@ public class CompileContext
                         // Add code entry, as a child
                         GMCode declCodeEntry = new() 
                         { 
-                            Name = Project.DataHandle.DefineString(decl.Name), 
+                            Name = Project.DataHandle.DefineString(decl.Reference.Name), 
                             LocalsCount = (short)decl.LocalCount,
                             ArgumentsCount = (short)decl.ArgCount,
                             Length = code.BytecodeLength,
@@ -336,7 +467,7 @@ public class CompileContext
                         // Add script entry
                         scpt.List.Add(new()
                         {
-                            Name = Project.DataHandle.DefineString(decl.Name),
+                            Name = Project.DataHandle.DefineString(decl.Reference.Name),
                             CodeID = codeChunk.List.Count - 1,
                             Constructor = decl.Constructor
                         });
@@ -524,7 +655,7 @@ public class EnumValue
 
 public class FunctionReference
 {
-    public string Name { get; init; }
+    public string Name { get; private set; }
     public bool Resolved { get; set; } = false;
     public bool Anonymous { get; init; }
     public GMFunctionEntry DataEntry { get; set; } = null;
@@ -562,10 +693,34 @@ public class FunctionReference
         if (Resolved)
             return;
 
+        if (Anonymous)
+        {
+            if (ctx.NameToCode.ContainsKey(Name))
+            {
+                // Uh oh, we're conflicting with an existing code entry name!
+                // Need to rename this now.
+                int counter = 0;
+                string curr;
+                do
+                {
+                    curr = Name + $"_{counter++}";
+                }
+                while (ctx.NameToCode.ContainsKey(curr));
+                Name = curr;
+            }
+        }
+
         var func = ctx.Project.DataHandle.GetChunk<GMChunkFUNC>();
         DataEntry = func.FindOrDefine(Name, ctx.Project.DataHandle);
         Resolved = true;
     }
 }
 
-public record FunctionDeclInfo(string Name, int LocalCount, int ArgCount, int Offset, bool Constructor);
+public record FunctionDeclInfo
+{
+    public FunctionReference Reference { get; set; }
+    public int LocalCount { get; set; }
+    public int ArgCount { get; set; }
+    public int Offset { get; set; }
+    public bool Constructor { get; set; }
+}

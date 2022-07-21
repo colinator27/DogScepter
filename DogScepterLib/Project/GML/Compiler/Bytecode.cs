@@ -1000,8 +1000,14 @@ public static partial class Bytecode
         ctx.InStaticBlock = false;
 
         // Make sure this declaration is linked up for later
-        ctx.FunctionDeclsToRegister.Add(new(info.Reference.Name, info.LocalVars.Count, 
-                                            info.Arguments.Count, ctx.BytecodeLength, info.IsConstructor));
+        ctx.FunctionDeclsToRegister.Add(new()
+        {
+            Reference = info.Reference,
+            LocalCount = info.LocalVars.Count,
+            ArgCount = info.Arguments.Count,
+            Offset = ctx.BytecodeLength,
+            Constructor = info.IsConstructor
+        });
 
         if (info.OptionalArgsIndex != -1)
         {
