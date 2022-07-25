@@ -87,6 +87,7 @@ public class GMChunkFORM : GMChunk
         { "CODE", typeof(GMChunkCODE) },
         { "SEQN", typeof(GMChunkSEQN) },
         { "FEDS", typeof(GMChunkFEDS) },
+        { "FEAT", typeof(GMChunkFEAT) },
     };
     public static readonly Dictionary<Type, string> ChunkMapReverse = ChunkMap.ToDictionary(x => x.Value, x => x.Key);
 
@@ -140,6 +141,8 @@ public class GMChunkFORM : GMChunk
                 reader.Data.VersionInfo.SetVersion(2, 3);
             else if (name == "FEDS")
                 reader.Data.VersionInfo.SetVersion(2, 3, 6);
+            else if (name == "FEAT")
+                reader.Data.VersionInfo.SetVersion(2022, 8);
 
             // Update whether this version aligns chunks to 16 bytes
             if (reader.Offset < EndOffset)
