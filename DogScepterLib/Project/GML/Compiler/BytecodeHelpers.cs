@@ -419,7 +419,10 @@ public static partial class Bytecode
             // Check for builtin variable
             if (tokenVar.Builtin != null)
             {
-                tokenVar.InstanceType = (int)InstanceType.Builtin;
+                if (tokenVar.Builtin.IsGlobal)
+                    tokenVar.InstanceType = (int)InstanceType.Builtin;
+                else
+                    tokenVar.InstanceType = (int)InstanceType.Self;
             }
 
             // Check for static variable

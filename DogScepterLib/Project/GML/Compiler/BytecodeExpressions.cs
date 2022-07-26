@@ -82,7 +82,7 @@ public static partial class Bytecode
                 if (constant.IsBool && 0 <= constant.ValueNumber && constant.ValueNumber <= 1)
                 {
                     // This is a proper boolean type
-                    Emit(ctx, Opcode.Push).Value = (short)constant.ValueNumber;
+                    Emit(ctx, Opcode.PushI, DataType.Int16).Value = (short)constant.ValueNumber;
                     ctx.TypeStack.Push(DataType.Boolean);
                 }
                 else if ((long)constant.ValueNumber == constant.ValueNumber)
@@ -456,7 +456,8 @@ public static partial class Bytecode
             (int)InstanceType.Global => Opcode.PushGlb,
             (int)InstanceType.Builtin => Opcode.PushBltn,
             (int)InstanceType.Local => Opcode.PushLoc,
-            _ => (tokenVar.Builtin == null ? Opcode.Push : Opcode.PushBltn),
+            _ => ((tokenVar.Builtin == null || !tokenVar.Builtin.IsGlobal) 
+                    ? Opcode.Push : Opcode.PushBltn),
         };
         EmitVariable(ctx, opcode, DataType.Variable, tokenVar);
         ctx.TypeStack.Push(DataType.Variable);

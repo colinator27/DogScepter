@@ -470,6 +470,7 @@ public class Parser
         }
 
         ctx.Error("Invalid base expression", curr);
+        ctx.Position++; // prevent infinite loop
         return null;
     }
 
@@ -557,7 +558,10 @@ public class Parser
             res.Children.Add(left);
             res.Children.Add(ParseAnd(ctx));
             while (ctx.Tokens[ctx.Position].Kind == TokenKind.Or)
+            {
+                ctx.Position++;
                 res.Children.Add(ParseAnd(ctx));
+            }
             return res;
         }
         return left;
@@ -576,7 +580,10 @@ public class Parser
             res.Children.Add(left);
             res.Children.Add(ParseXor(ctx));
             while (ctx.Tokens[ctx.Position].Kind == TokenKind.And)
+            {
+                ctx.Position++;
                 res.Children.Add(ParseXor(ctx));
+            }
             return res;
         }
         return left;
@@ -654,6 +661,8 @@ public class Parser
                         curr.Kind == TokenKind.BitOr ||
                         curr.Kind == TokenKind.BitXor)
                 {
+                    ctx.Position++;
+
                     Node next = new(NodeKind.Binary, curr);
                     next.Children.Add(res);
                     next.Children.Add(ParseBitShift(ctx));
@@ -685,6 +694,8 @@ public class Parser
                 while (curr.Kind == TokenKind.BitShiftLeft ||
                         curr.Kind == TokenKind.BitShiftRight)
                 {
+                    ctx.Position++;
+
                     Node next = new(NodeKind.Binary, curr);
                     next.Children.Add(res);
                     next.Children.Add(ParseAddSub(ctx));
@@ -716,6 +727,8 @@ public class Parser
                 while (curr.Kind == TokenKind.Plus ||
                         curr.Kind == TokenKind.Minus)
                 {
+                    ctx.Position++;
+
                     Node next = new(NodeKind.Binary, curr);
                     next.Children.Add(res);
                     next.Children.Add(ParseMulDiv(ctx));
@@ -751,6 +764,8 @@ public class Parser
                         curr.Kind == TokenKind.Mod ||
                         curr.Kind == TokenKind.Div)
                 {
+                    ctx.Position++;
+
                     Node next = new(NodeKind.Binary, curr);
                     next.Children.Add(res);
                     next.Children.Add(ParseChain(ctx));

@@ -50,8 +50,6 @@ public static class Util
 
         if (invert)
             console.Error.Write($"Project already exists at {dir}");
-        else
-            console.Output.WriteLine($"Project exists at {dir}");
         return true;
     }
 

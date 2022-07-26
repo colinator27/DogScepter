@@ -9,21 +9,15 @@ namespace DogScepterLib.Project.GML.Compiler;
 
 public class BuiltinVariable
 {
+    public bool IsGlobal { get; init; }
     public string Name { get; init; }
     public bool CanSet { get; init; }
     public bool CanGet { get; init; }
     public int ID { get; init; }
 
-    public BuiltinVariable(Builtins ctx, string name)
+    public BuiltinVariable(Builtins ctx, bool isGlobal, string name, bool canSet, bool canGet)
     {
-        Name = name;
-        CanSet = true;
-        CanGet = true;
-        ID = ctx.ID++;
-    }
-
-    public BuiltinVariable(Builtins ctx, string name, bool canSet, bool canGet)
-    {
+        IsGlobal = isGlobal;
         Name = name;
         CanSet = canSet;
         CanGet = canGet;
@@ -92,12 +86,12 @@ public partial class Builtins
 
     private void VarGlobalDefine(string name, bool canSet = true, bool canGet = true)
     {
-        VarGlobal[name] = new BuiltinVariable(this, name, canSet, canGet);
+        VarGlobal[name] = new BuiltinVariable(this, true, name, canSet, canGet);
     }
 
     private void VarInstanceDefine(string name, bool canSet = true, bool canGet = true)
     {
-        VarInstance[name] = new BuiltinVariable(this, name, canSet, canGet);
+        VarInstance[name] = new BuiltinVariable(this, false, name, canSet, canGet);
     }
 
     private void FunctionDefine(string name, int argCount, FunctionClassification classification)

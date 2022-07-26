@@ -35,11 +35,11 @@ namespace DogScepterLib.Project.Assets
             byte[] buff = File.ReadAllBytes(assetPath);
             var res = JsonSerializer.Deserialize<AssetSprite>(buff, ProjectFile.JsonOptions);
 
+            string dir = Path.GetDirectoryName(assetPath);
+
             using (var sha1 = SHA1.Create())
             {
                 res.Length = buff.Length;
-
-                string dir = Path.GetDirectoryName(assetPath);
 
                 int ind = 0;
                 string basePath = Path.Combine(dir, res.Name);
@@ -144,8 +144,8 @@ namespace DogScepterLib.Project.Assets
 
                         if (actuallyWrite)
                         {
-                            using (FileStream fs = new FileStream(Path.Combine(dir, SpecialInfo.Buffer), FileMode.Create))
-                                fs.Write(internalBufferArray, 0, internalBufferArray.Length);
+                            using FileStream fs = new FileStream(Path.Combine(dir, SpecialInfo.Buffer), FileMode.Create);
+                            fs.Write(internalBufferArray, 0, internalBufferArray.Length);
                         }
 
                         Length += internalBufferArray.Length;

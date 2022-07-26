@@ -25,7 +25,8 @@ namespace DogScepterLib.Project
         {
             DataFileMismatch,
             MissingAsset,
-            MissingAudioGroup
+            MissingAudioGroup,
+            CodeCompilationFailure
         }
         public delegate void Warning(WarningType type, string info = null);
 
@@ -49,6 +50,7 @@ namespace DogScepterLib.Project
         public AssetRefList<AssetPath> Paths { get; set; } = new();
         public AssetRefList<AssetObject> Objects { get; set; } = new();
         public AssetRefList<AssetRoom> Rooms { get; set; } = new();
+        public AssetRefList<AssetCode> Code { get; set; } = new();
 
         public Dictionary<int, GMChunkAUDO> _CachedAudioChunks;
         public Textures InternalTextures = null;
@@ -111,6 +113,7 @@ namespace DogScepterLib.Project
             new PathConverter(),
             new ObjectConverter(),
             new RoomConverter(),
+            new CodeConverter(),
         };
 
         public readonly static Dictionary<Type, Type> AssetTypeConverter = new Dictionary<Type, Type>()
@@ -122,6 +125,7 @@ namespace DogScepterLib.Project
             { typeof(AssetObject), typeof(ObjectConverter) },
             { typeof(AssetPath), typeof(PathConverter) },
             { typeof(AssetRoom), typeof(RoomConverter) },
+            { typeof(AssetCode), typeof(CodeConverter) },
         };
 
         public T GetConverter<T>() where T : IConverter, new()
@@ -205,6 +209,7 @@ namespace DogScepterLib.Project
             SaveAssets(Paths);
             SaveAssets(Objects);
             SaveAssets(Rooms);
+            SaveAssets(Code);
         }
 
         public void LoadMain()
@@ -267,6 +272,7 @@ namespace DogScepterLib.Project
             LoadAssets(Paths);
             LoadAssets(Objects);
             LoadAssets(Rooms);
+            LoadAssets(Code);
         }
 
         /// <summary>
@@ -587,6 +593,7 @@ namespace DogScepterLib.Project
             { typeof(AssetObject), "Objects" },
             { typeof(AssetPath), "Paths" },
             { typeof(AssetRoom), "Rooms" },
+            { typeof(AssetCode), "Code" },
         };
         public readonly static HashSet<Type> AssetUsesFolder = new HashSet<Type>()
         {
@@ -594,10 +601,9 @@ namespace DogScepterLib.Project
             typeof(AssetBackground),
             typeof(AssetSprite),
             typeof(AssetFont),
-
-            // Code entries not implemented yet, will be eventually
             typeof(AssetObject), 
-            typeof(AssetRoom)
+            typeof(AssetRoom),
+            typeof(AssetCode),
         };
 
         public ProjectJson()

@@ -255,6 +255,9 @@ public static class ProjectShell
             case "rooms":
                 AddAsset(console, args[2], projectFile.Rooms, projectFile);
                 break;
+            case "code":
+                AddAsset(console, args[2], projectFile.Code, projectFile);
+                break;
             default:
                 return Command.CommandResult.InvalidSyntax;
         }
