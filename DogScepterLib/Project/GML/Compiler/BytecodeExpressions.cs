@@ -20,16 +20,16 @@ public static partial class Bytecode
                 CompileFunctionCall(ctx, expr, false);
                 break;
             case NodeKind.Variable:
-                CompileVariable(ctx, expr);
+                CompileVariable(ctx, expr, false);
                 break;
             case NodeKind.ChainReference:
                 CompileChain(ctx, expr);
                 break;
             case NodeKind.Prefix:
-                // TODO
+                CompilePrefixAndPostfix(ctx, expr, true, true);
                 break;
             case NodeKind.Postfix:
-                // TODO
+                CompilePrefixAndPostfix(ctx, expr, true, false);
                 break;
             case NodeKind.Conditional:
                 {
@@ -54,6 +54,7 @@ public static partial class Bytecode
                 break;
             case NodeKind.NullCoalesce:
                 // TODO
+                ctx.Error("Unsupported", -1);
                 break;
             case NodeKind.Binary:
                 CompileBinary(ctx, expr);
@@ -404,37 +405,50 @@ public static partial class Bytecode
         CompileExpression(ctx, chain.Children[0]);
 
         // Compile right side separately
-        switch (chain.Children[1].Kind)
+        Node rhs = chain.Children[1];
+        if (rhs.Kind == NodeKind.Variable)
         {
-            case NodeKind.Variable:
-                ConvertToInstance(ctx);
+            ConvertToInstance(ctx);
 
-                var variable = chain.Children[1].Token.Value as TokenVariable;
-                variable.VariableType = VariableType.StackTop;
-                EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
-
-                ctx.TypeStack.Push(DataType.Variable);
-                break;
-            case NodeKind.FunctionCall:
-                if (ConvertTo(ctx, DataType.Variable))
-                    EmitCall(ctx, Opcode.Call, DataType.Int32, Builtins.MakeFuncToken(ctx, "@@GetInstance@@"), 1);
-                CompileFunctionCall(ctx, chain.Children[1], true);
-                break;
-            // todo, arrays
-            default:
-                ctx.Error("Unsupported", chain.Children[1].Token);
-                break;
+            (rhs.Token.Value as TokenVariable).VariableType = VariableType.StackTop;
+            CompileVariable(ctx, rhs, true);
+        } 
+        else if (rhs.Kind == NodeKind.FunctionCall)
+        {
+            if (ConvertTo(ctx, DataType.Variable))
+                EmitCall(ctx, Opcode.Call, DataType.Int32, Builtins.MakeFuncToken(ctx, "@@GetInstance@@"), 1);
+            CompileFunctionCall(ctx, rhs, true);
         }
+        else
+            ctx.Error("Unsupported chain variable", rhs.Token);
     }
 
-    private static void CompileVariable(CodeContext ctx, Node variable)
+    private static void CompileVariable(CodeContext ctx, Node variable, bool inChain)
     {
-        // todo, arrays here
-
         TokenVariable tokenVar = variable.Token.Value as TokenVariable;
 
-        // Process variable and instance type
-        ProcessTokenVariable(ctx, ref tokenVar);
+        if (!inChain)
+        {
+            // Process variable and instance type
+            ProcessTokenVariable(ctx, ref tokenVar);
+        }
+
+        if (variable.Children.Count != 0)
+        {
+            if (!inChain)
+            {
+                // Compile instance type
+                CompileConstant(ctx, new TokenConstant((double)tokenVar.InstanceType));
+                ConvertToInstance(ctx);
+            }
+
+            // Deal with array index
+            CompileExpression(ctx, variable.Children[0]);
+            ConvertTo(ctx, DataType.Int32);
+
+            tokenVar.VariableType = (variable.Children.Count == 1 ? VariableType.Array : VariableType.MultiPush);
+            tokenVar.InstanceType = (int)InstanceType.Self;
+        }
 
         // Emit actual push instruction
         var opcode = tokenVar.InstanceType switch
@@ -446,5 +460,30 @@ public static partial class Bytecode
         };
         EmitVariable(ctx, opcode, DataType.Variable, tokenVar);
         ctx.TypeStack.Push(DataType.Variable);
+
+        if (variable.Children.Count >= 2)
+            CompileMultiArrayPush(ctx, variable);
+    }
+
+    private static void CompileMultiArrayPush(CodeContext ctx, Node variable)
+    {
+        for (int i = 1; i < variable.Children.Count; i++)
+        {
+            // Push next array index to stack
+            CompileExpression(ctx, variable.Children[i]);
+            ConvertTo(ctx, DataType.Int32);
+
+            // Actual array access instructions
+            if (i == variable.Children.Count - 1)
+            {
+                // For the last one, pushaf
+                EmitBreak(ctx, BreakType.pushaf);
+            }
+            else
+            {
+                // For every other one, pushac
+                EmitBreak(ctx, BreakType.pushac);
+            }
+        }
     }
 }

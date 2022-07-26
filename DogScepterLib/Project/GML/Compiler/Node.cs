@@ -104,8 +104,8 @@ public class NodeFunctionInfo : INodeInfo
     public List<string> LocalVars { get; set; }
     public List<string> StaticVars { get; set; }
     public List<string> Arguments { get; set; }
-    public int InheritingIndex { get; set; }
-    public int OptionalArgsIndex { get; set; }
+    public int InheritingIndex { get; set; } = -1;
+    public int OptionalArgsIndex { get; set; } = -1;
 
     public NodeFunctionInfo(FunctionReference reference, bool isConstructor, List<string> localVars, List<string> staticVars, List<string> arguments)
     {

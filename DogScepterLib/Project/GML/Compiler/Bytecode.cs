@@ -452,7 +452,7 @@ public static partial class Bytecode
                 break;
             case NodeKind.Postfix:
             case NodeKind.Prefix:
-                CompilePrefix(ctx, stmt, false);
+                CompilePrefixAndPostfix(ctx, stmt, false, true);
                 break;
         }
     }
@@ -528,7 +528,7 @@ public static partial class Bytecode
             };
             ProcessTokenVariable(ctx, ref tokenVar);
             newVariable.Token.Value = tokenVar;
-            CompileVariable(ctx, newVariable);
+            CompileVariable(ctx, newVariable, false);
             ctx.TypeStack.Pop();
 
             // Actual call instruction
@@ -654,8 +654,6 @@ public static partial class Bytecode
                 if (lhs.Children.Count > 1)
                 {
                     // 2d array or above
-                    if (!ctx.BaseContext.IsGMS23)
-                        ctx.Error("Chained array usage not supported pre-2.3", lhs.Token);
                     variable.VariableType = VariableType.MultiPushPop;
                     if (ctx.BaseContext.IsGMS23)
                         variable.InstanceType = (int)InstanceType.Self;
@@ -767,8 +765,44 @@ public static partial class Bytecode
 
         if (lhs.Kind == NodeKind.Variable)
         {
+            var variable = lhs.Token.Value as TokenVariable;
+            ProcessTokenVariable(ctx, ref variable);
+
+            if (lhs.Children.Count != 0)
+            {
+                // Array
+
+                // Compile instance type
+                CompileConstant(ctx, new TokenConstant((double)variable.InstanceType));
+                ConvertToInstance(ctx);
+
+                // Deal with array index
+                CompileExpression(ctx, lhs.Children[0]);
+                ConvertTo(ctx, DataType.Int32);
+
+                if (lhs.Children.Count == 1)
+                {
+                    // This is a 1d array, so just use dup shenanigans instead of other instructions
+                    EmitDup(ctx, DataType.Int32, (byte)1);
+
+                    // Array variable uses array type
+                    variable.VariableType = VariableType.Array;
+                }
+                else
+                {
+                    // Multi-dimensional array variable uses array type
+                    variable.VariableType = VariableType.MultiPushPop;
+                }
+            }
+
             // Push original variable value
-            EmitVariable(ctx, Opcode.Push, DataType.Variable, lhs.Token.Value as TokenVariable);
+            EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
+
+            if (lhs.Children.Count >= 2)
+            {
+                // Deal with multi-dimensional arrays
+                CompileMultiArrayCombined(ctx, lhs);
+            }
 
             // Push expression and convert to necessary data types
             CompileExpression(ctx, expr);
@@ -790,10 +824,18 @@ public static partial class Bytecode
             // Actual specific operation
             Emit(ctx, opcode, type, DataType.Variable);
 
-            // Store result in original variable
-            TokenVariable tokenVar = lhs.Token.Value as TokenVariable;
-            ProcessTokenVariable(ctx, ref tokenVar);
-            EmitVariable(ctx, Opcode.Pop, DataType.Variable, tokenVar, DataType.Variable);
+            if (lhs.Children.Count >= 2)
+            {
+                // Store multi-dimensional array
+                EmitBreak(ctx, BreakType.restorearef);
+                EmitDupSwap(ctx, DataType.Int32, 4, 5);
+                EmitBreak(ctx, BreakType.popaf);
+            }
+            else
+            {
+                // Store result in original variable
+                EmitVariable(ctx, Opcode.Pop, type, variable, DataType.Variable);
+            }
         }
         else if (lhs.Kind == NodeKind.ChainReference)
         {
@@ -811,12 +853,43 @@ public static partial class Bytecode
             // Compile end of chain separately
             bool usedMagic = (ConvertToInstance(ctx) == 2);
 
-            // Need to duplicate the instance on the stack
-            EmitDup(ctx, DataType.Int32, usedMagic ? (byte)4 : (byte)0);
+            if (end.Children.Count != 0)
+            {
+                // Deal with array index
+                CompileExpression(ctx, end.Children[0]);
+                ConvertTo(ctx, DataType.Int32);
+
+                if (end.Children.Count == 1)
+                {
+                    // This is a 1d array, so just use dup shenanigans instead of other instructions
+                    EmitDup(ctx, DataType.Int32, usedMagic ? (byte)5 : (byte)1);
+
+                    // Array variable uses array type
+                    variable.VariableType = VariableType.Array;
+                }
+                else
+                {
+                    // Multi-dimensional array variable uses array type
+                    variable.VariableType = VariableType.MultiPushPop;
+                }
+            }
+            else
+            {
+                // Need to duplicate the instance on the stack
+                EmitDup(ctx, DataType.Int32, usedMagic ? (byte)4 : (byte)0);
+
+                // Normal variable uses stacktop type
+                variable.VariableType = VariableType.StackTop;
+            }
 
             // Push original variable value, finally
-            variable.VariableType = VariableType.StackTop;
             EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
+
+            if (end.Children.Count >= 2)
+            {
+                // Deal with multi-dimensional arrays
+                CompileMultiArrayCombined(ctx, end);
+            }
 
             // Push expression and convert to necessary data types
             CompileExpression(ctx, expr);
@@ -838,94 +911,243 @@ public static partial class Bytecode
             // Actual specific operation
             Emit(ctx, opcode, type, DataType.Variable);
 
-            // Store result in original variable
-            EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, DataType.Variable);
+            if (expr.Children.Count >= 2)
+            {
+                // Store multi-dimensional array
+                EmitBreak(ctx, BreakType.restorearef);
+                EmitDupSwap(ctx, DataType.Int32, 4, 5);
+                EmitBreak(ctx, BreakType.popaf);
+            }
+            else
+            {
+                // Store result in original variable
+                EmitVariable(ctx, Opcode.Pop, type, variable, DataType.Variable);
+            }
         }
         else
             ctx.Error("Unsupported compound assignment", lhs.Token);
     }
 
-    private static void CompilePrefix(CodeContext ctx, Node prefix, bool leaveOnStack)
+    private static void CompilePrePostOperation(CodeContext ctx, Node node)
     {
-        Node expr = prefix.Children[0];
+        // Push int16 1 (special instruction here)
+        Emit(ctx, Opcode.Push, DataType.Int16).Value = (short)1;
+
+        // Actual operation
+        if (node.Token.Kind == TokenKind.Increment)
+            Emit(ctx, Opcode.Add, DataType.Int32, DataType.Variable);
+        else
+            Emit(ctx, Opcode.Sub, DataType.Int32, DataType.Variable);
+    }
+
+    private static void CompilePrefixAndPostfix(CodeContext ctx, Node node, bool leaveOnStack, bool isPrefix)
+    {
+        Node expr = node.Children[0];
 
         if (expr.Kind == NodeKind.Variable)
         {
-            // Push original variable value
             var variable = expr.Token.Value as TokenVariable;
+            ProcessTokenVariable(ctx, ref variable);
+            if (expr.Children.Count == 0)
+            {
+                // Push original variable value
+                EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
+
+                if (!isPrefix)
+                {
+                    if (leaveOnStack)
+                    {
+                        // Duplicate value to leave it on stack
+                        EmitDup(ctx, DataType.Variable, 0);
+                        ctx.TypeStack.Push(DataType.Variable);
+                    }
+                }
+
+                // Actual operation
+                CompilePrePostOperation(ctx, node);
+
+                if (isPrefix)
+                {
+                    if (leaveOnStack)
+                    {
+                        // Duplicate value to leave it on stack
+                        EmitDup(ctx, DataType.Variable, 0);
+                        ctx.TypeStack.Push(DataType.Variable);
+                    }
+                }
+
+                // Store result into original variable
+                EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, DataType.Variable);
+            }
+            else
+            {
+                // Variable with array
+
+                // Compile instance type
+                CompileConstant(ctx, new TokenConstant((double)variable.InstanceType));
+                ConvertToInstance(ctx);
+
+                // Array index
+                CompileExpression(ctx, expr.Children[0]);
+                ConvertTo(ctx, DataType.Int32);
+
+                if (expr.Children.Count > 1)
+                {
+                    // 2d array or above
+                    variable.VariableType = VariableType.MultiPushPop;
+                    if (ctx.BaseContext.IsGMS23)
+                        variable.InstanceType = (int)InstanceType.Self;
+                    EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
+                    CompileMultiArrayPrefix(ctx, expr);
+                }
+                else
+                {
+                    // 1d array
+                    EmitDup(ctx, DataType.Int32, (byte)1);
+                    variable.VariableType = VariableType.Array;
+                    if (ctx.BaseContext.IsGMS23)
+                        variable.InstanceType = (int)InstanceType.Self;
+                    EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
+                }
+
+                // Push int16 1 (special instruction here)
+                Emit(ctx, Opcode.Push, DataType.Int16).Value = (short)1;
+
+                // Actual operation
+                if (node.Token.Kind == TokenKind.Increment)
+                    Emit(ctx, Opcode.Add, DataType.Int32, DataType.Variable);
+                else
+                    Emit(ctx, Opcode.Sub, DataType.Int32, DataType.Variable);
+
+                if (leaveOnStack)
+                {
+                    // Duplicate value to leave it on stack
+                    EmitDup(ctx, DataType.Variable, 0);
+                    if (ctx.BaseContext.IsGMS23)
+                    {
+                        if (expr.Children.Count == 1)
+                            EmitDupSwap(ctx, DataType.Int32, 4, (byte)6); // 1d array
+                        else if (expr.Children.Count >= 2)
+                            EmitDupSwap(ctx, DataType.Int32, 4, 9); // multi-dimensional array
+                        else
+                            EmitDupSwap(ctx, DataType.Int32, 4, (byte)5); // normal variable
+                    }
+                    else
+                    {
+                        // pre-2.3 swap instruction
+                        Emit(ctx, Opcode.Pop, DataType.Int16, DataType.Variable).TypeInst = (InstanceType)5;
+                    }
+                    ctx.TypeStack.Push(DataType.Variable);
+                }
+
+                if (expr.Children.Count >= 2)
+                {
+                    // Store multi-dimensional array
+                    EmitDupSwap(ctx, DataType.Int32, 4, 5);
+                    EmitBreak(ctx, BreakType.popaf);
+                }
+                else
+                {
+                    // Store result in original variable
+                    EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, DataType.Int32);
+                }
+            }
+        }
+        else if (expr.Kind == NodeKind.ChainReference)
+        {
+            Node end = expr.Children[1];
+            if (end.Kind != NodeKind.Variable)
+            {
+                ctx.Error("Invalid end of chain reference", end.Token);
+                return;
+            }
+            var variable = end.Token.Value as TokenVariable;
+
+            // Compile left side of dot first
+            CompileExpression(ctx, expr.Children[0]);
+
+            // Compile end of chain separately
+            bool usedMagic = (ConvertToInstance(ctx) == 2);
+
+            if (end.Children.Count != 0)
+            {
+                // Deal with array index
+                CompileExpression(ctx, end.Children[0]);
+                ConvertTo(ctx, DataType.Int32);
+
+                if (end.Children.Count == 1)
+                {
+                    // This is a 1d array, so just use dup shenanigans instead of other instructions
+                    EmitDup(ctx, DataType.Int32, usedMagic ? (byte)5 : (byte)1);
+
+                    // Array variable uses array type
+                    variable.VariableType = VariableType.Array;
+                }
+                else
+                {
+                    // Multi-dimensional array variable uses array type
+                    variable.VariableType = VariableType.MultiPushPop;
+                }
+            }
+            else
+            {
+                // Need to duplicate the instance on the stack
+                EmitDup(ctx, DataType.Int32, usedMagic ? (byte)4 : (byte)0);
+
+                // Normal variable uses stacktop type
+                variable.VariableType = VariableType.StackTop;
+            }
+
+            // Push original variable value, finally
             EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
 
-            // Push int16 1 (special instruction here)
-            Emit(ctx, Opcode.Push, DataType.Int16).Value = (short)1;
+            if (end.Children.Count >= 2)
+            {
+                // Deal with multi-dimensional arrays
+                CompileMultiArrayPrefix(ctx, end);
+            }
 
-            // Actual operation
-            if (prefix.Token.Kind == TokenKind.Increment)
-                Emit(ctx, Opcode.Add, DataType.Int32, DataType.Variable);
-            else
-                Emit(ctx, Opcode.Sub, DataType.Int32, DataType.Variable);
+            if (isPrefix)
+                CompilePrePostOperation(ctx, node);
 
             if (leaveOnStack)
             {
                 // Duplicate value to leave it on stack
                 EmitDup(ctx, DataType.Variable, 0);
+                if (ctx.BaseContext.IsGMS23)
+                {
+                    if (end.Children.Count == 1)
+                        EmitDupSwap(ctx, DataType.Int32, 4, usedMagic ? (byte)10 : (byte)6); // 1d array
+                    else if (end.Children.Count >= 2)
+                        EmitDupSwap(ctx, DataType.Int32, 4, 9); // multi-dimensional array
+                    else
+                        EmitDupSwap(ctx, DataType.Int32, 4, usedMagic ? (byte)9 : (byte)5); // normal variable
+                }
+                else
+                {
+                    // pre-2.3 swap instruction
+                    Emit(ctx, Opcode.Pop, DataType.Int16, DataType.Variable).TypeInst = (InstanceType)5;
+                }
                 ctx.TypeStack.Push(DataType.Variable);
             }
 
-            // Store result into original variable
-            EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, DataType.Variable);
-        }
-        else if (expr.Kind == NodeKind.ChainReference)
-        {
-            // Compile left side of dot first
-            CompileExpression(ctx, expr.Children[0]);
+            if (!isPrefix)
+                CompilePrePostOperation(ctx, node);
 
-            // Compile end of chain separately
-            switch (expr.Children[1].Kind)
+            if (end.Children.Count >= 2)
             {
-                case NodeKind.Variable:
-                    bool usedMagic = (ConvertToInstance(ctx) == 2);
-
-                    // Need to duplicate the instance on the stack
-                    EmitDup(ctx, DataType.Int32, usedMagic ? (byte)4 : (byte)0);
-
-                    // Push original variable value, finally
-                    var variable = expr.Children[1].Token.Value as TokenVariable;
-                    variable.VariableType = VariableType.StackTop;
-                    EmitVariable(ctx, Opcode.Push, DataType.Variable, variable);
-
-                    // Push int16 1 (special instruction here)
-                    Emit(ctx, Opcode.Push, DataType.Int16).Value = (short)1;
-
-                    // Actual operation
-                    if (prefix.Token.Kind == TokenKind.Increment)
-                        Emit(ctx, Opcode.Add, DataType.Int32, DataType.Variable);
-                    else
-                        Emit(ctx, Opcode.Sub, DataType.Int32, DataType.Variable);
-
-                    if (leaveOnStack)
-                    {
-                        // Duplicate value to leave it on stack
-                        EmitDup(ctx, DataType.Variable, 0);
-                        if (ctx.BaseContext.IsGMS23)
-                            EmitDupSwap(ctx, DataType.Int32, 4, usedMagic ? (byte)9 : (byte)5);
-                        else
-                        {
-                            // pre-2.3 swap instruction
-                            Emit(ctx, Opcode.Pop, DataType.Int16, DataType.Variable).TypeInst = (InstanceType)5;
-                        }
-                        ctx.TypeStack.Push(DataType.Variable);
-                    }
-
-                    // Store result in original variable
-                    EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, DataType.Int32);
-                    break;
-                default:
-                    ctx.Error("Unsupported prefix operation", expr.Children[1].Token);
-                    break;
+                // Store multi-dimensional array
+                EmitDupSwap(ctx, DataType.Int32, 4, 5);
+                EmitBreak(ctx, BreakType.popaf);
+            }
+            else
+            {
+                // Store result in original variable
+                EmitVariable(ctx, Opcode.Pop, DataType.Variable, variable, DataType.Int32);
             }
         }
         else
-            ctx.Error("Unsupported prefix operation #2", expr.Token);
+            ctx.Error("Unsupported prefix operation", expr.Token);
     }
 
     private static void CompileMultiArrayPop(CodeContext ctx, Node variable)
@@ -941,6 +1163,53 @@ public static partial class Bytecode
             {
                 // For the last one, pop
                 EmitBreak(ctx, BreakType.popaf);
+            }
+            else
+            {
+                // For every other one, push
+                EmitBreak(ctx, BreakType.pushac);
+            }
+        }
+    }
+
+    private static void CompileMultiArrayPrefix(CodeContext ctx, Node variable)
+    {
+        for (int i = 1; i < variable.Children.Count; i++)
+        {
+            // Push next array index to stack
+            CompileExpression(ctx, variable.Children[i]);
+            ConvertTo(ctx, DataType.Int32);
+
+            // Actual array access instructions
+            if (i == variable.Children.Count - 1)
+            {
+                // For the last one, use a dup and pushaf
+                EmitDup(ctx, DataType.Int32, (byte)4);
+                EmitBreak(ctx, BreakType.pushaf);
+            }
+            else
+            {
+                // For every other one, push
+                EmitBreak(ctx, BreakType.pushac);
+            }
+        }
+    }
+
+    private static void CompileMultiArrayCombined(CodeContext ctx, Node variable)
+    {
+        for (int i = 1; i < variable.Children.Count; i++)
+        {
+            // Push next array index to stack
+            CompileExpression(ctx, variable.Children[i]);
+            ConvertTo(ctx, DataType.Int32);
+
+            // Actual array access instructions
+            if (i == variable.Children.Count - 1)
+            {
+                // For the last one, use a dup and pushaf
+                EmitDup(ctx, DataType.Int32, (byte)4);
+                EmitBreak(ctx, BreakType.savearef);
+                EmitBreak(ctx, BreakType.pushaf);
             }
             else
             {
@@ -1074,10 +1343,13 @@ public static partial class Bytecode
             EmitDup(ctx, DataType.Variable, 0);
             ctx.TypeStack.Push(DataType.Variable);
 
-            // For some reason storing here happens with a -6 (builtin?) instance
+            // For some reason storing here happens with a -6 (builtin?) instance, or -16 (static?) instance
             // Need to build a chain node for that, I guess...?
             Node store = new(NodeKind.ChainReference);
-            store.Children.Add(new(NodeKind.Constant, new Token(ctx, new TokenConstant((double)-6), -1)));
+            if ((func.Children[0].Token.Value as TokenVariable).InstanceType == (int)InstanceType.Static)
+                store.Children.Add(new(NodeKind.Constant, new Token(ctx, new TokenConstant((double)-16), -1)));
+            else
+                store.Children.Add(new(NodeKind.Constant, new Token(ctx, new TokenConstant((double)-6), -1)));
             store.Children.Add(func.Children[0]);
             CompileAssign(ctx, store);
         }

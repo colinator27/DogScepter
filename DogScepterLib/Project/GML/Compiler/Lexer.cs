@@ -621,14 +621,22 @@ public class Lexer
         StringBuilder sb = new();
         char startChar = ctx.Code[ctx.Position++];
 
+        bool finished = false;
+
         while (ctx.Position < ctx.Code.Length)
         {
             char c = ctx.Code[ctx.Position];
-            if (c == startChar)
-                break;
-            sb.Append(c);
             ctx.Position++;
+            if (c == startChar)
+            {
+                finished = true;
+                break;
+            }
+            sb.Append(c);
         }
+
+        if (!finished)
+            ctx.Error("Unenclosed string", startPosition);
 
         return new Token(ctx, new TokenConstant(sb.ToString()), startPosition);
     }
@@ -637,6 +645,8 @@ public class Lexer
     {
         int startPosition = ctx.Position++;
 
+        bool finished = false;
+
         StringBuilder sb = new();
         while (ctx.Position < ctx.Code.Length)
         {
@@ -644,6 +654,7 @@ public class Lexer
             if (c == '"')
             {
                 ctx.Position++;
+                finished = true;
                 break;
             }
             if (c == '\\')
@@ -774,6 +785,9 @@ public class Lexer
                 ctx.Position++;
             }
         }
+
+        if (!finished)
+            ctx.Error("Unenclosed string", startPosition);
 
         return new Token(ctx, new TokenConstant(sb.ToString()), startPosition);
     }

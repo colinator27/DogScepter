@@ -251,7 +251,7 @@ public static class Disassembler
     private static string StringifyVariableRef(Reference<GMVariable> var)
     {
         if (var.Type != VariableType.Normal)
-            return $"({var.Type.ToString().ToLower()}){var.Target.Name.Content}";
+            return $"[{var.Type.ToString().ToLower()}]{var.Target.VariableType.ToString().ToLower()}.{var.Target.Name.Content}";
         else
             return var.Target.Name.Content;
     }

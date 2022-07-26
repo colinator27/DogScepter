@@ -236,6 +236,12 @@ public class Parser
                 ctx.Position++;
                 assign.Children.Add(ParseExpression(ctx));
                 return assign;
+            case TokenKind.Increment:
+                // This is a ++ after a chain, so this is just postfix
+                Node postfix = new(NodeKind.Postfix, curr);
+                postfix.Children.Add(left);
+                ctx.Position++;
+                return postfix;
         }
 
         if (left.Kind != NodeKind.FunctionCall && left.Kind != NodeKind.FunctionCallChain &&
@@ -280,7 +286,7 @@ public class Parser
                 }
             }
 
-            // Check for postfix and function calls
+            // Check for function calls
             // todo
         }
         while (ctx.Tokens[ctx.Position].Kind == TokenKind.Dot);
@@ -759,15 +765,17 @@ public class Parser
 
     private static Node ParseStruct(CodeContext ctx)
     {
-        Node res = new(NodeKind.FunctionCall, new Token(ctx, TokenKind.FunctionCall, -1) { Value = Builtins.MakeFuncToken(ctx, "@@NewGMLArray@@") });
+        Node res = new(NodeKind.FunctionCall, new Token(ctx, TokenKind.FunctionCall, -1) { Value = Builtins.MakeFuncToken(ctx, "@@NewGMLObject@@") });
         Node decl = new(NodeKind.FunctionDecl, ctx.Tokens[ctx.Position++]);
         res.Children.Add(decl);
         string structFuncName = $"___struct___{++ctx.BaseContext.Project.DataHandle.Stats.LastStructID}";
         decl.Children.Add(new Node(NodeKind.Variable,
                                     new Token(ctx, TokenKind.Variable, -1)
                                     {
-                                        Value = new TokenVariable(structFuncName, null),
-                                        ID = -16 // static
+                                        Value = new TokenVariable(structFuncName, null)
+                                        {
+                                            InstanceType = (int)InstanceType.Static
+                                        }
                                     }));
         decl.Children.Add(new Node(NodeKind.Group)); // no arguments
         Node body = new(NodeKind.Block);
@@ -803,7 +811,7 @@ public class Parser
             Token name = ExpectToken(ctx, TokenKind.Variable, "variable name");
             if (name != null)
             {
-                name.ID = -1; // self
+                (name.Value as TokenVariable).InstanceType = (int)InstanceType.Self;
                 assign.Children.Add(new Node(NodeKind.Variable, name));
             }
 
