@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static DogScepterLib.Core.Chunks.GMChunkGEN8;
 
 namespace DogScepterLib.Project.GML.Compiler;
 
@@ -35,17 +36,18 @@ public class BuiltinFunction
     public string Name { get; init; }
     public int ArgumentCount { get; init; }
     public int ID { get; init; }
-    // todo: function classifications?
+    public FunctionClassification Classification { get; init; }
 
-    public BuiltinFunction(Builtins ctx, string name, int argumentCount)
+    public BuiltinFunction(Builtins ctx, string name, int argumentCount, FunctionClassification classification)
     {
         Name = name;
         ArgumentCount = argumentCount;
         ID = ctx.ID++;
+        Classification = classification;
     }
 }
 
-public class Builtins
+public partial class Builtins
 {
     public CompileContext Context { get; set; }
 
@@ -54,6 +56,7 @@ public class Builtins
     public Dictionary<string, BuiltinVariable> VarGlobalArray { get; init; } = new();
     public Dictionary<string, BuiltinVariable> VarInstance { get; init; } = new();
     public Dictionary<string, BuiltinFunction> Functions { get; init; } = new();
+    public List<string> Arguments { get; init; } = new();
 
     public int ID = 0;
 
@@ -64,33 +67,6 @@ public class Builtins
         // Should always have ID 0
         VarGlobalDefine("undefined", false);
 
-        VarInstanceDefine("x");
-        VarInstanceDefine("y");
-
-        FunctionDefine("show_message", 1);
-        FunctionDefine("show_debug_message", 1);
-        FunctionDefine("room_goto", 1);
-
-        FunctionDefine("@@This@@", 0);
-        FunctionDefine("@@Other@@", 0);
-        FunctionDefine("@@Global@@", 0);
-        FunctionDefine("@@NewGMLArray@@", -1);
-        FunctionDefine("@@NewGMLObject@@", -1);
-        FunctionDefine("@@NullObject@@", 0);
-        FunctionDefine("@@CopyStatic@@", 1);
-        FunctionDefine("@@GetInstance@@", 1);
-
-        FunctionDefine("variable_global_set", 2);
-        FunctionDefine("get_integer", 2);
-
-        FunctionDefine("ord", 1);
-        FunctionDefine("chr", 1);
-        FunctionDefine("int64", 1);
-        FunctionDefine("real", 1);
-        FunctionDefine("string", 1);
-
-        FunctionDefine("method", 2);
-
         ConstantDefine("self", -1);
         ConstantDefine("other", -2);
         ConstantDefine("all", -3);
@@ -98,6 +74,20 @@ public class Builtins
         ConstantDefine("global", -5);
         ConstantDefine("false", 0);
         ConstantDefine("true", 1);
+
+        FunctionDefine("@@NullObject@@", 0, FunctionClassification.None);
+        FunctionDefine("@@CopyStatic@@", 1, FunctionClassification.None);
+
+        for (int i = 0; i <= 15; i++)
+            Arguments.Add($"argument{i}");
+        Arguments.Add("argument");
+        if (!ctx.IsGMS23)
+        {
+            foreach (string arg in Arguments)
+                VarInstanceDefine(arg);
+        }
+
+        InitializeData(ctx.IsGMS2);
     }
 
     private void VarGlobalDefine(string name, bool canSet = true, bool canGet = true)
@@ -110,9 +100,9 @@ public class Builtins
         VarInstance[name] = new BuiltinVariable(this, name, canSet, canGet);
     }
 
-    private void FunctionDefine(string name, int argCount)
+    private void FunctionDefine(string name, int argCount, FunctionClassification classification)
     {
-        Functions[name] = new BuiltinFunction(this, name, argCount);
+        Functions[name] = new BuiltinFunction(this, name, argCount, classification);
     }
 
     private void ConstantDefine(string name, double val)

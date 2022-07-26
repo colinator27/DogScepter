@@ -428,12 +428,20 @@ public static partial class Bytecode
                 tokenVar.InstanceType = (int)InstanceType.Static;
             }
 
-            // Check for argument
-            int argIndex = ctx.ArgumentVars.IndexOf(tokenVar.Name);
-            if (argIndex != -1)
+            if (ctx.BaseContext.Builtins.Arguments.Contains(tokenVar.Name))
             {
-                tokenVar = new($"argument{argIndex}", null);
+                // This is already an argument
                 tokenVar.InstanceType = (int)InstanceType.Argument;
+            }
+            else
+            {
+                // Check for argument
+                int argIndex = ctx.ArgumentVars.IndexOf(tokenVar.Name);
+                if (argIndex != -1)
+                {
+                    tokenVar = new($"argument{argIndex}", null);
+                    tokenVar.InstanceType = (int)InstanceType.Argument;
+                }
             }
         }
 

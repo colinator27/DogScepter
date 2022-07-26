@@ -17,13 +17,21 @@ public static partial class Bytecode
 
         // Resolve function references
         var func = ctx.BaseContext.Project.DataHandle.GetChunk<GMChunkFUNC>();
+        var gen8 = ctx.BaseContext.Project.DataHandle.GetChunk<GMChunkGEN8>();
         foreach (var p in ctx.FunctionPatches)
         {
             GMFunctionEntry entry;
             if (p.Reference != null)
                 entry = p.Reference.DataEntry;
             else
+            {
+                if (p.Token?.Builtin != null)
+                {
+                    // Update function classifications
+                    gen8.FunctionClassifications |= p.Token.Builtin.Classification;
+                }
                 entry = func.FindOrDefine(p.Token.Name, ctx.BaseContext.Project.DataHandle);
+            }
             p.Target.Function = new Reference<GMFunctionEntry>(entry);
         }
 
