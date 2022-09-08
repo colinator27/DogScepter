@@ -54,13 +54,14 @@ namespace DogScepterLib.Core.Models
         /// Adds a new local to this code local entry.
         /// Updates relevant related information in other locations.
         /// </summary>
-        public void AddLocal(GMData data, string name, GMCode code)
+        public void AddLocal(GMData data, string name, GMCode code = null)
         {
             Entries.Add(new GMLocal(data, Entries, name));
             var vari = data.GetChunk<GMChunkVARI>();
             if (vari.MaxLocalVarCount < Entries.Count)
                 vari.MaxLocalVarCount = Entries.Count;
-            code.LocalsCount = (short)Entries.Count;
+            if (code != null)
+                code.LocalsCount = (short)Entries.Count;
         }
 
         /// <summary>
@@ -71,6 +72,19 @@ namespace DogScepterLib.Core.Models
         {
             Entries.Clear();
             code.LocalsCount = 0;
+        }
+
+        /// <summary>
+        /// Returns the local ID for the local of the given name, or -1 if not found.
+        /// </summary>
+        public int LocalIdByName(string name)
+        {
+            foreach (var local in Entries)
+            {
+                if (local.Name.Content == name)
+                    return local.Index;
+            }   
+            return -1;
         }
 
         public override string ToString()

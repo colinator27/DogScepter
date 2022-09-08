@@ -31,6 +31,13 @@ namespace DogScepterLib.Project.Converters
                 IsScript = isScript,
                 Patches = new()
             };
+            
+            if (isScript && pf.DataHandle.VersionInfo.IsVersionAtLeast(2, 3) &&
+                projectAsset.Name.StartsWith("gml_GlobalScript_"))
+            {
+                // If this entry's name starts with "gml_GlobalScript_", and this is a script, we need to remove it
+                projectAsset.Name = projectAsset.Name["gml_GlobalScript_".Length..];
+            }
 
             string codeString;
             CodeContext.CodeMode mode;
@@ -51,7 +58,7 @@ namespace DogScepterLib.Project.Converters
             {
                 Code = codeString,
                 Mode = mode,
-                Filename = $"{projectAsset.Name[0..Math.Min(projectAsset.Name.Length, 128)]}.gml"
+                Filename = $"{dataAsset.Name.Content[0..Math.Min(dataAsset.Name.Content.Length, 100)]}.gml"
             });
 
             pf.Code[index].Asset = projectAsset;
@@ -59,7 +66,9 @@ namespace DogScepterLib.Project.Converters
 
         public override void ConvertData(ProjectFile pf)
         {
-            var dataCode = pf.DataHandle.GetChunk<GMChunkCODE>().List;
+            var dataCode = pf.DataHandle.GetChunk<GMChunkCODE>()?.List;
+            if (dataCode == null)
+                return;
             for (int i = 0; i < dataCode.Count; i++)
             {
                 GMCode code = dataCode[i];
@@ -71,7 +80,9 @@ namespace DogScepterLib.Project.Converters
 
         public override void ConvertProject(ProjectFile pf)
         {
-            var dataAssets = pf.DataHandle.GetChunk<GMChunkCODE>().List;
+            var dataAssets = pf.DataHandle.GetChunk<GMChunkCODE>()?.List;
+            if (dataAssets == null)
+                return;
 
             CompileContext ctx = null; 
 

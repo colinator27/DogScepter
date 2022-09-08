@@ -152,6 +152,7 @@ public class Parser
     private static void UnsupportedSyntax(CodeContext ctx, Token t)
     {
         ctx.Error("Unsupported syntax", t);
+        ctx.Position++;
     }
 
     private static Node ParseBlock(CodeContext ctx, bool newFuncBegin = false)
@@ -237,7 +238,8 @@ public class Parser
                 assign.Children.Add(ParseExpression(ctx));
                 return assign;
             case TokenKind.Increment:
-                // This is a ++ after a chain, so this is just postfix
+            case TokenKind.Decrement:
+                // This is a ++/-- after a chain, so this is just postfix
                 Node postfix = new(NodeKind.Postfix, curr);
                 postfix.Children.Add(left);
                 ctx.Position++;
@@ -1039,8 +1041,10 @@ public class Parser
         if (ctx.IsScript && !anonymous)
         {
             // Add named function declaration to global scope if this is in a script
-            if (ctx.BaseContext.Functions.TryGetValue(name, out reference))
+            if (ctx.Mode != CodeContext.CodeMode.ReplaceFunctions && ctx.BaseContext.Functions.TryGetValue(name, out reference))
+            {
                 ctx.Error($"Redefining function '{name}'", res.Children[0].Token);
+            }
             else
             {
                 reference = new FunctionReference(ctx.BaseContext, $"gml_Script_{name}", false);

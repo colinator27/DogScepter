@@ -12,6 +12,7 @@ public class CompileContext
     public ProjectFile Project { get; init; }
     public Builtins Builtins { get; init; }
     public List<CodeContext> Code { get; init; } = new();
+    public bool IsOldCodeFormat { get; init; }
     public bool IsGMS2 { get; init; }
     public bool IsGMS23 { get; init; }
     public List<ErrorMessage> Errors { get; init; } = new();
@@ -29,6 +30,7 @@ public class CompileContext
     public CompileContext(ProjectFile pf)
     {
         Project = pf;
+        IsOldCodeFormat = (pf.DataHandle.VersionInfo.FormatID <= 14);
         IsGMS2 = pf.DataHandle.VersionInfo.IsVersionAtLeast(2);
         IsGMS23 = pf.DataHandle.VersionInfo.IsVersionAtLeast(2, 3);
             
@@ -182,10 +184,14 @@ public class CompileContext
     {
         if (IsGMS23)
         {
-            // Add all 2.3 function declarations NOT included in scripts we're compiling now
+            // Add all 2.3 function declarations NOT included in scripts we're compiling now, if we're replacing its contents entirely
             List<string> codeEntryNames = new(Code.Count);
             foreach (var code in Code)
+            {
+                if (code.Mode != CodeContext.CodeMode.Replace)
+                    continue;
                 codeEntryNames.Add(code.Name);
+            }
             foreach (var func in Decompiler.DecompileCache.Find23FunctionsNotIncluded(Project, codeEntryNames))
                 Functions.Add(func.Key, new FunctionReference(func.Value));
 
@@ -293,13 +299,6 @@ public class CompileContext
                         break;
                 }
 
-                // Clear and re-populate locals entry
-                GMLocalsEntry localsEntry = func.FindLocalsEntry(code.Name);
-                localsEntry.ClearLocals(existing);
-                localsEntry.AddLocal(Project.DataHandle, "arguments", existing);
-                foreach (string local in code.ReferencedLocalVars)
-                    localsEntry.AddLocal(Project.DataHandle, local, existing);
-
                 if (Project.DataHandle.VersionInfo.IsVersionAtLeast(2, 3))
                 {
                     // Handle updating function declarations
@@ -310,36 +309,80 @@ public class CompileContext
                         GMCode declCodeEntry = oldChildren.Find(c => c.Name.Content == decl.Reference.Name);
                         if (declCodeEntry == null)
                         {
-                            // Need to make a new entry
-                            declCodeEntry = new()
+                            if (code.Mode == CodeContext.CodeMode.ReplaceFunctions)
                             {
-                                Name = Project.DataHandle.DefineString(decl.Reference.Name),
-                                LocalsCount = (short)decl.LocalCount,
-                                ArgumentsCount = (short)decl.ArgCount,
-                                Length = codeLength,
-                                BytecodeOffset = codeOffset + decl.Offset,
-                                ParentEntry = existing,
-                                BytecodeEntry = existing.BytecodeEntry
-                            };
-                            existing.ChildEntries.Add(declCodeEntry);
+                                if (decl.Parent == null)
+                                {
+                                    // Ignore unreferenced functions
+                                    continue;
+                                }
+                                
+                                // Theoretically by this point, the parent function should have had its bytecode emitted,
+                                // and this includes this sub-function. We just need to add the data referencing it properly now.
+                                declCodeEntry = new()
+                                {
+                                    Name = Project.DataHandle.DefineString(decl.Reference.Name),
+                                    LocalsCount = (short)decl.LocalCount,
+                                    ArgumentsCount = (short)decl.ArgCount,
+                                    Length = 0,
+                                    BytecodeOffset = decl.Parent.InsertedOffset + (decl.Offset - decl.Parent.Offset),
+                                    ParentEntry = existing,
+                                    BytecodeEntry = existing.BytecodeEntry
+                                };
+                                existing.ChildEntries.Add(declCodeEntry);
+                                
+                                if (NameToCode.ContainsKey(decl.Reference.Name))
+                                {
+                                    // There's a conflicting code entry already, outside of this code
+                                    throw new System.Exception($"Code entry with name \"{decl.Reference.Name}\" already exists in game");
+                                }
+                                else
+                                {
+                                    // Add to CODE chunk
+                                    codeChunk.List.Add(declCodeEntry);
 
-                            if (NameToCode.ContainsKey(decl.Reference.Name))
-                            {
-                                // There's a conflicting code entry already, outside of this code
-                                throw new System.Exception($"Code entry with name \"{decl.Reference.Name}\" already exists in game");
+                                    // Add script entry
+                                    scpt.List.Add(new()
+                                    {
+                                        Name = Project.DataHandle.DefineString(decl.Reference.Name),
+                                        CodeID = codeChunk.List.Count - 1,
+                                        Constructor = decl.Constructor
+                                    });
+                                }
                             }
                             else
                             {
-                                // Add to CODE chunk
-                                codeChunk.List.Add(declCodeEntry);
-
-                                // Add script entry
-                                scpt.List.Add(new()
+                                // Need to make a new entry
+                                declCodeEntry = new()
                                 {
                                     Name = Project.DataHandle.DefineString(decl.Reference.Name),
-                                    CodeID = codeChunk.List.Count - 1,
-                                    Constructor = decl.Constructor
-                                });
+                                    LocalsCount = (short)decl.LocalCount,
+                                    ArgumentsCount = (short)decl.ArgCount,
+                                    Length = codeLength,
+                                    BytecodeOffset = codeOffset + decl.Offset,
+                                    ParentEntry = existing,
+                                    BytecodeEntry = existing.BytecodeEntry
+                                };
+                                existing.ChildEntries.Add(declCodeEntry);
+
+                                if (NameToCode.ContainsKey(decl.Reference.Name))
+                                {
+                                    // There's a conflicting code entry already, outside of this code
+                                    throw new System.Exception($"Code entry with name \"{decl.Reference.Name}\" already exists in game");
+                                }
+                                else
+                                {
+                                    // Add to CODE chunk
+                                    codeChunk.List.Add(declCodeEntry);
+
+                                    // Add script entry
+                                    scpt.List.Add(new()
+                                    {
+                                        Name = Project.DataHandle.DefineString(decl.Reference.Name),
+                                        CodeID = codeChunk.List.Count - 1,
+                                        Constructor = decl.Constructor
+                                    });
+                                }
                             }
                         }
                         else
@@ -359,6 +402,42 @@ public class CompileContext
 
                                 // Remove from old children list
                                 oldChildren.Remove(declCodeEntry);
+                            }
+                            else if (code.Mode == CodeContext.CodeMode.ReplaceFunctions)
+                            {
+                                // Find index of first (inclusive) instruction and last (exclusive) instruction
+                                int index = 0;
+                                while (existing.BytecodeEntry.Instructions[index].Address < declCodeEntry.BytecodeOffset - 4)
+                                    index++;
+                                var branchInstruction = existing.BytecodeEntry.Instructions[index];
+                                int oldEndOffset = declCodeEntry.BytecodeOffset + (branchInstruction.JumpOffset * 4) - 4;
+                                int oldStartIndex = ++index;
+                                while (existing.BytecodeEntry.Instructions[index].Address < oldEndOffset)
+                                    index++;
+                                int oldEndIndex = index;
+                                
+                                // Replace instructions in place
+                                decl.InsertedOffset = declCodeEntry.BytecodeOffset;
+                                existing.BytecodeEntry.Instructions.RemoveRange(oldStartIndex, oldEndIndex - oldStartIndex);
+                                existing.BytecodeEntry.Instructions.InsertRange(oldStartIndex, 
+                                    code.Instructions.Skip(decl.StartIndex).Take(decl.EndIndex - decl.StartIndex));
+                                
+                                // Update info
+                                declCodeEntry.LocalsCount = (short)decl.LocalCount;
+                                declCodeEntry.ArgumentsCount = (short)decl.ArgCount;
+                                declCodeEntry.Flags = 0;
+                                
+                                // Update addresses
+                                int newSize = (decl.EndOffset - decl.Offset);
+                                int sizeDifference = newSize - (oldEndOffset - declCodeEntry.BytecodeOffset);
+                                branchInstruction.JumpOffset = (newSize / 4) + 1;
+                                foreach (var child in existing.ChildEntries)
+                                {
+                                    if (child.BytecodeOffset > oldEndOffset)
+                                        child.BytecodeOffset += sizeDifference;
+                                }
+                                for (; index < existing.BytecodeEntry.Instructions.Count; index++)
+                                    existing.BytecodeEntry.Instructions[index].Address += sizeDifference;
                             }
                             else
                             {
@@ -411,10 +490,20 @@ public class CompileContext
                             child.Length = codeLength;
                         }
                     }
+                    else if (code.Mode == CodeContext.CodeMode.ReplaceFunctions)
+                    {
+                        // Update code lengths
+                        codeLength = existing.BytecodeEntry.GetLength() * 4;
+                        foreach (var child in existing.ChildEntries)
+                            child.Length = codeLength;
+                    }
                 }
             }
             else
             {
+                if (code.Mode == CodeContext.CodeMode.ReplaceFunctions)
+                    throw new System.Exception($"Code entry must exist in order for ReplaceFunctions mode to work (\"{code.Name}\").");
+                
                 // This is a new code entry - create it
                 GMCode newEntry = new() 
                 { 
@@ -424,12 +513,9 @@ public class CompileContext
                 newEntry.BytecodeEntry = new(newEntry) { Instructions = code.Instructions };
                 codeChunk.List.Add(newEntry);
 
-                // Add locals entry
-                GMLocalsEntry localsEntry = new(newEntry.Name);
-                func.Locals.Add(localsEntry);
-                localsEntry.AddLocal(Project.DataHandle, "arguments", newEntry);
-                foreach (string local in code.ReferencedLocalVars)
-                    localsEntry.AddLocal(Project.DataHandle, local, newEntry);
+                // Properly finish local variables
+                func.Locals.Add(code.CodeLocals);
+                newEntry.LocalsCount = (short)code.CodeLocals.Entries.Count;
 
                 if (Project.DataHandle.VersionInfo.IsVersionAtLeast(2, 3))
                 {
@@ -501,6 +587,7 @@ public class CodeContext
         Replace,
         InsertBegin,
         InsertEnd,
+        ReplaceFunctions
     }
 
     public CompileContext BaseContext { get; set; }
@@ -533,6 +620,8 @@ public class CodeContext
     public List<Bytecode.StringPatch> StringPatches { get; set; } = new();
     public Stack<Bytecode.Context> BytecodeContexts { get; set; } = new();
     public List<FunctionDeclInfo> FunctionDeclsToRegister { get; set; } = new();
+    public FunctionDeclInfo ParentFunctionDecl { get; set; } = null;
+    public GMLocalsEntry CodeLocals { get; set; } = null;
 
     public CodeContext(CompileContext baseContext, string name, string code, CodeMode mode, bool isScript)
     {
@@ -722,5 +811,10 @@ public record FunctionDeclInfo
     public int LocalCount { get; set; }
     public int ArgCount { get; set; }
     public int Offset { get; set; }
+    public int EndOffset { get; set; }
+    public int StartIndex { get; set; }
+    public int EndIndex { get; set; }
     public bool Constructor { get; set; }
+    public FunctionDeclInfo Parent { get; set; }
+    public int InsertedOffset { get; set; }
 }

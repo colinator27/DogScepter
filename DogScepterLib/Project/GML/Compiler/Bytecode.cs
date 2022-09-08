@@ -35,22 +35,66 @@ public static partial class Bytecode
             p.Target.Function = new Reference<GMFunctionEntry>(entry);
         }
 
-        // Resolve variable references
-        var vari = ctx.BaseContext.Project.DataHandle.GetChunk<GMChunkVARI>();
+        // Handle linking local variables early on
         foreach (var p in ctx.VariablePatches)
         {
-            GMVariable variable = vari.FindOrDefine(p.Token.Name,
-                                                    (InstanceType)p.Token.InstanceType,
-                                                    p.Token.Builtin != null,
-                                                    ctx.BaseContext.Project.DataHandle);
-            p.Target.Variable = new Reference<GMVariable>(variable, p.Token.VariableType);
-            if (p.Token.VariableType == VariableType.Normal)
-                p.Target.TypeInst = (InstanceType)p.Token.InstanceType;
             if (p.Token.InstanceType == (int)InstanceType.Local)
             {
                 if (!ctx.ReferencedLocalVars.Contains(p.Token.Name))
                     ctx.ReferencedLocalVars.Add(p.Token.Name);
             }
+        }
+        GMLocalsEntry localsEntry = null;
+        List<GMVariable> originalReferencedLocals = new();
+        if (ctx.BaseContext.NameToCode.TryGetValue(ctx.Name, out GMCode existing))
+        {
+            // Find locals that were originally referenced
+            foreach (var instruction in existing.BytecodeEntry.Instructions)
+            {
+                if (instruction.Variable != null)
+                {
+                    if (instruction.Variable.Target.VariableType == InstanceType.Local)
+                        originalReferencedLocals.Add(instruction.Variable.Target);
+                }
+            }
+
+            if (!ctx.BaseContext.IsOldCodeFormat)
+            {
+                // Clear and re-populate locals entry
+                localsEntry = func.FindLocalsEntry(ctx.Name);
+                localsEntry.ClearLocals(existing);
+                localsEntry.AddLocal(ctx.BaseContext.Project.DataHandle, "arguments", existing);
+                foreach (string local in ctx.ReferencedLocalVars)
+                    localsEntry.AddLocal(ctx.BaseContext.Project.DataHandle, local, existing);
+                ctx.CodeLocals = localsEntry;
+            }
+        }
+        else if (!ctx.BaseContext.IsOldCodeFormat)
+        {
+            // Add locals entry
+            localsEntry = new(ctx.BaseContext.Project.DataHandle.DefineString(ctx.Name));
+            localsEntry.AddLocal(ctx.BaseContext.Project.DataHandle, "arguments", null);
+            foreach (string local in ctx.ReferencedLocalVars)
+                localsEntry.AddLocal(ctx.BaseContext.Project.DataHandle, local, null);
+            ctx.CodeLocals = localsEntry;
+        }
+
+        // Resolve variable references
+        var vari = ctx.BaseContext.Project.DataHandle.GetChunk<GMChunkVARI>();
+        foreach (var p in ctx.VariablePatches)
+        {
+            GMVariable variable;
+            if (p.Token.InstanceType == (int)InstanceType.Local)
+            {
+                variable = vari.FindOrDefineLocal(p.Token.Name, localsEntry.LocalIdByName(p.Token.Name), ctx.BaseContext.Project.DataHandle, originalReferencedLocals);
+            }
+            else
+            {
+                variable = vari.FindOrDefine(p.Token.Name, (InstanceType)p.Token.InstanceType, p.Token.Builtin != null, ctx.BaseContext.Project.DataHandle);
+            }
+            p.Target.Variable = new Reference<GMVariable>(variable, p.Token.VariableType);
+            if (p.Token.VariableType == VariableType.Normal)
+                p.Target.TypeInst = (InstanceType)p.Token.InstanceType;
         }
     }
 
@@ -1269,6 +1313,7 @@ public static partial class Bytecode
         var outerStaticVars = ctx.StaticVars;
         var outerArgumentVars = ctx.ArgumentVars;
         var outerBytecodeContexts = ctx.BytecodeContexts;
+        var outerParentFunctionDecl = ctx.ParentFunctionDecl;
         bool outerInStatic = ctx.InStaticBlock;
         ctx.LocalVars = info.LocalVars;
         ctx.StaticVars = info.StaticVars;
@@ -1277,14 +1322,18 @@ public static partial class Bytecode
         ctx.InStaticBlock = false;
 
         // Make sure this declaration is linked up for later
-        ctx.FunctionDeclsToRegister.Add(new()
+        FunctionDeclInfo declInfo = new()
         {
             Reference = info.Reference,
             LocalCount = info.LocalVars.Count,
             ArgCount = info.Arguments.Count,
             Offset = ctx.BytecodeLength,
-            Constructor = info.IsConstructor
-        });
+            Constructor = info.IsConstructor,
+            StartIndex = ctx.Instructions.Count,
+            Parent = ctx.ParentFunctionDecl
+        };
+        ctx.FunctionDeclsToRegister.Add(declInfo);
+        ctx.ParentFunctionDecl = declInfo;
 
         if (info.OptionalArgsIndex != -1)
         {
@@ -1314,6 +1363,9 @@ public static partial class Bytecode
         // Actually compile the main function contents
         CompileBlock(ctx, func.Children[^1]);
         Emit(ctx, Opcode.Exit, DataType.Int32);
+        
+        declInfo.EndOffset = ctx.BytecodeLength;
+        declInfo.EndIndex = ctx.Instructions.Count;
 
         // Leaving scope; restore variables from outer scope
         ctx.LocalVars = outerLocalVars;
@@ -1321,6 +1373,7 @@ public static partial class Bytecode
         ctx.ArgumentVars = outerArgumentVars;
         ctx.BytecodeContexts = outerBytecodeContexts;
         ctx.InStaticBlock = outerInStatic;
+        ctx.ParentFunctionDecl = outerParentFunctionDecl;
 
         // Now, after function contents, emit instructions to register the function
         jump.Finish(ctx);

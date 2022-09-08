@@ -20,6 +20,21 @@ public static partial class Bytecode
                 CompileFunctionCall(ctx, expr, false);
                 break;
             case NodeKind.Variable:
+                if (expr.Children.Count == 0)
+                {
+                    TokenVariable tokenVar = expr.Token.Value as TokenVariable;
+                    if (ctx.BaseContext.Builtins.Functions.TryGetValue(tokenVar.Name, out BuiltinFunction builtin) ||
+                        ctx.BaseContext.Functions.ContainsKey(tokenVar.Name))
+                    {
+                        // This is actually a function reference being pushed
+                        TokenFunction tokenFunc = new TokenFunction(tokenVar.Name, builtin);
+                        ctx.BaseContext.Functions.TryGetValue(tokenFunc.Name, out FunctionReference reference);
+                        EmitPushFunc(ctx, tokenFunc, reference);
+                        ctx.TypeStack.Push(DataType.Int32);
+                        break;
+                    }
+                }
+
                 CompileVariable(ctx, expr, false);
                 break;
             case NodeKind.ChainReference:
@@ -456,7 +471,7 @@ public static partial class Bytecode
             (int)InstanceType.Global => Opcode.PushGlb,
             (int)InstanceType.Builtin => Opcode.PushBltn,
             (int)InstanceType.Local => Opcode.PushLoc,
-            _ => ((tokenVar.Builtin == null || !tokenVar.Builtin.IsGlobal) 
+            _ => ((tokenVar.Builtin == null || !tokenVar.Builtin.IsGlobal || tokenVar.VariableType != VariableType.Normal) 
                     ? Opcode.Push : Opcode.PushBltn),
         };
         EmitVariable(ctx, opcode, DataType.Variable, tokenVar);

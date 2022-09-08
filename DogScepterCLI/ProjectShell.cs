@@ -342,6 +342,7 @@ public static class ProjectShell
 
         projectFile.AddAssetsToJSON(list, indices, true);
         projectFile.SaveAssets(list);
+        projectFile.SaveAssets(projectFile.Code);
         projectFile.SaveMain();
 
         console.Output.WriteLine($"Added {indices.Count} assets.");

@@ -6,10 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using System.Drawing.Imaging;
-using System.Drawing.Drawing2D;
 using DogScepterLib.Project.Util;
 using System.IO;
 using Microsoft.Toolkit.HighPerformance;
@@ -496,11 +493,13 @@ namespace DogScepterLib.Project
             var textures = Project.DataHandle.GetChunk<GMChunkTXTR>().List;
             foreach (var group in TextureGroups)
             {
-                foreach (int page in group.Pages)
+                if (group.Pages.Count == 0)
+                    continue;
+
+                var data = textures[0].TextureData;
+                if (data.IsQoi)
                 {
-                    var data = textures[page].TextureData;
-                    if (data.IsQoi)
-                        group.UseQOI = true;
+                    group.UseQOI = true;
                     if (data.IsBZip2)
                         group.UseBZ2 = true;
                 }
@@ -1001,7 +1000,7 @@ namespace DogScepterLib.Project
 
                 var spriteConverter = Project.GetConverter<SpriteConverter>();
                 var bgConverter = Project.GetConverter<BackgroundConverter>();
-                var fntConverter = Project.GetConverter<Converters.FontConverter>();
+                var fntConverter = Project.GetConverter<FontConverter>();
 
                 foreach (var g in TextureGroups)
                 {

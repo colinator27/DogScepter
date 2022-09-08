@@ -21,8 +21,8 @@ public static class NodeProcessor
                     (n.Children[1].Kind == NodeKind.Variable || 
                      n.Children[1].Kind == NodeKind.FunctionCall))
                 {
-                    // Collapse self/other/global when in a single variable
-                    int type = (int)InstanceType.Undefined;
+                    // Collapse self/other/global/object indices when in a single variable
+                    int? type = null;
 
                     TokenConstant c = (n.Children[0].Token.Value as TokenConstant);
                     if (c.Kind == ConstantKind.Number)
@@ -38,16 +38,20 @@ public static class NodeProcessor
                             case -5:
                                 type = (int)InstanceType.Global;
                                 break;
+                            default:
+                                if (c.ValueNumber < short.MaxValue)
+                                    type = (int)c.ValueNumber; // object index
+                                break;
                         }
                     }
-                    if (type != (int)InstanceType.Undefined)
+                    if (type != null)
                     {
                         n = n.Children[1];
 
                         if (n.Kind == NodeKind.Variable)
                         {
                             TokenVariable tokenVar = (n.Token.Value as TokenVariable);
-                            tokenVar.InstanceType = type;
+                            tokenVar.InstanceType = (int)type;
                             tokenVar.ExplicitInstType = true;
                         }
                         else
@@ -76,10 +80,17 @@ public static class NodeProcessor
                 {
                     // Check for local variables
                     if (ctx.LocalVars == null)
-                        break;
+                        break; // don't process the following when in chain variables
+
                     TokenVariable tokenVar = n.Token.Value as TokenVariable;
-                    if (!tokenVar.ExplicitInstType && ctx.LocalVars.Contains(tokenVar.Name))
-                        tokenVar.InstanceType = (int)InstanceType.Local;
+                    if (!tokenVar.ExplicitInstType)
+                    {
+                        if (ctx.LocalVars.Contains(tokenVar.Name))
+                        {
+                            // This is a local variable
+                            tokenVar.InstanceType = (int)InstanceType.Local;
+                        }
+                    }
                 }
                 break;
         }

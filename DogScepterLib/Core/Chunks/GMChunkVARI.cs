@@ -90,11 +90,15 @@ namespace DogScepterLib.Core.Chunks
 
         public GMVariable FindOrDefine(string name, GMCode.Bytecode.Instruction.InstanceType type, bool builtin, GMData data)
         {
+#if DEBUG
+            if (type == GMCode.Bytecode.Instruction.InstanceType.Local)
+                throw new Exception("Use FindOrDefineLocal for local variables");
+#endif
+
             // Search for an existing variable entry
             foreach (var variable in List)
             {
-                if (variable.VariableType == type &&
-                    variable.Name.Content == name)
+                if (variable.VariableType == type && variable.Name.Content == name)
                     return variable;
             }
 
@@ -132,6 +136,34 @@ namespace DogScepterLib.Core.Chunks
             {
                 Name = data.DefineString(name),
                 VariableType = type,
+                VariableID = id
+            };
+            List.Add(res);
+            return res;
+        }
+
+        public GMVariable FindOrDefineLocal(string name, int id, GMData data, List<GMVariable> originalReferencedLocals)
+        {
+            if (data.VersionInfo.FormatID <= 14)
+            {
+                // Search for existing variable
+                foreach (var variable in List)
+                {
+                    if (variable.VariableType == GMCode.Bytecode.Instruction.InstanceType.Local && variable.Name.Content == name)
+                        return variable;
+                }
+            }
+
+            // Attempt to look for original variable to reuse
+            GMVariable original = originalReferencedLocals.Find(v => v.Name.Content == name && v.VariableID == id);
+            if (original != null)
+                return original;
+
+            // Create a new variable, add to list, and return it
+            GMVariable res = new()
+            {
+                Name = data.DefineString(name),
+                VariableType = GMCode.Bytecode.Instruction.InstanceType.Local,
                 VariableID = id
             };
             List.Add(res);

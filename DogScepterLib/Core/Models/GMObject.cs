@@ -131,6 +131,7 @@ public class GMObject : IGMNamedSerializable
                 Friction = physicsProperties.Friction,
                 IsAwake = physicsProperties.IsAwake,
                 IsKinematic = physicsProperties.IsKinematic,
+                Vertices = new()
             };
             foreach (AssetObject.PhysicsVertex v in physicsProperties.Vertices)
                 newPhysics.Vertices.Add(new PhysicsVertex { X = v.X, Y = v.Y });

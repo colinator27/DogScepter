@@ -329,7 +329,8 @@ public static partial class Bytecode
         Instruction res = new(ctx.BytecodeLength)
         {
             Kind = Opcode.Push,
-            Type1 = DataType.Int32
+            Type1 = DataType.Int32,
+            Value = null
         };
 
         ctx.FunctionPatches.Add(new(res, function, reference));

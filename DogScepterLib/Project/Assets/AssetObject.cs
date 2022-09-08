@@ -20,14 +20,14 @@ namespace DogScepterLib.Project.Assets
             /// Whether the asset object uses GameMaker's builtin physics engine.
             /// </summary>
             /// <remarks>The default value in GameMaker for this is <see langword="false"/>.</remarks>
-            public bool IsEnabled;
+            public bool IsEnabled { get; set; }
 
             /// <summary>
             /// Whether this asset object should act as a sensor fixture, which will cause the game
             /// to ignore all other physical properties of this object, and only react to collision events.
             /// </summary>
             /// <remarks>The default value in GameMaker for this is <see langword="false"/>.</remarks>
-            public bool Sensor;
+            public bool Sensor { get; set; }
 
             /// <summary>
             /// The collision shape the asset object uses.
@@ -35,7 +35,7 @@ namespace DogScepterLib.Project.Assets
             /// <remarks>The default value in GameMaker Studio 1 for this is
             /// <see cref="Core.Models.GMObject.PhysicsProperties.CollisionShape.Circle"/> while in Studio 2 it is
             /// <see cref="Core.Models.GMObject.PhysicsProperties.CollisionShape.Box"/>.</remarks>
-            public Core.Models.GMObject.PhysicsProperties.CollisionShape Shape;
+            public Core.Models.GMObject.PhysicsProperties.CollisionShape Shape { get; set; }
 
             /// <summary>
             /// The physics density of the asset object.
@@ -43,57 +43,57 @@ namespace DogScepterLib.Project.Assets
             /// <remarks>Density is defined as mass per unit volume, with mass being automatically calculated by
             /// this density value and the unit volume being taken from the surface area of the shape. <br/>
             /// The default value in Gamemaker for this is <c>0.5</c>.</remarks>
-            public float Density;
+            public float Density { get; set; }
 
             /// <summary>
             /// Determines how "bouncy" a asset object is and is co-dependant on other attributes like <c>Gravity</c> or
             /// <see cref="Friction"/>.
             /// </summary>
             /// <remarks>The default value for this in GameMaker is <c>0.1</c>.</remarks>
-            public float Restitution;
+            public float Restitution { get; set; }
 
             /// <summary>
             /// The collision group this asset object belongs to.
             /// </summary>
             /// <remarks>The default value for this in GameMaker is <c>0</c>.</remarks>
-            public int Group;
+            public int Group { get; set; }
 
             /// <summary>
             /// The amount of linear damping this asset object has, which will gradually slow down moving objects.
             /// </summary>
             /// <remarks>The default value for this in GameMaker is <c>0.1</c></remarks>
-            public float LinearDamping;
+            public float LinearDamping { get; set; }
 
             /// <summary>
             /// The amount of angular damping this asset object has, which will slow down rotating objects.
             /// </summary>
             /// <remarks>The default value for this in GameMaker is <c>0.1</c>.</remarks>
-            public float AngularDamping;
+            public float AngularDamping { get; set; }
 
             /// <summary>
             /// The list of vertices used for
             /// <see cref="Core.Models.GMObject.PhysicsProperties.CollisionShape"/>.<see cref="Core.Models.GMObject.PhysicsProperties.CollisionShape.Custom"/>.
             /// </summary>
-            public List<PhysicsVertex> Vertices;
+            public List<PhysicsVertex> Vertices { get; set; }
 
             /// <summary>
             /// The amount of friction this asset object has, which will cause a loss of momentum during collisions.
             /// </summary>
             /// <remarks>The default value for this in GameMaker is <c>0.2</c>.</remarks>
-            public float Friction;
+            public float Friction { get; set; }
 
             /// <summary>
             /// Whether the asset object should use physics simulation on object creation.
             /// </summary>
             /// <remarks>The default value for this in GameMaker is <see langword="true"/>.</remarks>
-            public bool IsAwake;
+            public bool IsAwake { get; set; }
 
             /// <summary>
             /// Whether the asset object should be kinematic, which makes it unaffected by collisions and other physics properties
             /// Will only be used if <see cref="Density"/> is set to <c>0</c>.
             /// </summary>
             /// <remarks>The default value for this in GameMaker is <see langword="false"/>.</remarks>
-            public bool IsKinematic;
+            public bool IsKinematic { get; set; }
 
             /// <summary>
             /// An explicit cast from a <see cref="Core.Models.GMObject"/>.<see cref="Core.Models.GMObject.PhysicsProperties"/>
@@ -117,6 +117,7 @@ namespace DogScepterLib.Project.Assets
                     Friction = physicsProperties.Friction,
                     IsAwake = physicsProperties.IsAwake,
                     IsKinematic = physicsProperties.IsKinematic,
+                    Vertices = new()
                 };
                 foreach (Core.Models.GMObject.PhysicsVertex v in physicsProperties.Vertices)
                     newPhysics.Vertices.Add(new PhysicsVertex { X = v.X, Y = v.Y });
@@ -170,38 +171,18 @@ namespace DogScepterLib.Project.Assets
                     throw new JsonException();
                 if (!lookAhead.Read() || lookAhead.TokenType != JsonTokenType.PropertyName)
                     throw new JsonException();
-
-                Event baseEvent;
-                switch (lookAhead.GetString())
+                Event baseEvent = lookAhead.GetString() switch
                 {
-                    case "AlarmNumber":
-                        baseEvent = (Event)JsonSerializer.Deserialize(ref reader, typeof(EventAlarm), options);
-                        break;
-                    case "SubtypeStep":
-                        baseEvent = (Event)JsonSerializer.Deserialize(ref reader, typeof(EventStep), options);
-                        break;
-                    case "ObjectName":
-                        baseEvent = (Event)JsonSerializer.Deserialize(ref reader, typeof(EventCollision), options);
-                        break;
-                    case "SubtypeKey":
-                        baseEvent = (Event)JsonSerializer.Deserialize(ref reader, typeof(EventKeyboard), options);
-                        break;
-                    case "SubtypeMouse":
-                        baseEvent = (Event)JsonSerializer.Deserialize(ref reader, typeof(EventMouse), options);
-                        break;
-                    case "SubtypeOther":
-                        baseEvent = (Event)JsonSerializer.Deserialize(ref reader, typeof(EventOther), options);
-                        break;
-                    case "SubtypeDraw":
-                        baseEvent = (Event)JsonSerializer.Deserialize(ref reader, typeof(EventDraw), options);
-                        break;
-                    case "SubtypeGesture":
-                        baseEvent = (Event)JsonSerializer.Deserialize(ref reader, typeof(EventGesture), options);
-                        break;
-                    default:
-                        baseEvent = (Event)JsonSerializer.Deserialize(ref reader, typeof(EventNormal), options);
-                        break;
-                }
+                    "AlarmNumber" => (Event)JsonSerializer.Deserialize(ref reader, typeof(EventAlarm), options),
+                    "SubtypeStep" => (Event)JsonSerializer.Deserialize(ref reader, typeof(EventStep), options),
+                    "ObjectName" => (Event)JsonSerializer.Deserialize(ref reader, typeof(EventCollision), options),
+                    "SubtypeKey" => (Event)JsonSerializer.Deserialize(ref reader, typeof(EventKeyboard), options),
+                    "SubtypeMouse" => (Event)JsonSerializer.Deserialize(ref reader, typeof(EventMouse), options),
+                    "SubtypeOther" => (Event)JsonSerializer.Deserialize(ref reader, typeof(EventOther), options),
+                    "SubtypeDraw" => (Event)JsonSerializer.Deserialize(ref reader, typeof(EventDraw), options),
+                    "SubtypeGesture" => (Event)JsonSerializer.Deserialize(ref reader, typeof(EventGesture), options),
+                    _ => (Event)JsonSerializer.Deserialize(ref reader, typeof(EventNormal), options),
+                };
                 return baseEvent;
             }
 
@@ -548,6 +529,25 @@ namespace DogScepterLib.Project.Assets
                 Directory.CreateDirectory(Path.GetDirectoryName(assetPath));
                 using (FileStream fs = new FileStream(assetPath, FileMode.Create))
                     fs.Write(buff, 0, buff.Length);
+
+                // Write code entries for the object here as well, if possible
+                foreach (var eventList in Events.Values)
+                {
+                    foreach (var ev in eventList)
+                    {
+                        foreach (var action in ev.Actions)
+                        {
+                            if (action.Code != null)
+                            {
+                                int assetIndex = pf.Code.FindIndex(action.Code);
+                                if (assetIndex == -1)
+                                    continue;
+                                pf.AddAssetsToJSON(pf.Code, new List<int>() { assetIndex }, true, 
+                                    Path.GetRelativePath(pf.DirectoryPath, Path.GetDirectoryName(assetPath)).Replace('\\', '/'));
+                            }
+                        }
+                    }
+                }
             }
             return buff;
         }

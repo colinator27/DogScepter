@@ -99,7 +99,7 @@ public class DSImage
             int destJump = Width << 2;
             for (int y = 0; y < Height; y++)
             {
-                Buffer.BlockCopy(Data, pos, res, destPos, Width << 2);
+                Buffer.BlockCopy(Data, pos, res, destPos, destJump /* same here */);
                 pos += jump;
                 destPos += destJump;
             }

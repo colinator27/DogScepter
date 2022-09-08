@@ -2216,13 +2216,13 @@ public partial class Builtins
 		FunctionDefine("os_get_info", 0, FunctionClassification.Os);
 		FunctionDefine("os_get_language", 0, FunctionClassification.Os);
 		FunctionDefine("os_get_region", 0, FunctionClassification.Os);
-		FunctionDefine("os_check_permission", 0, FunctionClassification.Os);
-		FunctionDefine("os_request_permission", 0, FunctionClassification.Os);
+		FunctionDefine("os_check_permission", 1, FunctionClassification.Os);
+		FunctionDefine("os_request_permission", 1, FunctionClassification.Os);
 		FunctionDefine("display_get_dpi_x", 0, FunctionClassification.Display);
 		FunctionDefine("display_get_dpi_y", 0, FunctionClassification.Display);
-		FunctionDefine("display_set_gui_size", 0, FunctionClassification.Display);
-		FunctionDefine("display_set_gui_maximise", 0, FunctionClassification.Display);
-		FunctionDefine("display_set_gui_maximize", 0, FunctionClassification.Display);
+		FunctionDefine("display_set_gui_size", 2, FunctionClassification.Display);
+		FunctionDefine("display_set_gui_maximise", -1, FunctionClassification.Display);
+		FunctionDefine("display_set_gui_maximize", -1, FunctionClassification.Display);
 		FunctionDefine("display_get_frequency", 0, FunctionClassification.Display);
 		FunctionDefine("device_get_tilt_x", 0, FunctionClassification.IO);
 		FunctionDefine("device_get_tilt_y", 0, FunctionClassification.IO);

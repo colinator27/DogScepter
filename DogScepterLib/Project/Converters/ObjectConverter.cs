@@ -14,7 +14,6 @@ namespace DogScepterLib.Project.Converters
     {
         public override void ConvertData(ProjectFile pf, int index)
         {
-            // TODO use asset refs eventually
             var dataCode = ((GMChunkCODE)pf.DataHandle.Chunks["CODE"])?.List;
 
             GMObject asset = (GMObject)pf.Objects[index].DataAsset;
@@ -183,11 +182,12 @@ namespace DogScepterLib.Project.Converters
         {
             var dataAssets = pf.DataHandle.GetChunk<GMChunkOBJT>().List;
 
-            // TODO: use asset refs whenever code is implemented
-            GMList<GMCode> dataCode = ((GMChunkCODE)pf.DataHandle.Chunks["CODE"]).List;
+            GMList<GMCode> dataCode = ((GMChunkCODE)pf.DataHandle.Chunks["CODE"])?.List;
 
             int getCode(string name)
             {
+                if (dataCode == null)
+                    return -1;
                 try
                 {
                     return dataCode.Select((elem, index) => new { elem, index }).First(p => p.elem.Name.Content == name).index;
