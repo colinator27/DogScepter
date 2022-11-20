@@ -17,6 +17,11 @@ namespace DogScepterLib.Core.Models
         public uint GeneratedMips;
         public GMTextureData TextureData;
 
+        // 2022.9+ fields
+        public int TextureWidth;
+        public int TextureHeight;
+        public int IndexInGroup;
+
         public void Serialize(GMDataWriter writer)
         {
             writer.Write(Scaled);
@@ -26,6 +31,12 @@ namespace DogScepterLib.Core.Models
             {
                 TextureData.WriteLengthOffset = writer.Offset;
                 writer.Write(0);
+            }
+            if (writer.VersionInfo.IsVersionAtLeast(2022, 9))
+            {
+                writer.Write(TextureWidth);
+                writer.Write(TextureHeight);
+                writer.Write(IndexInGroup);
             }
             writer.WritePointer(TextureData);
         }
@@ -37,6 +48,12 @@ namespace DogScepterLib.Core.Models
                 GeneratedMips = reader.ReadUInt32();
             if (reader.VersionInfo.IsVersionAtLeast(2022, 3))
                 reader.ReadInt32(); // Ignore the data length (for now, at least)
+            if (reader.VersionInfo.IsVersionAtLeast(2022, 9))
+            {
+                TextureWidth = reader.ReadInt32();
+                TextureHeight = reader.ReadInt32();
+                IndexInGroup = reader.ReadInt32();
+            }
             TextureData = reader.ReadPointerObjectUnique<GMTextureData>();
         }
     }

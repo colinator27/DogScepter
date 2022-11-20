@@ -16,9 +16,28 @@ namespace DogScepterLib.Core.Models
         public GMList<ResourceID> FontIDs = new GMList<ResourceID>();
         public GMList<ResourceID> TilesetIDs = new GMList<ResourceID>();
 
+        // 2022.9+ fields
+        public GMString Directory;
+        public GMString Extension;
+        public TextureGroupLoadType LoadType;
+
+        public enum TextureGroupLoadType
+        {
+            InFile = 0,
+            SeparateGroup = 1,
+            SeparateTextures = 2
+        }
+
         public void Serialize(GMDataWriter writer)
         {
             writer.WritePointerString(Name);
+
+            if (writer.VersionInfo.IsVersionAtLeast(2022, 9))
+            {
+                writer.WritePointerString(Directory);
+                writer.WritePointerString(Extension);
+                writer.Write((int)LoadType);
+            }
 
             writer.WritePointer(TexturePageIDs);
             writer.WritePointer(SpriteIDs);
@@ -41,6 +60,12 @@ namespace DogScepterLib.Core.Models
         public void Deserialize(GMDataReader reader)
         {
             Name = reader.ReadStringPointerObject();
+            if (reader.VersionInfo.IsVersionAtLeast(2022, 9))
+            {
+                Directory = reader.ReadStringPointerObject();
+                Extension = reader.ReadStringPointerObject();
+                LoadType = (TextureGroupLoadType)reader.ReadInt32();
+            }
             TexturePageIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
             SpriteIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
             SpineSpriteIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
