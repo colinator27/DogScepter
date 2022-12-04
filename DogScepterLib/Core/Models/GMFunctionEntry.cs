@@ -44,7 +44,7 @@ namespace DogScepterLib.Core.Models
                         nextDiff = ((GMChunkSTRG)writer.Data.Chunks["STRG"]).List.IndexOf(Name);
 
                     writer.Offset = curr + 4;
-                    writer.Write((nextDiff & 0x07FFFFFF) | ((int)references[i].Item2 << 27));
+                    writer.Write((nextDiff & 0x07FFFFFF) | ((int)references[i].Item2 << 24));
                 }
                 writer.Offset = returnTo;
             }
