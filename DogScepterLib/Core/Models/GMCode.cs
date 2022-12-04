@@ -227,7 +227,7 @@ public class GMCode : IGMSerializable
                 public Reference(int int32Value)
                 {
                     NextOccurrence = int32Value & 0x07FFFFFF;
-                    Type = (VariableType)(int32Value >> 24);
+                    Type = (VariableType)((int32Value >> 24) & 0xF8);
                 }
 
                 public void Serialize(GMDataWriter writer)
@@ -240,7 +240,7 @@ public class GMCode : IGMSerializable
                 {
                     int int32Value = reader.ReadInt32();
                     NextOccurrence = int32Value & 0x07FFFFFF;
-                    Type = (VariableType)(int32Value >> 24);
+                    Type = (VariableType)((int32Value >> 24) & 0xF8);
                 }
 
                 public override string ToString()
