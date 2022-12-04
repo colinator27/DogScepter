@@ -226,7 +226,7 @@ public class GMCode : IGMSerializable
 
                 public Reference(int int32Value)
                 {
-                    NextOccurrence = int32Value & 0x00FFFFFF;
+                    NextOccurrence = int32Value & 0x07FFFFFF;
                     Type = (VariableType)(int32Value >> 24);
                 }
 
@@ -238,8 +238,9 @@ public class GMCode : IGMSerializable
 
                 public void Deserialize(GMDataReader reader)
                 {
-                    NextOccurrence = reader.ReadInt24();
-                    Type = (VariableType)reader.ReadByte();
+                    int int32Value = reader.ReadInt32();
+                    NextOccurrence = int32Value & 0x07FFFFFF;
+                    Type = (VariableType)(int32Value >> 24);
                 }
 
                 public override string ToString()
@@ -496,11 +497,11 @@ public class GMCode : IGMSerializable
                 {
                     if (Variable.Target != null)
                     {
-                        List<int> l;
+                        List<(int, VariableType)> l;
                         if (writer.VariableReferences.TryGetValue(Variable.Target, out l))
-                            l.Add(writer.Offset);
+                            l.Add((writer.Offset, Variable.Type));
                         else
-                            writer.VariableReferences.Add(Variable.Target, new List<int> { writer.Offset });
+                            writer.VariableReferences.Add(Variable.Target, new List<(int, VariableType)> { (writer.Offset, Variable.Type) });
                     }
                     else
                         writer.Warnings.Add(new GMWarning($"Missing variable target at {writer.Offset}"));
@@ -509,11 +510,11 @@ public class GMCode : IGMSerializable
                 {
                     if (Function.Target != null)
                     {
-                        List<int> l;
+                        List<(int, VariableType)> l;
                         if (writer.FunctionReferences.TryGetValue(Function.Target, out l))
-                            l.Add(writer.Offset);
+                            l.Add((writer.Offset, Function.Type));
                         else
-                            writer.FunctionReferences.Add(Function.Target, new List<int> { writer.Offset });
+                            writer.FunctionReferences.Add(Function.Target, new List<(int, VariableType)> { (writer.Offset, Function.Type) });
                     }
                     else
                         writer.Warnings.Add(new GMWarning($"Missing function target at {writer.Offset}"));

@@ -25,7 +25,7 @@ namespace DogScepterLib.Core.Models
                 writer.Write(VariableID);
             }
 
-            List<int> references;
+            List<(int, GMCode.Bytecode.Instruction.VariableType)> references;
             if (writer.VariableReferences.TryGetValue(this, out references))
                 Occurrences = references.Count;
             else
@@ -34,21 +34,21 @@ namespace DogScepterLib.Core.Models
             writer.Write(Occurrences);
             if (Occurrences > 0)
             {
-                writer.Write(references[0]);
+                writer.Write(references[0].Item1);
 
                 int returnTo = writer.Offset;
                 for (int i = 0; i < references.Count; i++)
                 {
-                    int curr = references[i];
+                    int curr = references[i].Item1;
 
                     int nextDiff;
                     if (i < references.Count - 1)
-                        nextDiff = references[i + 1] - curr;
+                        nextDiff = references[i + 1].Item1 - curr;
                     else
                         nextDiff = ((GMChunkSTRG)writer.Data.Chunks["STRG"]).List.IndexOf(Name);
 
                     writer.Offset = curr + 4;
-                    writer.WriteInt24(nextDiff);
+                    writer.Write((nextDiff & 0x07FFFFFF) | ((int)references[i].Item2 << 27));
                 }
                 writer.Offset = returnTo;
             }

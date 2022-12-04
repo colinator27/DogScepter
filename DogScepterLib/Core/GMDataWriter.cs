@@ -20,8 +20,8 @@ namespace DogScepterLib.Core
         public Dictionary<IGMSerializable, List<int>> PendingPointerWrites = new Dictionary<IGMSerializable, List<int>>();
         public Dictionary<GMString, List<int>> PendingStringPointerWrites = new Dictionary<GMString, List<int>>();
 
-        public Dictionary<GMVariable, List<int>> VariableReferences = new Dictionary<GMVariable, List<int>>();
-        public Dictionary<GMFunctionEntry, List<int>> FunctionReferences = new Dictionary<GMFunctionEntry, List<int>>();
+        public Dictionary<GMVariable, List<(int, GMCode.Bytecode.Instruction.VariableType)>> VariableReferences = new();
+        public Dictionary<GMFunctionEntry, List<(int, GMCode.Bytecode.Instruction.VariableType)>> FunctionReferences = new();
 
         public GMDataWriter(GMData data, Stream stream, string path, int baseSize = 1024 * 1024 * 32) : base(stream, baseSize)
         {
