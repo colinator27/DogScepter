@@ -101,6 +101,12 @@ namespace DogScepterLib.Core.Chunks
                                 reader.Offset = lastGlyph;
                                 int kerningLength = (reader.ReadUInt16() * 4);
                                 reader.Offset += kerningLength;
+
+                                if (fontCount == 1 && reader.VersionInfo.AlignChunksTo16)
+                                {
+                                    // If we only have one font, align to 16 byte chunk boundary if needed
+                                    reader.Pad(16);
+                                }
                             }
                         }
                     }
