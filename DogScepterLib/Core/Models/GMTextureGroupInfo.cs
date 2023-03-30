@@ -48,7 +48,6 @@ namespace DogScepterLib.Core.Models
 
             writer.WriteObjectPointer(TexturePageIDs);
             TexturePageIDs.Serialize(writer);
-
             writer.WriteObjectPointer(SpriteIDs);
             SpriteIDs.Serialize(writer);
             if (!writer.VersionInfo.IsVersionAtLeast(2023, 1))
