@@ -68,7 +68,7 @@ namespace DogScepterLib.Core.Chunks
                 // Navigate to the fourth list pointer, which is different
                 // depending on whether this is 2023.1+ or not (either "FontIDs"
                 // or "SpineSpriteIDs").
-                reader.Offset = (int)(firstPtr + 16 + (sizeof(uint) * 3));
+                reader.Offset = (int)(firstPtr + 16 + (4 * 3));
                 uint fourthPtr = reader.ReadUInt32();
 
                 // We read either the "TexturePageIDs" count or the pointer to
