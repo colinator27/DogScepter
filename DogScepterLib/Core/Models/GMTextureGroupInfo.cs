@@ -41,14 +41,15 @@ namespace DogScepterLib.Core.Models
 
             writer.WritePointer(TexturePageIDs);
             writer.WritePointer(SpriteIDs);
-            writer.WritePointer(SpineSpriteIDs);
+            if (!writer.VersionInfo.IsVersionAtLeast(2023, 1))
+                writer.WritePointer(SpineSpriteIDs);
             writer.WritePointer(FontIDs);
             writer.WritePointer(TilesetIDs);
 
             writer.WriteObjectPointer(TexturePageIDs);
             TexturePageIDs.Serialize(writer);
-            if (!writer.VersionInfo.IsVersionAtLeast(2023, 1))
-                writer.WriteObjectPointer(SpriteIDs);
+
+            writer.WriteObjectPointer(SpriteIDs);
             SpriteIDs.Serialize(writer);
             if (!writer.VersionInfo.IsVersionAtLeast(2023, 1))
             {
