@@ -41,7 +41,8 @@ namespace DogScepterLib.Core.Models
 
             writer.WritePointer(TexturePageIDs);
             writer.WritePointer(SpriteIDs);
-            writer.WritePointer(SpineSpriteIDs);
+            if (!writer.VersionInfo.IsVersionAtLeast(2023, 1))
+                writer.WritePointer(SpineSpriteIDs);
             writer.WritePointer(FontIDs);
             writer.WritePointer(TilesetIDs);
 
@@ -49,8 +50,11 @@ namespace DogScepterLib.Core.Models
             TexturePageIDs.Serialize(writer);
             writer.WriteObjectPointer(SpriteIDs);
             SpriteIDs.Serialize(writer);
-            writer.WriteObjectPointer(SpineSpriteIDs);
-            SpineSpriteIDs.Serialize(writer);
+            if (!writer.VersionInfo.IsVersionAtLeast(2023, 1))
+            {
+                writer.WriteObjectPointer(SpineSpriteIDs);
+                SpineSpriteIDs.Serialize(writer);
+            }
             writer.WriteObjectPointer(FontIDs);
             FontIDs.Serialize(writer);
             writer.WriteObjectPointer(TilesetIDs);
@@ -68,7 +72,8 @@ namespace DogScepterLib.Core.Models
             }
             TexturePageIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
             SpriteIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
-            SpineSpriteIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
+            if (!reader.VersionInfo.IsVersionAtLeast(2023, 1))
+                SpineSpriteIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
             FontIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
             TilesetIDs = reader.ReadPointerObjectUnique<GMList<ResourceID>>();
         }
