@@ -818,7 +818,7 @@ public class Parser
             Node accessor = new(NodeAccessorInfo.Accessors[TokenKind.ArrayOpen]);
             newArg.Children.Add(accessor);
             accessor.Children.Add(new Node(NodeKind.Constant, new Token(ctx, new TokenConstant((double)(argCount++)), -1)));
-            return null;
+            return newArg;
         }
         while (curr.Kind != TokenKind.EOF && curr.Kind != TokenKind.End)
         {
