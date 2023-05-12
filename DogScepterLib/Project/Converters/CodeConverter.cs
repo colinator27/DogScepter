@@ -88,6 +88,7 @@ namespace DogScepterLib.Project.Converters
 
             for (int i = 0; i < pf.Code.Count; i++)
             {
+                // Get project-level asset
                 AssetCode assetCode = pf.Code[i].Asset;
                 if (assetCode == null)
                 {

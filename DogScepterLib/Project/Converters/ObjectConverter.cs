@@ -209,6 +209,10 @@ namespace DogScepterLib.Project.Converters
             List<GMObject> newList = new List<GMObject>();
             for (int i = 0; i < pf.Objects.Count; i++)
             {
+                // Assign new data index to this asset ref
+                pf.Objects[i].DataIndex = newList.Count;
+
+                // Get project-level asset
                 AssetObject projectAsset = pf.Objects[i].Asset;
                 if (projectAsset == null)
                 {

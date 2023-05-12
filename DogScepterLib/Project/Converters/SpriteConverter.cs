@@ -242,6 +242,10 @@ namespace DogScepterLib.Project.Converters
             List<GMSprite> newList = new List<GMSprite>();
             for (int i = 0; i < pf.Sprites.Count; i++)
             {
+                // Assign new data index to this asset ref
+                pf.Sprites[i].DataIndex = newList.Count;
+
+                // Get project-level asset
                 AssetSprite projectAsset = pf.Sprites[i].Asset;
                 if (projectAsset == null)
                 {

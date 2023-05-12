@@ -77,6 +77,10 @@ namespace DogScepterLib.Project.Converters
             List<GMFont> newList = new List<GMFont>();
             for (int i = 0; i < pf.Fonts.Count; i++)
             {
+                // Assign new data index to this asset ref
+                pf.Fonts[i].DataIndex = newList.Count;
+
+                // Get project-level asset
                 AssetFont projectAsset = pf.Fonts[i].Asset;
                 if (projectAsset == null)
                 {

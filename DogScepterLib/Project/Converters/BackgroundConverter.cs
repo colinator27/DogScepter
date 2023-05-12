@@ -74,6 +74,10 @@ namespace DogScepterLib.Project.Converters
             List<GMBackground> newList = new List<GMBackground>();
             for (int i = 0; i < pf.Backgrounds.Count; i++)
             {
+                // Assign new data index to this asset ref
+                pf.Backgrounds[i].DataIndex = newList.Count;
+
+                // Get project-level asset
                 AssetBackground projectAsset = pf.Backgrounds[i].Asset;
                 if (projectAsset == null)
                 {

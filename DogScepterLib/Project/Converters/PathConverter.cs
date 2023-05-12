@@ -43,6 +43,10 @@ namespace DogScepterLib.Project.Converters
             dataAssets.Clear();
             for (int i = 0; i < pf.Paths.Count; i++)
             {
+                // Assign new data index to this asset ref
+                pf.Paths[i].DataIndex = dataAssets.Count;
+
+                // Get project-level asset
                 AssetPath assetPath = pf.Paths[i].Asset;
                 if (assetPath == null)
                 {

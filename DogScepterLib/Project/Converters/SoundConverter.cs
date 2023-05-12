@@ -251,6 +251,9 @@ namespace DogScepterLib.Project.Converters
             // Actually add sounds to the data
             foreach (var assetRef in pf.Sounds)
             {
+                // (also assign new data index to this asset ref)
+                assetRef.DataIndex = dataAssets.Count;
+
                 dataAssets.Add(finalMap[assetRef]);
             }
         }
