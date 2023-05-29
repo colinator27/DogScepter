@@ -591,6 +591,13 @@ public static partial class Bytecode
 
         if (ctx.BaseContext.IsGMS23)
         {
+            // Arguments get pushed in reverse order
+            for (int i = func.Children.Count - 1; i >= 0; i--)
+            {
+                CompileExpression(ctx, func.Children[i]);
+                ConvertTo(ctx, DataType.Variable);
+            }
+            
             if (inChain)
             {
                 // Handle calling at the end of a chain
@@ -610,13 +617,6 @@ public static partial class Bytecode
             }
             else
             {
-                // Arguments get pushed in reverse order
-                for (int i = func.Children.Count - 1; i >= 0; i--)
-                {
-                    CompileExpression(ctx, func.Children[i]);
-                    ConvertTo(ctx, DataType.Variable);
-                }
-
                 EmitCall(ctx, Opcode.Call, DataType.Int32, tokenFunc, func.Children.Count, token, funcRef);
                 ctx.TypeStack.Push(DataType.Variable);
             }
