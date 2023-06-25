@@ -112,7 +112,7 @@ namespace DogScepterLib.Core.Models
                 // This is fully transparent, just grab one pixel
                 SourceWidth = 1;
                 SourceHeight = 1;
-                _Image = new DSImage(_Image, 0, 0, 1, 1);
+                _Image = new DSImage(_Image, SourceX, SourceY, SourceWidth, SourceHeight);
             }
             else if (left != 0 || top != 0 || right != BoundWidth - 1 || bottom != BoundHeight - 1)
             {
@@ -123,9 +123,11 @@ namespace DogScepterLib.Core.Models
                 SourceHeight = (ushort)(bottom - top);
                 TargetWidth = SourceWidth;
                 TargetHeight = SourceHeight;
-                TargetX = (ushort)left;
-                TargetY = (ushort)top;
-                _Image = new DSImage(_Image, left, top, right - left, bottom - top);
+                SourceX = (ushort)left;
+                SourceY = (ushort)top;
+                TargetX = SourceX;
+                TargetY = SourceY;
+                _Image = new DSImage(_Image, SourceX, SourceY, SourceWidth, SourceHeight);
             }
         }
 
