@@ -817,8 +817,8 @@ namespace DogScepterLib.Project
                 fixed (byte* bytePtr = &texture.Data[0],
                              entryBytePtr = &entryTexture.Data[0])
                 {
-                    int* ptr = (int*)bytePtr + (self.SourceX + (self.SourceY * texture.Width));
-                    int* entryPtr = (int*)entryBytePtr + (entry.SourceX + (entry.SourceY * entryTexture.Width));
+                    int* ptr = (int*)bytePtr + (self.TargetX + (self.TargetY * texture.Width));
+                    int* entryPtr = (int*)entryBytePtr + (entry.TargetX + (entry.TargetY * entryTexture.Width));
 
                     bool checking = true;
                     for (int y = 0; y < self.SourceHeight && checking; y++)
@@ -833,8 +833,8 @@ namespace DogScepterLib.Project
                             ptr++;
                             entryPtr++;
                         }
-                        ptr += texture.Width - self.SourceWidth;
-                        entryPtr += entryTexture.Width - self.SourceWidth;
+                        ptr += texture.RealWidth - self.SourceWidth;
+                        entryPtr += entryTexture.RealWidth - self.SourceWidth;
                     }
 
                     if (checking)
